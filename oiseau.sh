@@ -754,8 +754,14 @@ show_spinner() {
         esac
     fi
 
-    # Animation settings
+    # Animation settings with validation
     local fps="${OISEAU_SPINNER_FPS:-10}"
+
+    # Validate FPS is a positive number
+    if ! [[ "$fps" =~ ^[0-9]+$ ]] || [ "$fps" -le 0 ]; then
+        fps=10  # Fallback to default
+    fi
+
     local delay=$(awk "BEGIN {print 1/$fps}")
     local frame_idx=0
     local num_frames=${#frames[@]}
@@ -763,9 +769,10 @@ show_spinner() {
     # Hide cursor
     echo -en "\033[?25l"
 
-    # Cleanup on exit - clear line and show cursor
+    # Cleanup on exit - clear line and show cursor, then exit
     cleanup_spinner() {
         echo -en "\r\033[K\033[?25h"
+        trap - EXIT INT TERM  # Remove trap to prevent recursion
         exit 0
     }
     trap cleanup_spinner EXIT INT TERM
@@ -776,7 +783,7 @@ show_spinner() {
         echo -en "\r${COLOR_INFO}${frame}${RESET}  ${safe_message}\033[K"
 
         frame_idx=$(( (frame_idx + 1) % num_frames ))
-        sleep "$delay"
+        sleep "$delay" || exit 0  # Exit if sleep is interrupted
     done
 }
 

@@ -36,12 +36,10 @@ test_utf8_output() {
     export OISEAU_HAS_UTF8=1
     export OISEAU_HAS_COLOR=1
 
-    # Start spinner, capture one frame
-    start_spinner "Test" &
-    local pid=$!
+    # Start spinner properly
+    start_spinner "Test"
     sleep 0.2
-    kill $pid 2>/dev/null
-    wait $pid 2>/dev/null
+    stop_spinner
 
     # Should have used UTF-8 spinner characters
     # We can't easily capture the output, so just verify it doesn't error
@@ -55,12 +53,10 @@ test_ascii_output() {
     export OISEAU_HAS_UTF8=0
     export OISEAU_HAS_COLOR=1
 
-    # Start spinner
-    start_spinner "Test" &
-    local pid=$!
+    # Start spinner properly
+    start_spinner "Test"
     sleep 0.2
-    kill $pid 2>/dev/null
-    wait $pid 2>/dev/null
+    stop_spinner
 
     return 0
 }
@@ -72,14 +68,10 @@ test_plain_output() {
     export OISEAU_HAS_UTF8=0
     export OISEAU_HAS_COLOR=0
 
-    # Capture output
-    local output=$(show_spinner "Loading" &)
-    local pid=$!
-    sleep 0.1
-    kill $pid 2>/dev/null
-    wait $pid 2>/dev/null
+    # In plain mode, spinner just prints message once and returns
+    show_spinner "Loading" > /dev/null
 
-    # In plain mode, should just print message once
+    # Should just print message once
     return 0
 }
 
