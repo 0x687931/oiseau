@@ -441,35 +441,32 @@ show_box() {
     # Top border
     echo -e "${color}${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}${RESET}"
 
-    # Title line
-    echo -e "${color}${BOX_DV}${RESET}  ${color}${icon}  ${BOLD}${title}${RESET}"
+    # Title line (with proper right border)
+    local title_content="  ${icon}  ${title}"
+    echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "$title_content" "$inner_width")${color}${BOX_DV}${RESET}"
 
     # Separator
     echo -e "${color}${BOX_DVR}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DVL}${RESET}"
 
     # Empty line
-    echo -e "${color}${BOX_DV}${RESET}"
+    echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "" "$inner_width")${color}${BOX_DV}${RESET}"
 
     # Message (word-wrapped if needed)
     echo "$message" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
-        echo -e "${color}${BOX_DV}${RESET}  $line"
+        echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "  $line" "$inner_width")${color}${BOX_DV}${RESET}"
     done
 
     # Commands section if provided
     if [ "${#commands[@]}" -gt 0 ]; then
-        echo -e "${color}${BOX_DV}${RESET}"
-        if [ "${#commands[@]}" -eq 1 ]; then
-            echo -e "${color}${BOX_DV}${RESET}  ${COLOR_MUTED}To resolve:${RESET}"
-        else
-            echo -e "${color}${BOX_DV}${RESET}  ${COLOR_MUTED}To resolve:${RESET}"
-        fi
+        echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "" "$inner_width")${color}${BOX_DV}${RESET}"
+        echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "  To resolve:" "$inner_width")${color}${BOX_DV}${RESET}"
         for cmd in "${commands[@]}"; do
-            echo -e "${color}${BOX_DV}${RESET}    ${COLOR_CODE}${cmd}${RESET}"
+            echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "    ${cmd}" "$inner_width")${color}${BOX_DV}${RESET}"
         done
     fi
 
     # Bottom empty line and border
-    echo -e "${color}${BOX_DV}${RESET}"
+    echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "" "$inner_width")${color}${BOX_DV}${RESET}"
     echo -e "${color}${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}${RESET}"
 }
 
