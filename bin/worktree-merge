@@ -20,6 +20,15 @@ else
     exit 1
 fi
 
+# Get current repository owner and name
+REPO_INFO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
+if [ -z "$REPO_INFO" ]; then
+    print_error "Failed to get repository information"
+    exit 1
+fi
+REPO_OWNER=$(echo "$REPO_INFO" | cut -d'/' -f1)
+REPO_NAME=$(echo "$REPO_INFO" | cut -d'/' -f2)
+
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     print_error "Not in a git repository"
@@ -179,7 +188,7 @@ print_info "Checking for unresolved code review threads..."
 # Use pagination to get ALL review threads, not just first 50
 UNRESOLVED_THREADS=$(gh api graphql --paginate -f query="
 query(\$endCursor: String) {
-  repository(owner: \"0x687931\", name: \"tild\") {
+  repository(owner: \"$REPO_OWNER\", name: \"$REPO_NAME\") {
     pullRequest(number: $PR_NUMBER) {
       reviewThreads(first: 100, after: \$endCursor) {
         pageInfo {

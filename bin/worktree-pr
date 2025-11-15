@@ -139,8 +139,8 @@ if [ -n "$EXISTING_PR" ]; then
     exit 0
 fi
 
-# Create PR
-if gh pr create --base main --title "$PR_TITLE" --body "$PR_BODY"; then
+# Create PR targeting the detected default branch
+if gh pr create --base "$DEFAULT_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"; then
     echo ""
     print_success "Pull request created successfully!"
     echo ""

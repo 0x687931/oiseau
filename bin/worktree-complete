@@ -485,7 +485,7 @@ else
         fi
     else
         # Remote branch doesn't exist yet - check if we have any commits
-        AHEAD_OF_MAIN=$(git rev-list main..HEAD --count 2>/dev/null || echo "0")
+        AHEAD_OF_MAIN=$(git rev-list "$DEFAULT_BRANCH"..HEAD --count 2>/dev/null || echo "0")
 
         if [ "$AHEAD_OF_MAIN" -gt 0 ]; then
             echo ""
@@ -493,7 +493,7 @@ else
             echo ""
             print_section "Local-only commits:"
             echo ""
-            git log main..HEAD --oneline --no-decorate | sed 's/^/  /'
+            git log "$DEFAULT_BRANCH"..HEAD --oneline --no-decorate | sed 's/^/  /'
             echo ""
             print_error "These commits would be LOST if the worktree is deleted"
             echo ""
@@ -513,11 +513,11 @@ else
     print_success "Worktree removed"
 fi
 
-# Update main branch
-print_info "Updating main branch..."
-git checkout main -q
-git pull origin main -q
-print_success "Main branch updated"
+# Update default branch
+print_info "Updating $DEFAULT_BRANCH branch..."
+git checkout "$DEFAULT_BRANCH" -q
+git pull origin "$DEFAULT_BRANCH" -q
+print_success "$DEFAULT_BRANCH branch updated"
 
 # Delete local branch
 if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
