@@ -238,6 +238,7 @@ run_tui() {
         else
             # Selective update: just update the footer counter
             move_cursor $(tput lines) 1
+            echo -en "\033[K"  # Clear from cursor to end of line
             echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
         fi
 

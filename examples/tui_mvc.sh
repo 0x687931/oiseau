@@ -351,6 +351,7 @@ app::run() {
             # Selective update: just update the footer frame counter
             local footer_line=$(( $(tput lines) ))
             tui::move $footer_line 1
+            echo -en "\033[K"  # Clear from cursor to end of line
             case ${MODEL[view]} in
                 tasks)
                     echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
