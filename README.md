@@ -206,6 +206,108 @@ Types: `error`, `warning`, `info`, `success`
 
 ---
 
+## 🎨 Customization
+
+Oiseau is designed to **work beautifully with zero configuration**. The defaults are carefully chosen for modern terminals while gracefully degrading to ASCII in limited environments.
+
+### Environment Variables
+
+Three simple environment variables let you customize Oiseau globally:
+
+#### 1. `OISEAU_BORDER_STYLE` - Change Border Style
+
+Force a specific border style for all widgets:
+
+```bash
+export OISEAU_BORDER_STYLE="rounded"  # Friendly, modern (╭─╮)
+export OISEAU_BORDER_STYLE="double"   # Emphasis, important (┏━┓)
+export OISEAU_BORDER_STYLE="ascii"    # Universal fallback (+--+)
+```
+
+**Border Styles:**
+
+- **Rounded** (`╭─╮`): Used by headers, info boxes, section headers
+- **Double** (`┏━┓`): Used by error boxes, warning boxes, critical alerts
+- **ASCII** (`+--+`): Auto-enabled for pipes, redirects, or `NO_COLOR=1`
+
+#### 2. `OISEAU_BOX_WIDTH` - Change Box Width
+
+Override the default 60-column width:
+
+```bash
+export OISEAU_BOX_WIDTH="80"   # Wider boxes
+export OISEAU_BOX_WIDTH="40"   # Narrower boxes
+```
+
+Boxes automatically clamp to terminal width - 4 to prevent overflow.
+
+#### 3. Individual Color Overrides
+
+Override specific colors using ANSI 256-color codes:
+
+```bash
+export COLOR_ERROR="196"     # Bright red (default: 204)
+export COLOR_SUCCESS="46"    # Bright green (default: 114)
+export COLOR_WARNING="214"   # Orange (default: 214)
+export COLOR_INFO="39"       # Cyan (default: 75)
+export COLOR_HEADER="141"    # Purple (default: 141)
+export COLOR_MUTED="240"     # Gray (default: 240)
+```
+
+### Examples
+
+#### Zero Configuration (Recommended)
+
+```bash
+#!/bin/bash
+source oiseau.sh
+
+show_header_box "Deployment Pipeline"
+show_progress_bar 8 10 "Deploying"
+show_box success "Complete" "Deployed to production"
+```
+
+Works perfectly with automatic detection.
+
+#### Custom Border Style
+
+```bash
+#!/bin/bash
+export OISEAU_BORDER_STYLE="double"
+source oiseau.sh
+
+show_box success "Complete" "All tests passed"
+# Uses ┏━┓ instead of ╭─╮
+```
+
+#### Custom Brand Colors
+
+```bash
+#!/bin/bash
+export COLOR_ERROR="196"    # Corporate brand red
+export COLOR_SUCCESS="46"   # Corporate brand green
+export OISEAU_BOX_WIDTH="80"
+source oiseau.sh
+
+show_box error "Critical Alert" "System requires immediate attention"
+show_box success "All Clear" "Systems operational"
+```
+
+### Environment Variable Reference
+
+| Variable | Values | Default | Purpose |
+|----------|--------|---------|---------|
+| `OISEAU_BORDER_STYLE` | `rounded`, `double`, `ascii` | Auto | Force border style |
+| `OISEAU_BOX_WIDTH` | Number (20-200) | `60` | Override box width |
+| `COLOR_ERROR` | ANSI 256 code | `204` | Error message color |
+| `COLOR_SUCCESS` | ANSI 256 code | `114` | Success message color |
+| `COLOR_WARNING` | ANSI 256 code | `214` | Warning message color |
+| `COLOR_INFO` | ANSI 256 code | `75` | Info message color |
+| `COLOR_HEADER` | ANSI 256 code | `141` | Header text color |
+| `COLOR_MUTED` | ANSI 256 code | `240` | Muted text color |
+
+---
+
 ## 🎨 Terminal Modes
 
 Oiseau automatically detects your terminal capabilities and adapts:
