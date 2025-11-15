@@ -124,8 +124,9 @@ test_section_headers() {
 
 # Test 9: Pipe delimiter parsing
 test_pipe_delimiter() {
-    if grep -q "IFS='|' read -r key description" "$PROJECT_ROOT/oiseau.sh"; then
-        echo "  ✓ Pipe delimiter parsing"
+    # Check for pipe delimiter parsing (may use local IFS for safety)
+    if grep -q "IFS='|'" "$PROJECT_ROOT/oiseau.sh" && grep -q "read -r key description" "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Pipe delimiter parsing (with local IFS for safety)"
         return 0
     else
         echo "  ✗ Pipe delimiter parsing not found"

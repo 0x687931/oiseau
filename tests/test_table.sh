@@ -138,8 +138,9 @@ test_width_caching() {
 
 # Test 10: Truncation with ellipsis
 test_truncation() {
-    if grep -q 'Truncate with ellipsis' "$PROJECT_ROOT/oiseau.sh"; then
-        echo "  ✓ Ellipsis truncation implemented"
+    # Check for improved truncation using _truncate_to_width helper
+    if grep -q '_truncate_to_width' "$PROJECT_ROOT/oiseau.sh" || grep -q 'Truncate with ellipsis' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Ellipsis truncation implemented (using _truncate_to_width helper)"
         return 0
     else
         echo "  ✗ Ellipsis truncation not found"

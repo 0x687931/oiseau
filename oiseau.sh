@@ -1918,6 +1918,12 @@ show_help_paged() {
     # Set OISEAU_HELP_NO_KEYPRESS to suppress the prompt in show_help
     local help_content
     help_content=$(OISEAU_HELP_NO_KEYPRESS=1 show_help "$title" "$array_name" "$key_width" 2>&1)
+    local show_help_exit=$?
+
+    # Propagate errors from show_help (invalid args, etc.)
+    if [ $show_help_exit -ne 0 ]; then
+        return $show_help_exit
+    fi
 
     # Display in pager
     show_pager "$help_content" "$title"
@@ -1974,8 +1980,15 @@ register_resize_handler() {
     # Store callback
     _OISEAU_RESIZE_CALLBACK="$callback"
 
-    # Save existing WINCH trap for chaining
-    _OISEAU_RESIZE_ORIGINAL_TRAP=$(trap -p WINCH | sed "s/trap -- '\(.*\)' WINCH/\1/")
+    # Save existing WINCH trap for chaining (only if not already saved)
+    # This prevents losing the original trap when re-registering
+    if [ -z "$_OISEAU_RESIZE_ORIGINAL_TRAP" ]; then
+        local current_trap=$(trap -p WINCH | sed "s/trap -- '\(.*\)' WINCH/\1/")
+        # Only save if it's not our own handler
+        if [ "$current_trap" != "_oiseau_resize_handler" ]; then
+            _OISEAU_RESIZE_ORIGINAL_TRAP="$current_trap"
+        fi
+    fi
 
     # Install new trap
     trap '_oiseau_resize_handler' WINCH
@@ -2152,17 +2165,20 @@ show_pager() {
 
     if [ -z "$content_source" ] || [ "$content_source" = "-" ]; then
         # Read from stdin
-        while IFS= read -r line; do
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
             content_lines+=("$line")
         done
     elif [ -f "$content_source" ]; then
         # Read from file
-        while IFS= read -r line; do
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
             content_lines+=("$line")
         done < "$content_source"
     else
         # Treat as variable content
-        while IFS= read -r line; do
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
             content_lines+=("$line")
         done <<< "$content_source"
     fi

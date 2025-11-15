@@ -123,8 +123,9 @@ test_recursion_prevention() {
 
 # Test 9: Trap chaining - saves original
 test_trap_chaining_save() {
-    if grep -q '_OISEAU_RESIZE_ORIGINAL_TRAP=.*trap -p WINCH' "$PROJECT_ROOT/oiseau.sh"; then
-        echo "  ✓ Saves original WINCH trap"
+    # Check for trap saving logic (may include re-register protection)
+    if grep -q 'trap -p WINCH' "$PROJECT_ROOT/oiseau.sh" && grep -q '_OISEAU_RESIZE_ORIGINAL_TRAP' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Saves original WINCH trap (with re-register protection)"
         return 0
     else
         echo "  ✗ Doesn't save original trap"
