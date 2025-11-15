@@ -1,317 +1,163 @@
-# Oiseau Widget Reference
-
-**Philosophy**: Zero config by default, 3 env vars for global customization:
-- `OISEAU_BORDER_STYLE` - Global border style (rounded/double/ascii)
-- `OISEAU_BOX_WIDTH` - Default box width (60)
-- `COLOR_*` - Standard color variables for theming
-
-## Border Styles
-
-**ROUNDED** (default): `╭─╮ │ ╰─╯`
-**DOUBLE**: `╔═╗ ║ ╚═╝`
-**SQUARE**: `┌─┐ │ └─┘`
-**ASCII**: `+--+ | +--+`
-
-## Widget Reference
-
-### Bordered Box Widgets
-
-#### `show_box <type> <title> <message> [commands...]`
-Display important messages in a bordered container.
-
-**Parameters**:
-- `type`: error, warning, info, success
-- `title`: Box title (displays with icon)
-- `message`: Main message content (word-wrapped)
-- `commands`: Optional command suggestions (prefixed, code-styled)
-
-**Border**: DOUBLE (`╔═╗`)
-**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
-**Colors**: error=red, warning=orange, info=blue, success=green
-**Padding**: 2 spaces horizontal, 1 line vertical
-
-```
-╔══════════════════════════════════════════════════════════╗
-║  [icon]  Title                                           ║
-╠══════════════════════════════════════════════════════════╣
-║                                                          ║
-║  Message content here                                    ║
-║                                                          ║
-║  To resolve:                                             ║
-║    command one                                           ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-```
-
----
-
-#### `show_header_box <title> [subtitle]`
-Display prominent page/section header.
-
-**Parameters**:
-- `title`: Main header text (word-wrapped)
-- `subtitle`: Optional subtitle (word-wrapped)
-
-**Border**: ROUNDED (`╭─╮`)
-**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
-**Color**: Bold cyan/blue
-**Padding**: 3 spaces horizontal, 1 line vertical
-
-```
-  ╭──────────────────────────────────────────────────────────╮
-  │                                                          │
-  │   Title Text Here                                       │
-  │                                                          │
-  │   Subtitle text here                                    │
-  │                                                          │
-  ╰──────────────────────────────────────────────────────────╯
-```
-
----
-
-#### `show_section_header <title> [step] [total] [subtitle]`
-Display section header with optional step counter.
-
-**Parameters**:
-- `title`: Section title
-- `step`: Current step number (optional)
-- `total`: Total steps (optional)
-- `subtitle`: Subtitle text (optional)
-
-**Border**: ROUNDED (`╭─╮`)
-**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
-**Color**: Muted/dim
-**Format**: `Step X of Y › subtitle`
-
-```
-╭────────────────────────────────────────────────────────────╮
-│  Title                                                     │
-│  Step 2 of 4 › Subtitle text                               │
-╰────────────────────────────────────────────────────────────╯
-```
-
----
-
-#### `show_summary <title> <items...>`
-Display summary information in a bordered list.
-
-**Parameters**:
-- `title`: Summary title
-- `items`: List items (one per line)
-
-**Border**: SQUARE (`┌─┐`)
-**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
-**Color**: Muted
-**Padding**: 2 spaces horizontal
-
-```
-  ┌──────────────────────────────────────────────────────────┐
-  │  Title                                                   │
-  ├──────────────────────────────────────────────────────────┤
-  │  Item 1                                                  │
-  │  Item 2                                                  │
-  └──────────────────────────────────────────────────────────┘
-```
-
----
-
-### Status Message Widgets
-
-#### `show_success <message>`
-#### `show_error <message>`
-#### `show_warning <message>`
-#### `show_info <message>`
-
-Display inline status messages with icons.
-
-**Parameters**:
-- `message`: Status message text (word-wrapped)
-
-**Icons**: ✓ (success), ✗ (error), ⚠ (warning), ℹ (info)
-**Colors**: green, red, orange, blue
-**Format**: `  [icon]  Message text`
-
-```
-  ✓  Operation completed successfully
-  ✗  Failed to connect
-  ⚠  This action cannot be undone
-  ℹ  Processing 50 files...
-```
-
----
-
-### Progress Widgets
-
-#### `show_progress_bar <current> <total> [label]`
-Display progress bar with percentage.
-
-**Parameters**:
-- `current`: Current progress value
-- `total`: Total value (100%)
-- `label`: Optional label text
-
-**Bar Width**: 20 characters
-**Fill**: `█` (rich), `#` (plain)
-**Empty**: `░` (rich), `-` (plain)
-**Format**: `Label: ████████░░░░░░░░░░ 40% (4/10)`
-
-```
-Installation: ████████████░░░░░░░░ 60% (6/10)
-```
-
----
-
-#### `show_checklist <array_name>`
-Display task checklist with status indicators.
-
-**Parameters**:
-- `array_name`: Name of bash array containing "status|label|detail" items
-
-**Statuses**: done (✓), active (●), pending (○), skip (—)
-**Colors**: done=green, active=blue, pending=dim, skip=yellow
-**Columns**: Label width 24 chars, detail fills remaining
-
-```
-  ✓  Build Docker image     Completed in 45s
-  ●  Run tests              156 tests running...
-  ○  Deploy to staging      Waiting
-  —  Run linter             Skipped (--no-lint flag)
-```
-
----
-
-### Header Widgets
-
-#### `show_header <title>`
-Simple bold header without borders.
-
-**Parameters**:
-- `title`: Header text
-
-**Format**: Bold text with blank lines before/after
-
-```
-
-Title Text Here
-
-```
-
----
-
-#### `show_subheader <title>`
-Secondary header, muted style.
-
-**Parameters**:
-- `title`: Subheader text
-
-**Format**: Muted/dim text, no blank lines
-
-```
-Subtitle Text Here
-```
-
----
-
-### Formatting Helpers
-
-#### `print_kv <key> <value> [width]`
-Display key-value pairs in aligned columns.
-
-**Parameters**:
-- `key`: Key name
-- `value`: Value text
-- `width`: Key column width (default: 20)
-
-**Format**: `  Key:     Value`
-
-```
-  Project:              my-awesome-app
-  Version:              1.2.3
-```
-
----
-
-#### `print_command <command>`
-Display command in code/monospace style.
-
-**Parameters**:
-- `command`: Command text
-
-**Format**: `  command text` (dim/code color)
-
----
-
-#### `print_item <text>`
-Display bulleted list item.
-
-**Parameters**:
-- `text`: Item text
-
-**Format**: `  • Text` (rich), `  - Text` (plain)
-
----
-
-#### `print_step <number> <text>`
-Display numbered step.
-
-**Parameters**:
-- `number`: Step number
-- `text`: Step text
-
-**Format**: `  1. Text`
-
----
-
-#### `print_section <title>`
-Display section divider.
-
-**Parameters**:
-- `title`: Section title
-
-**Format**: Bold title with decorative line
-
----
-
-#### `print_next_steps <items...>`
-Display numbered list of next steps.
-
-**Parameters**:
-- `items`: Step items
-
-**Format**: Numbered list in styled block
-
----
-
-## Implementation Requirements
-
-### Width Calculations
-- **Always use `_display_width()`** for measuring text (handles CJK, emoji, full-width chars)
-- **Never use** `${#string}`, `wc -c`, `wc -m` for display width
-
-### Padding
-- **Always use `_pad_to_width()`** for padding content to exact width
-- **All bordered lines must have right borders** (no missing borders)
-
-### Security
-- **Always use `_escape_input()`** on user-provided strings
-- Strips ANSI codes, control characters, prevents injection
-
-### Border Box Rules
-1. Inner width = `box_width - 2` (subtract left/right borders)
-2. Content padding = `inner_width - left_padding - right_padding`
-3. Word wrap at content padding width using `fold -s`
-4. Every content line padded to exact inner_width
-5. Every line has both left AND right borders
-
-### Wide Character Support
-Test all widgets with:
-- ASCII text
-- Emoji (2-column width)
-- CJK characters (2-column width)
-- Full-width characters
-- Mixed content
-
-### Fallback Modes
-- **Rich mode**: UTF-8 + color (default)
-- **Color mode**: ASCII + color
-- **Plain mode**: ASCII only
+# Oiseau Widget Specification
+
+## Overview
+Oiseau is a modern, zero-dependency terminal UI library for Bash that provides 30+ reusable widgets with automatic terminal capability detection and graceful degradation.
+
+## Core Requirements
+
+### Zero Dependencies
+- Pure bash implementation (Bash 4.0+)
+- No external tools required
+- Graceful degradation when optional tools unavailable
+
+### Terminal Mode Support
+1. **Rich Mode** - Full 256-color + UTF-8 Unicode
+2. **Color Mode** - 256-color + ASCII fallbacks
+3. **Plain Mode** - No color, ASCII only (pipes, CI/CD, NO_COLOR=1)
+
+### Widget Categories
+
+#### 1. Status Messages
+- `show_success()` - Green checkmark with message
+- `show_error()` - Red X with message
+- `show_warning()` - Orange warning with message
+- `show_info()` - Blue info with message
+
+#### 2. Headers
+- `show_header()` - Simple bold header
+- `show_subheader()` - Muted subheader
+- `show_section_header()` - Boxed header with optional step counter
+
+#### 3. Boxes
+- `show_box()` - Styled box with type, title, message, and optional commands
+- Types: error, warning, info, success
+- Auto-wrapping for long messages
+- Command suggestions section
+
+#### 4. Progress & Lists
+- `show_progress_bar()` - Progress bar with percentage
+- `show_checklist()` - Status-based checklist (done, active, pending, skip)
+- `show_summary()` - Summary box with multiple items
+
+#### 5. Interactive Prompts
+- `prompt_confirm()` - Yes/no confirmation
+- `ask_yes_no()` - Alias for prompt_confirm
+- `ask_input()` - Text input with optional default
+
+#### 6. Formatting Helpers
+- `print_kv()` - Key-value pairs
+- `print_command()` - Code-styled commands
+- `print_item()` - Bulleted list items
+- `print_section()` - Section titles
+- `print_step()` - Numbered steps
+- `print_next_steps()` - Next steps list
+
+## Design Principles
+
+### 1. KISS (Keep It Simple, Stupid)
+- Simple function calls
+- Minimal configuration
+- Sensible defaults
+- Zero config to get started
+
+### 2. Security
+- Input sanitization via `_escape_input()`
+- ANSI code removal
+- Control character stripping
+- Prevents code injection
+
+### 3. Compatibility
+- Works in all terminal environments
+- Automatic degradation
+- Respects NO_COLOR standard
+- UI_DISABLE toggle for complete disablement
+
+### 4. Performance
+- Terminal detection cached
+- Minimal overhead
+- No repeated capability checks
+
+## Border/Box Drawing Styles
+
+### Current Implementation
+Two box styles available based on terminal UTF-8 support:
+
+1. **Rounded Borders** (UTF-8)
+   - Used in: section headers, summary boxes
+   - Characters: ╭─╮│╰─╯
+
+2. **Double Borders** (UTF-8)
+   - Used in: show_box widgets
+   - Characters: ┏━┓┃┗━┛
+
+3. **ASCII Fallback** (No UTF-8)
+   - Used in: all modes when UTF-8 unavailable
+   - Characters: +---+ |
+
+### Border Style Selection
+- Automatically determined by UTF-8 detection
+- No user configuration currently available
+- Hardcoded per widget type
+
+## Color System
+
+### Current Implementation
+- 256-color ANSI palette
+- Predefined color constants
+- Auto-disabled when color unsupported
+- Color variables exported globally
+
+### Color Categories
+1. **Status Colors** - Success, error, warning, info, accent
+2. **UI Element Colors** - Header, border, muted, dim
+3. **Priority Colors** - P0 (critical), P1 (high), P2 (medium)
+4. **Special Colors** - Link, code
+
+## Width Management
+
+### Current Implementation
+- Auto-detection via `tput cols`
+- Default: 60 columns for boxes
+- Clamped to terminal width minus 4
+- No user override available
+
+## Critical Gaps Identified
+
+### 1. No Customization System
+- Border styles are hardcoded per widget
+- Colors cannot be overridden
+- Box width is fixed at 60
+- No environment variable overrides
+
+### 2. Inconsistent Box Usage
+- Section headers use rounded borders
+- Error/warning boxes use double borders
+- No unified border selection mechanism
+
+### 3. Limited Flexibility
+- Cannot change border style globally
+- Cannot adjust box width globally
+- Cannot customize colors beyond editing source
+
+## Requirements for Customization
+
+Based on KISS principle, any customization system should:
+
+1. **Work with zero config** - Current behavior is default
+2. **Simple override mechanism** - Environment variables only
+3. **Global scope** - One setting affects all widgets
+4. **No complexity** - No themes, no config files, no APIs
+5. **Three border styles** - rounded, double, ascii (user choice)
+6. **Width override** - Single global box width setting
+7. **Color override** - Optional color palette selection
+
+## Non-Requirements
+
+To maintain simplicity:
+
+- No per-widget customization
+- No theme system
+- No config files
+- No plugin architecture
+- No runtime configuration APIs
+- No complex color schemes
