@@ -195,22 +195,10 @@ view::footer() {
 
     case ${MODEL[view]} in
         tasks)
-            echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+            echo -ne "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
             ;;
         *)
-            echo -e "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
-            ;;
-    esac
-}
-
-# Render just the status line (for selective updates)
-view::footer_status_only() {
-    case ${MODEL[view]} in
-        tasks)
-            echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
-            ;;
-        *)
-            echo -e "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+            echo -ne "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
             ;;
     esac
 }
@@ -356,12 +344,6 @@ app::run() {
     view::render
     last_view="${MODEL[view]}"
 
-    # Save cursor position at the footer line for selective updates
-    # Move up 1 line from current position (to footer status line)
-    echo -en "\033[1A\r"
-    tui::save_cursor
-    echo -en "\033[1B"
-
     while $running; do
         # Handle input
         local key=$(app::read_key)
@@ -384,16 +366,17 @@ app::run() {
             view::render
             need_full_redraw=false
             last_view="${MODEL[view]}"
-
-            # Re-save cursor position at footer line
-            echo -en "\033[1A\r"
-            tui::save_cursor
-            echo -en "\033[1B"
         else
             # Selective update: just update the footer status line
-            tui::restore_cursor
-            echo -en "\033[K"  # Clear from cursor to end of line
-            view::footer_status_only
+            # Move to beginning of current line and overwrite
+            case ${MODEL[view]} in
+                tasks)
+                    echo -ne "\r\033[K${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+                    ;;
+                *)
+                    echo -ne "\r\033[K${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+                    ;;
+            esac
         fi
     done
 }

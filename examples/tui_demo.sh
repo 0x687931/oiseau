@@ -155,11 +155,6 @@ render_tasks() {
     fi
 }
 
-# Render just the footer (for selective updates)
-render_footer() {
-    echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
-}
-
 # Main render function - redraws entire screen
 render_screen() {
     clear_screen
@@ -182,7 +177,7 @@ render_screen() {
     # Footer with instructions
     echo ""
     echo -e "${COLOR_DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    render_footer
+    echo -ne "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
 }
 
 # ==============================================================================
@@ -238,13 +233,6 @@ run_tui() {
     render_screen
     last_view="$CURRENT_VIEW"
 
-    # Save cursor position at the footer line for selective updates
-    # We need to calculate where it is: move up 1 line from current position
-    echo -en "\033[1A"  # Move up one line (to footer line)
-    echo -en "\r"       # Move to beginning of line
-    save_cursor
-    echo -en "\033[1B"  # Move back down
-
     while $running; do
         # Read input (non-blocking with 1s timeout)
         local key=$(read_key)
@@ -267,16 +255,10 @@ run_tui() {
             render_screen
             need_full_redraw=false
             last_view="$CURRENT_VIEW"
-
-            # Re-save cursor position at footer line
-            echo -en "\033[1A\r"
-            save_cursor
-            echo -en "\033[1B"
         else
             # Selective update: just update the footer counter
-            restore_cursor
-            echo -en "\033[K"  # Clear from cursor to end of line
-            render_footer
+            # Move to beginning of current line and overwrite
+            echo -ne "\r\033[K${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
         fi
     done
 }
