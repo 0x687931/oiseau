@@ -37,12 +37,24 @@ pause_between_sections() {
 
 clear
 
-# Header
+# Header - demonstrates emoji alignment with the fix from PR#1
 echo ""
-show_header "🐦  Oiseau - Modern Terminal UI Library for Bash"
-echo ""
-echo -e "${COLOR_MUTED}A showcase of all available widgets and components${RESET}"
-echo ""
+echo -e "${COLOR_HEADER}${BOLD}"
+
+# Define the box width (inner content width)
+header_inner_width=59
+
+# Build the header lines with proper padding
+# Note: Using _pad_to_width ensures emoji and wide characters are handled correctly
+echo "  ╔═══════════════════════════════════════════════════════════╗"
+echo "  ║$(_pad_to_width "" $header_inner_width)║"
+echo "  ║$(_pad_to_width "   🐦  Oiseau - Modern Terminal UI Library for Bash" $header_inner_width)║"
+echo "  ║$(_pad_to_width "" $header_inner_width)║"
+echo "  ║$(_pad_to_width "   A showcase of all available widgets and components" $header_inner_width)║"
+echo "  ║$(_pad_to_width "" $header_inner_width)║"
+echo "  ╚═══════════════════════════════════════════════════════════╝"
+echo -e "${RESET}"
+
 echo -e "${COLOR_MUTED}Mode: ${OISEAU_MODE} | Colors: ${OISEAU_HAS_COLOR} | UTF-8: ${OISEAU_HAS_UTF8} | Width: ${OISEAU_WIDTH}${RESET}"
 
 pause_between_sections
