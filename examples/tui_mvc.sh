@@ -193,9 +193,6 @@ view::footer() {
     echo ""
     echo -e "${COLOR_DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
-    # Save cursor position before status line for selective updates
-    tui::save_cursor
-
     case ${MODEL[view]} in
         tasks)
             echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
@@ -359,6 +356,12 @@ app::run() {
     view::render
     last_view="${MODEL[view]}"
 
+    # Save cursor position at the footer line for selective updates
+    # Move up 1 line from current position (to footer status line)
+    echo -en "\033[1A\r"
+    tui::save_cursor
+    echo -en "\033[1B"
+
     while $running; do
         # Handle input
         local key=$(app::read_key)
@@ -381,6 +384,11 @@ app::run() {
             view::render
             need_full_redraw=false
             last_view="${MODEL[view]}"
+
+            # Re-save cursor position at footer line
+            echo -en "\033[1A\r"
+            tui::save_cursor
+            echo -en "\033[1B"
         else
             # Selective update: just update the footer status line
             tui::restore_cursor
