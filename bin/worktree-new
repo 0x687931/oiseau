@@ -172,9 +172,15 @@ fi
 
 wait_for_git_lock_clear 45 "Preparing worktree" || exit 1
 
-# Check if base branch exists
-if ! git show-ref --verify --quiet "refs/heads/$BASE_BRANCH"; then
-    print_error "Base branch '$BASE_BRANCH' does not exist"
+# Fetch latest changes from remote FIRST so we can check remote branches
+print_info "Fetching latest changes from remote..."
+wait_for_git_lock_clear 45 "Fetching latest changes" || exit 1
+git fetch origin
+
+# Check if base branch exists (local or remote)
+if ! git show-ref --verify --quiet "refs/heads/$BASE_BRANCH" && \
+   ! git show-ref --verify --quiet "refs/remotes/origin/$BASE_BRANCH"; then
+    print_error "Base branch '$BASE_BRANCH' does not exist locally or on remote"
     exit 1
 fi
 
@@ -197,11 +203,6 @@ if [ -d "$WORKTREE_PATH" ]; then
     print_error "Directory '$WORKTREE_PATH' already exists"
     exit 1
 fi
-
-# Fetch latest changes from remote
-print_info "Fetching latest changes from remote..."
-wait_for_git_lock_clear 45 "Fetching latest changes" || exit 1
-git fetch origin
 
 # Update base branch
 print_info "Updating $BASE_BRANCH branch..."
