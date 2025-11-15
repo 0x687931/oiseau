@@ -13,13 +13,13 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
-print_info() { echo -e "${BLUE}ℹ${NC} $1"; }
-print_success() { echo -e "${GREEN}✓${NC} $1"; }
-print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
-print_error() { echo -e "${RED}✗${NC} $1"; }
-print_header() { echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
-print_section() { echo -e "${MAGENTA}▸ $1${NC}"; }
+# Function to print colored output (using printf for safety)
+print_info() { printf "${BLUE}ℹ${NC} %s\n" "$1"; }
+print_success() { printf "${GREEN}✓${NC} %s\n" "$1"; }
+print_warning() { printf "${YELLOW}⚠${NC} %s\n" "$1"; }
+print_error() { printf "${RED}✗${NC} %s\n" "$1"; }
+print_header() { printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
+print_section() { printf "${MAGENTA}▸ %s${NC}\n" "$1"; }
 
 # Check if gh CLI is installed
 if ! command -v gh &> /dev/null; then
@@ -38,7 +38,7 @@ fi
 echo ""
 print_header
 echo ""
-echo -e "${CYAN}📊 CODE REVIEW DASHBOARD${NC}"
+printf "${CYAN}📊 CODE REVIEW DASHBOARD${NC}\n"
 echo ""
 print_header
 echo ""

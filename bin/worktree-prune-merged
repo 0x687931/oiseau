@@ -17,6 +17,29 @@ print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 print_header() { echo -e "${BOLD}${CYAN}$1${NC}"; }
 
+get_default_branch() {
+    # Try to get from remote HEAD
+    local default_branch
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||')
+
+    if [ -n "$default_branch" ]; then
+        printf '%s\n' "$default_branch"
+        return 0
+    fi
+
+    # Fallback: check which common default branch exists
+    for branch in main master trunk; do
+        if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+            printf '%s\n' "$branch"
+            return 0
+        fi
+    done
+
+    # Ultimate fallback
+    printf '%s\n' "main"
+    return 1
+}
+
 usage() {
     cat <<'EOF'
 Usage: bin/worktree-prune-merged [options]
@@ -24,7 +47,7 @@ Usage: bin/worktree-prune-merged [options]
 Automatically delete worktrees whose branches have already been merged.
 
 Options:
-  --base <branch>        Base branch to compare against (default: main)
+  --base <branch>        Base branch to compare against (default: auto-detected)
   --timeout <seconds>    Max seconds to wait for git worktree remove (default: 900)
   --dry-run              Show what would be removed without deleting
   --skip-preclean        Skip deleting tmp/cache, node_modules, etc. before pruning
@@ -39,7 +62,8 @@ Examples:
 EOF
 }
 
-BASE_BRANCH="main"
+# Default to empty - will be auto-detected if not provided via --base flag
+BASE_BRANCH=""
 DEFAULT_TIMEOUT=900
 DRY_RUN=false
 SKIP_PRE_CLEAN=false
@@ -88,6 +112,11 @@ done
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     print_error "Not inside a git repository"
     exit 1
+fi
+
+# Auto-detect base branch if not provided via --base flag
+if [ -z "$BASE_BRANCH" ]; then
+    BASE_BRANCH=$(get_default_branch)
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
