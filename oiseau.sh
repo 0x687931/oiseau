@@ -71,26 +71,8 @@ else
     fi
 fi
 
-# Get terminal width (cached - call refresh_width to update)
+# Get terminal width (cached)
 export OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
-
-# Refresh terminal width (call before rendering large widgets)
-refresh_width() {
-    OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
-}
-
-# Cache perl availability for _display_width to avoid repeated spawning
-_OISEAU_HAS_PERL=""
-_check_perl_once() {
-    if [ -z "$_OISEAU_HAS_PERL" ]; then
-        if command -v perl >/dev/null 2>&1; then
-            _OISEAU_HAS_PERL="1"
-        else
-            _OISEAU_HAS_PERL="0"
-        fi
-    fi
-    return $(( 1 - _OISEAU_HAS_PERL ))
-}
 
 # ==============================================================================
 # COLOR DEFINITIONS (ANSI 256-Color Palette)
@@ -168,45 +150,38 @@ fi
 # Escape user input to prevent code injection
 _escape_input() {
     local input="$1"
-    # Remove ALL ANSI escape sequences (CSI, OSC, etc.) and control characters
-    # Use printf to avoid echo -e interpretation of backslashes
-    # Use $'\033' for ESC character (portable across GNU and BSD sed)
-    local esc=$'\033'
-    printf '%s\n' "$input" | sed -E "s/${esc}\[[0-9;]*[A-Za-z]//g; s/${esc}].*($'\007'|${esc}\\\\)//g; s/${esc}[^[]]//g" | tr -d '\000-\037\177'
+    # Remove ANSI escape sequences and control characters
+    echo "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037' | tr -d '\177'
 }
 
 # Calculate visible length (ignoring ANSI codes)
 _visible_len() {
     local str="$1"
-    # Remove ANSI codes before calculating length - use printf to avoid echo -e issues
-    # Use $'\033' for ESC character (portable across GNU and BSD sed)
-    local esc=$'\033'
-    local clean
-    clean=$(printf '%s\n' "$str" | sed -E "s/${esc}\[[0-9;]*[A-Za-z]//g; s/${esc}].*($'\007'|${esc}\\\\)//g; s/${esc}[^[]]//g")
-    printf '%s\n' "${#clean}"
+    # Remove ANSI codes before calculating length
+    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    echo "${#clean}"
 }
 
 # Calculate display width (accounts for wide characters like emojis)
 # Emojis and some Unicode characters take 2 columns, this estimates the width
 _display_width() {
     local str="$1"
-    # Remove ANSI codes first - use printf to avoid echo -e issues
-    local clean
-    clean=$(printf '%s\n' "$str" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g')
+    # Remove ANSI codes first
+    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
 
-    # Try perl for accurate display width calculation if available (cached check)
-    if _check_perl_once; then
+    # Try perl for accurate display width calculation if the module is available
+    if command -v perl >/dev/null 2>&1; then
         local perl_result
-        perl_result=$(printf '%s\n' "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
+        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
-            printf '%s\n' "$perl_result"
+            echo "$perl_result"
             return
         fi
     fi
 
     # Fallback: Perl-based wcwidth estimation without external modules
     # This handles CJK, emojis, and other wide characters more accurately
-    if [ "$_OISEAU_HAS_PERL" = "1" ]; then
+    if command -v perl >/dev/null 2>&1; then
         local perl_width
         perl_width=$(echo -n "$clean" | perl -C -ne '
             use utf8;
@@ -345,40 +320,6 @@ _clamp_width() {
     else
         echo "$requested"
     fi
-}
-
-# Get default branch for current git repository
-# Returns the default branch name (e.g., "main", "master", "trunk")
-get_default_branch() {
-    # Try to get from remote HEAD
-    local default_branch
-    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||')
-
-    if [ -n "$default_branch" ]; then
-        printf '%s\n' "$default_branch"
-        return 0
-    fi
-
-    # Fallback: try gh if available
-    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-        default_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null)
-        if [ -n "$default_branch" ]; then
-            printf '%s\n' "$default_branch"
-            return 0
-        fi
-    fi
-
-    # Last resort: check which common default branch exists
-    for branch in main master trunk; do
-        if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
-            printf '%s\n' "$branch"
-            return 0
-        fi
-    done
-
-    # Ultimate fallback - return success so scripts with set -e don't abort
-    printf 'main\n'
-    return 0
 }
 
 # ==============================================================================
@@ -560,39 +501,115 @@ show_box() {
 # PROGRESS & CHECKLIST
 # ==============================================================================
 
-# Show a progress bar
-# Usage: show_progress_bar <current> <total> [label]
+#===============================================================================
+# FUNCTION: show_progress_bar
+# DESCRIPTION: Display a progress bar with optional animation
+# PARAMETERS:
+#   $1 - current (number, required): Current progress value
+#   $2 - total (number, required): Total/maximum value
+#   $3 - label (string, optional): Label text (default: "Progress")
+# ENVIRONMENT VARIABLES:
+#   OISEAU_PROGRESS_ANIMATE - Enable in-place animation (1=yes, 0=no, default: auto)
+#   OISEAU_PROGRESS_WIDTH   - Bar width in characters (default: 20)
+# RETURNS: 0 on success, 1 on error
+# MODES:
+#   Rich:  UTF-8 filled/empty blocks (█░)
+#   Color: ASCII filled/empty (#-)
+#   Plain: Percentage only
+# BEHAVIOR:
+#   - Auto-detects animation: if called rapidly in TTY, updates in place
+#   - Prints newline when progress reaches 100%
+#   - Non-TTY or Plain mode: always prints new line
+# EXAMPLE:
+#   for i in {1..100}; do
+#     show_progress_bar $i 100 "Downloading"
+#     sleep 0.05
+#   done
+#===============================================================================
 show_progress_bar() {
     local current="$1"
     local total="$2"
     local label="${3:-Progress}"
 
-    # Guard against invalid input
-    if [ "$total" -le 0 ]; then
-        echo -e "${label}: Invalid total ($total)"
+    # Validate inputs
+    if [ -z "$current" ] || [ -z "$total" ]; then
+        echo "ERROR: show_progress_bar requires current and total arguments" >&2
         return 1
     fi
 
-    # Clamp current to valid range [0, total]
-    if [ "$current" -lt 0 ]; then
-        current=0
-    elif [ "$current" -gt "$total" ]; then
-        current="$total"
+    # Ensure numeric values
+    if ! [[ "$current" =~ ^[0-9]+$ ]] || ! [[ "$total" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: show_progress_bar requires numeric arguments" >&2
+        return 1
     fi
 
+    # Prevent division by zero
+    if [ "$total" -eq 0 ]; then
+        echo "ERROR: show_progress_bar total cannot be zero" >&2
+        return 1
+    fi
+
+    # Sanitize label
+    local safe_label="$(_escape_input "$label")"
+
+    # Calculate progress
     local percent=$((current * 100 / total))
-    local bar_width=20
+    local bar_width="${OISEAU_PROGRESS_WIDTH:-20}"
     local filled=$((current * bar_width / total))
     local empty=$((bar_width - filled))
 
-    # Use ASCII fallback when UTF-8 is not available
-    if [ "$OISEAU_HAS_UTF8" = "1" ]; then
-        local bar="${COLOR_SUCCESS}$(_repeat_char '█' "$filled")${COLOR_DIM}$(_repeat_char '░' "$empty")${RESET}"
+    # Determine if we should animate (update in place)
+    local should_animate=0
+
+    # Check explicit override
+    if [ -n "${OISEAU_PROGRESS_ANIMATE+x}" ]; then
+        if [ "$OISEAU_PROGRESS_ANIMATE" = "1" ]; then
+            should_animate=1
+        fi
     else
-        local bar="${COLOR_SUCCESS}$(_repeat_char '#' "$filled")${COLOR_DIM}$(_repeat_char '-' "$empty")${RESET}"
+        # Auto-detect: animate if stdout is a TTY and not plain mode
+        # Check at call time (not source time) to handle redirected output
+        if [ -t 1 ] && [ "$OISEAU_MODE" != "plain" ]; then
+            should_animate=1
+        fi
     fi
 
-    echo -e "${label}: ${bar} ${percent}% (${current}/${total})"
+    # Build progress bar based on mode
+    local bar_display
+    if [ "$OISEAU_MODE" = "plain" ]; then
+        # Plain mode: just percentage
+        bar_display="${percent}%"
+    else
+        # Build visual bar
+        local filled_char empty_char
+        if [ "$OISEAU_MODE" = "rich" ]; then
+            filled_char="█"
+            empty_char="░"
+        else
+            filled_char="#"
+            empty_char="-"
+        fi
+
+        local bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
+        bar_display="${bar} ${percent}%"
+    fi
+
+    # Add count if space allows
+    local full_display="${safe_label}: ${bar_display} (${current}/${total})"
+
+    # Output
+    if [ "$should_animate" = "1" ]; then
+        # In-place update (carriage return, clear to end of line)
+        echo -en "\r${full_display}\033[K"
+
+        # Print newline when complete
+        if [ "$current" -ge "$total" ]; then
+            echo ""
+        fi
+    else
+        # Static mode: print new line each time
+        echo -e "${full_display}"
+    fi
 }
 
 # Show a checklist with status indicators
@@ -600,27 +617,11 @@ show_progress_bar() {
 # Array format: "status|label|details" where status is: done, active, pending, skip
 show_checklist() {
     local array_name="$1"
-
-    # Validate array name to prevent injection (only allow valid bash identifiers)
-    if ! [[ "$array_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-        echo "Error: Invalid array name '$array_name'" >&2
-        return 1
-    fi
-
-    # Use declare -n for nameref if bash 4.3+, otherwise eval with validated input
-    if [ "${BASH_VERSINFO[0]}" -gt 4 ] || ([ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 3 ]); then
-        declare -n items="$array_name"
-    else
-        # Safe to use eval now that array_name is validated
-        eval "local items=(\"\${${array_name}[@]}\")"
-    fi
+    # Use eval for bash 3.x/4.x compatibility (nameref requires bash 4.3+)
+    eval "local items=(\"\${${array_name}[@]}\")"
 
     for item in "${items[@]}"; do
         IFS='|' read -r status label details <<< "$item"
-
-        # Escape all user-provided fields
-        label=$(_escape_input "$label")
-        details=$(_escape_input "$details")
 
         local icon color
         case "$status" in
@@ -631,9 +632,9 @@ show_checklist() {
         esac
 
         if [ -n "$details" ]; then
-            printf "  %b%s%b  %b%s%b  %b%s%b\n" "$color" "$icon" "$RESET" "$BOLD" "$label" "$RESET" "$COLOR_MUTED" "$details" "$RESET"
+            echo -e "  ${color}${icon}${RESET}  ${BOLD}${label}${RESET}  ${COLOR_MUTED}${details}${RESET}"
         else
-            printf "  %b%s%b  %s\n" "$color" "$icon" "$RESET" "$label"
+            echo -e "  ${color}${icon}${RESET}  ${label}"
         fi
     done
 }
@@ -719,42 +720,42 @@ ask_input() {
 
 # Print key-value pair
 print_kv() {
-    local key="$(_escape_input "$1")"
-    local value="$(_escape_input "$2")"
+    local key="$1"
+    local value="$2"
     local key_width="${3:-20}"
 
-    printf "  %b%-${key_width}s%b %s\n" "$COLOR_MUTED" "$key" "$RESET" "$value"
+    printf "  ${COLOR_MUTED}%-${key_width}s${RESET} %s\n" "$key" "$value"
 }
 
 # Print command in code style
 print_command() {
-    local cmd="$(_escape_input "$1")"
-    printf "  %b%s%b\n" "$COLOR_CODE" "$cmd" "$RESET"
+    local cmd="$1"
+    echo -e "  ${COLOR_CODE}${cmd}${RESET}"
 }
 
 # Print inline command
 print_command_inline() {
-    local cmd="$(_escape_input "$1")"
-    printf "%b%s%b" "$COLOR_CODE" "$cmd" "$RESET"
+    local cmd="$1"
+    echo -e "${COLOR_CODE}${cmd}${RESET}"
 }
 
 # Print bulleted item
 print_item() {
-    local item="$(_escape_input "$1")"
-    printf "  • %s\n" "$item"
+    local item="$1"
+    echo -e "  • $item"
 }
 
 # Print section title
 print_section() {
-    local title="$(_escape_input "$1")"
-    printf "\n%b%s%b\n" "$COLOR_HEADER" "$title" "$RESET"
+    local title="$1"
+    echo -e "\n${COLOR_HEADER}${title}${RESET}"
 }
 
 # Print numbered step
 print_step() {
     local num="$1"
-    local text="$(_escape_input "$2")"
-    printf "  %b%s.%b %s\n" "$COLOR_INFO" "$num" "$RESET" "$text"
+    local text="$2"
+    echo -e "  ${COLOR_INFO}${num}.${RESET} ${text}"
 }
 
 # Print "next steps" list
@@ -773,6 +774,165 @@ print_box() {
     local title="$1"; shift
     local items=("$@")
     show_summary "$title" "${items[@]}"
+}
+
+# ==============================================================================
+# SPINNER WIDGET
+# ==============================================================================
+
+#===============================================================================
+# FUNCTION: show_spinner
+# DESCRIPTION: Display an animated loading spinner
+# PARAMETERS:
+#   $1 - message (string, required): Message to display next to spinner
+# ENVIRONMENT VARIABLES:
+#   OISEAU_SPINNER_STYLE - Spinner animation style (dots|line|circle|pulse|arc)
+#   OISEAU_SPINNER_FPS   - Animation frame rate (default: 10)
+# RETURNS: Runs until killed (Ctrl+C or kill PID)
+# MODES:
+#   Rich:  Animated UTF-8 spinner (⠋⠙⠹⠸...)
+#   Color: Animated ASCII spinner (|/-\)
+#   Plain: Static message only
+# EXAMPLE:
+#   show_spinner "Loading data..." &
+#   SPINNER_PID=$!
+#   # ... do work ...
+#   kill $SPINNER_PID
+#   wait $SPINNER_PID 2>/dev/null
+#===============================================================================
+show_spinner() {
+    local message="${1:-Loading...}"
+
+    # Sanitize input
+    local safe_message="$(_escape_input "$message")"
+
+    # Non-TTY: just print message once and return
+    if [ "$OISEAU_IS_TTY" != "1" ]; then
+        echo "$safe_message"
+        return 0
+    fi
+
+    # Plain mode: static message
+    if [ "$OISEAU_MODE" = "plain" ]; then
+        echo "$safe_message"
+        return 0
+    fi
+
+    # Validate and get spinner style
+    local style="${OISEAU_SPINNER_STYLE:-dots}"
+    case "$style" in
+        dots|line|circle|pulse|arc) ;;
+        *)
+            style="dots"
+            ;;
+    esac
+
+    # Get frames based on mode and style
+    local frames
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        case "$style" in
+            dots)   frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") ;;
+            line)   frames=("⎯" "⎼" "⎽" "⎼") ;;
+            circle) frames=("◐" "◓" "◑" "◒") ;;
+            pulse)  frames=("●" "○" "●" "○") ;;
+            arc)    frames=("◜" "◝" "◞" "◟") ;;
+        esac
+    else
+        # Color mode (ASCII)
+        case "$style" in
+            dots)   frames=("|" "/" "-" "\\") ;;
+            line)   frames=("-" "=" "≡" "=") ;;
+            circle) frames=("|" "/" "-" "\\") ;;
+            pulse)  frames=("*" "o" "*" "o") ;;
+            arc)    frames=("." "o" "O" "o") ;;
+        esac
+    fi
+
+    # Animation settings with validation
+    local fps="${OISEAU_SPINNER_FPS:-10}"
+
+    # Validate FPS is a positive number
+    if ! [[ "$fps" =~ ^[0-9]+$ ]] || [ "$fps" -le 0 ]; then
+        fps=10  # Fallback to default
+    fi
+
+    local delay=$(awk "BEGIN {print 1/$fps}")
+    local frame_idx=0
+    local num_frames=${#frames[@]}
+
+    # Hide cursor
+    echo -en "\033[?25l"
+
+    # Cleanup on exit - clear line and show cursor, then exit
+    cleanup_spinner() {
+        echo -en "\r\033[K\033[?25h"
+        trap - EXIT INT TERM  # Remove trap to prevent recursion
+        exit 0
+    }
+    trap cleanup_spinner EXIT INT TERM
+
+    # Animation loop
+    while true; do
+        local frame="${frames[$frame_idx]}"
+        echo -en "\r${COLOR_INFO}${frame}${RESET}  ${safe_message}\033[K"
+
+        frame_idx=$(( (frame_idx + 1) % num_frames ))
+        sleep "$delay" || exit 0  # Exit if sleep is interrupted
+    done
+}
+
+#===============================================================================
+# FUNCTION: start_spinner
+# DESCRIPTION: Start spinner in background and track PID
+# PARAMETERS:
+#   $1 - message (string, optional): Message to display (default: "Loading...")
+# ENVIRONMENT VARIABLES:
+#   Sets OISEAU_SPINNER_PID - PID of background spinner process
+# RETURNS: 0 on success
+# EXAMPLE:
+#   start_spinner "Processing files..."
+#   # ... do work ...
+#   stop_spinner
+#===============================================================================
+start_spinner() {
+    local message="${1:-Loading...}"
+
+    # Start spinner in background
+    show_spinner "$message" &
+    export OISEAU_SPINNER_PID=$!
+
+    # Give it a moment to start
+    sleep 0.1
+}
+
+#===============================================================================
+# FUNCTION: stop_spinner
+# DESCRIPTION: Stop background spinner started with start_spinner
+# PARAMETERS: None
+# ENVIRONMENT VARIABLES:
+#   Reads OISEAU_SPINNER_PID - PID of spinner to stop
+#   Unsets OISEAU_SPINNER_PID after stopping
+# RETURNS: 0 on success
+# EXAMPLE:
+#   start_spinner "Loading..."
+#   sleep 2
+#   stop_spinner
+#   show_success "Done!"
+#===============================================================================
+stop_spinner() {
+    if [ -n "$OISEAU_SPINNER_PID" ]; then
+        # Kill spinner process
+        kill "$OISEAU_SPINNER_PID" 2>/dev/null
+
+        # Wait for it to finish
+        wait "$OISEAU_SPINNER_PID" 2>/dev/null
+
+        # Clear line and show cursor
+        echo -en "\r\033[K\033[?25h"
+
+        # Unset PID
+        unset OISEAU_SPINNER_PID
+    fi
 }
 
 # ==============================================================================
