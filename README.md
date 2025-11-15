@@ -811,6 +811,67 @@ print_next_steps \
 
 ---
 
+## 🤖 Multi-Agent Decision Framework
+
+Oiseau includes a reusable **Multi-Agent Decision Framework (MADF)** for solving complex development problems using specialized AI agents working in parallel.
+
+### What is MADF?
+
+The framework coordinates multiple specialized agents (Performance, Maintainability, Robustness, Usability, Security, Compatibility) to:
+- Analyze problems from different perspectives
+- Generate diverse solution approaches
+- Compare tradeoffs between approaches
+- Synthesize the best combined solution
+
+### Quick Start
+
+Invoke the framework with a slash command:
+
+```bash
+/madf Implement a tree view widget with expand/collapse
+```
+
+Or reference the skill explicitly:
+
+```
+Please use the multi-agent-framework skill to help me decide whether to split oiseau.sh into multiple files.
+```
+
+### When to Use MADF
+
+Use this framework for:
+- New widget implementation (Tier 3)
+- Architecture decisions (Tier 4)
+- Performance optimizations (Tier 2-3)
+- Complex bug fixes (Tier 2-3)
+- API design questions (Tier 2-3)
+
+Don't use for trivial changes (typos, comments, simple fixes).
+
+### Example Output
+
+The framework provides structured analysis:
+
+1. **Problem Classification** - Complexity tier (1-4) and reasoning
+2. **Agent Solutions** - Each agent's approach with pros/cons/code
+3. **Comparison Matrix** - Side-by-side tradeoff analysis
+4. **Synthesis** - Combined best approach from all perspectives
+5. **Implementation Plan** - Concrete next steps
+6. **Risks & Mitigations** - What could go wrong and how to prevent it
+
+### Documentation
+
+- **Framework Guide**: `docs/multi-agent-framework.md`
+- **Quick Reference**: `docs/examples/madf-sessions/quick-reference.md`
+- **Example Sessions**: `docs/examples/madf-sessions/`
+
+### Configuration Files
+
+- **Agent Skill**: `.claude/skills/multi-agent-framework.md`
+- **Slash Command**: `.claude/commands/madf.md`
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Here's how:
@@ -835,6 +896,16 @@ UI_DISABLE=1 ./gallery.sh
 # Test in pipe
 ./gallery.sh | cat
 ```
+
+### Using MADF for Development
+
+When contributing complex features, consider using the Multi-Agent Decision Framework:
+
+```bash
+/madf Implement [your feature name]
+```
+
+This will provide multiple perspectives on implementation approach, helping ensure your contribution considers performance, maintainability, robustness, usability, security, and compatibility.
 
 ---
 
