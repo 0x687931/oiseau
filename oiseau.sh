@@ -240,7 +240,8 @@ _display_width() {
 
     # Count characters that are likely wide (multibyte UTF-8 sequences of 3+ bytes)
     # CJK and emoji are typically 3-4 byte sequences
-    local byte_count=${#clean}
+    # Use LC_ALL=C to get actual byte count instead of character count
+    local byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
     local estimated_wide=$(( (byte_count - char_count) / 2 ))
 
     # Ensure we don't over-estimate
