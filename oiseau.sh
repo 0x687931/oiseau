@@ -179,15 +179,76 @@ _display_width() {
         fi
     fi
 
-    # Fallback: simple estimation using heuristics
-    # Count characters and add extra width for emojis (which take 2 columns)
+    # Fallback: Perl-based wcwidth estimation without external modules
+    # This handles CJK, emojis, and other wide characters more accurately
+    if command -v perl >/dev/null 2>&1; then
+        local perl_width
+        perl_width=$(echo -n "$clean" | perl -C -ne '
+            use utf8;
+            binmode(STDIN, ":utf8");
+            binmode(STDOUT, ":utf8");
+            chomp;
+            my $width = 0;
+            for my $char (split //, $_) {
+                my $code = ord($char);
+                # East Asian Width ranges (CJK, full-width, etc.)
+                # Based on Unicode East Asian Width property
+                # Note: Ambiguous-width characters (hiragana, katakana) are treated as wide
+                # for better compatibility with CJK-aware terminal emulators
+                if (
+                    # Hiragana
+                    ($code >= 0x3040 && $code <= 0x309F) ||
+                    # Katakana
+                    ($code >= 0x30A0 && $code <= 0x30FF) ||
+                    # CJK Extension A
+                    ($code >= 0x3400 && $code <= 0x4DBF) ||
+                    # CJK Unified Ideographs
+                    ($code >= 0x4E00 && $code <= 0x9FFF) ||
+                    # Hangul Syllables
+                    ($code >= 0xAC00 && $code <= 0xD7AF) ||
+                    # CJK Compatibility Ideographs
+                    ($code >= 0xF900 && $code <= 0xFAFF) ||
+                    # Full-width Latin
+                    ($code >= 0xFF00 && $code <= 0xFF60) ||
+                    # Full-width Hangul
+                    ($code >= 0xFFA0 && $code <= 0xFFDC) ||
+                    # Emoji ranges (most common)
+                    ($code >= 0x1F300 && $code <= 0x1F9FF) ||
+                    # Supplementary Ideographic Plane
+                    ($code >= 0x20000 && $code <= 0x2FFFF) ||
+                    # Misc symbols and pictographs
+                    ($code >= 0x2600 && $code <= 0x26FF) ||
+                    # Dingbats
+                    ($code >= 0x2700 && $code <= 0x27BF)
+                ) {
+                    $width += 2;
+                } else {
+                    $width += 1;
+                }
+            }
+            print $width;
+        ' 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$perl_width" ]; then
+            echo "$perl_width"
+            return
+        fi
+    fi
+
+    # Last resort: basic heuristic for systems without perl
+    # This is less accurate but better than nothing
     local char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
 
-    # Count common emojis and special characters that take 2 columns
-    local emoji_count=$(echo "$clean" | grep -o '[🐦🎯✓✗⚠ℹ⏳◆⬤○◇▶●◉⚡🔄❌✔⚙🎨📦🚀💡🔍📝💬💭]' 2>/dev/null | wc -l | tr -d ' ')
+    # Count characters that are likely wide (multibyte UTF-8 sequences of 3+ bytes)
+    # CJK and emoji are typically 3-4 byte sequences
+    local byte_count=${#clean}
+    local estimated_wide=$(( (byte_count - char_count) / 2 ))
 
-    # Display width = character count + emoji count (since emojis take 2 columns but count as 1 char)
-    echo $((char_count + emoji_count))
+    # Ensure we don't over-estimate
+    if [ "$estimated_wide" -lt 0 ]; then
+        estimated_wide=0
+    fi
+
+    echo $((char_count + estimated_wide))
 }
 
 # Pad a string to a specific display width
