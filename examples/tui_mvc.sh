@@ -314,7 +314,8 @@ app::read_key() {
     local key=""
 
     # Try to read a full escape sequence (for arrow keys)
-    IFS= read -rsn1 -t 0.5 key 2>/dev/null
+    # Use 1s timeout - screen only redraws on input or state change
+    IFS= read -rsn1 -t 1 key 2>/dev/null
 
     if [ "$key" = $'\x1b' ]; then
         # Read next char to see if it's an arrow key
@@ -334,13 +335,31 @@ app::run() {
     trap app::cleanup EXIT INT TERM
 
     local running=true
+    local last_view="${MODEL[view]}"
+    local need_full_redraw=true
 
     while $running; do
         # Update model (business logic)
         controller::update
 
-        # Render view
-        view::render
+        # Full redraw only when view changes or on user input
+        if [ "$need_full_redraw" = true ] || [ "${MODEL[view]}" != "$last_view" ]; then
+            view::render
+            need_full_redraw=false
+            last_view="${MODEL[view]}"
+        else
+            # Selective update: just update the footer frame counter
+            local footer_line=$(( $(tput lines) ))
+            tui::move $footer_line 1
+            case ${MODEL[view]} in
+                tasks)
+                    echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+                    ;;
+                *)
+                    echo -e "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+                    ;;
+            esac
+        fi
 
         # Handle input
         local key=$(app::read_key)
@@ -348,6 +367,8 @@ app::run() {
         if [ -n "$key" ]; then
             if ! controller::handle_key "$key"; then
                 running=false
+            else
+                need_full_redraw=true
             fi
         fi
     done

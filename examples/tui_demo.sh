@@ -187,7 +187,7 @@ render_screen() {
 # Read a single character without waiting (non-blocking with timeout)
 read_key() {
     local key=""
-    # Read with 1 second timeout
+    # Read with 1 second timeout (balances responsiveness with refresh rate)
     IFS= read -rsn1 -t 1 key 2>/dev/null
     echo "$key"
 }
@@ -226,10 +226,20 @@ run_tui() {
     trap cleanup EXIT INT TERM
 
     local running=true
+    local last_view="$CURRENT_VIEW"
+    local need_full_redraw=true
 
     while $running; do
-        # Render the current screen
-        render_screen
+        # Full redraw only when needed
+        if [ "$need_full_redraw" = true ] || [ "$CURRENT_VIEW" != "$last_view" ]; then
+            render_screen
+            need_full_redraw=false
+            last_view="$CURRENT_VIEW"
+        else
+            # Selective update: just update the footer counter
+            move_cursor $(tput lines) 1
+            echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+        fi
 
         # Read input (non-blocking with 1s timeout)
         local key=$(read_key)
@@ -238,6 +248,8 @@ run_tui() {
         if [ -n "$key" ]; then
             if ! process_input "$key"; then
                 running=false
+            else
+                need_full_redraw=true
             fi
         fi
 
