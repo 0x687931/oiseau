@@ -645,7 +645,9 @@ show_checklist() {
     eval "local items=(\"\${${array_name}[@]}\")"
 
     for item in "${items[@]}"; do
-        IFS='|' read -r status label details <<< "$item"
+        # Use local IFS to avoid corrupting global field separator
+        local IFS='|'
+        read -r status label details <<< "$item"
 
         local icon color
         case "$status" in
@@ -1358,7 +1360,9 @@ show_help() {
     local last_was_section=0
     for item in "${help_items[@]}"; do
         # Parse item into key and description
-        IFS='|' read -r key description <<< "$item"
+        # Use local IFS to avoid corrupting global field separator
+        local IFS='|'
+        read -r key description <<< "$item"
 
         # Sanitize inputs
         local safe_key
@@ -1433,7 +1437,9 @@ show_help_paged() {
     local last_was_section=0
 
     for item in "${help_items[@]}"; do
-        IFS='|' read -r key description <<< "$item"
+        # Use local IFS to avoid corrupting global field separator
+        local IFS='|'
+        read -r key description <<< "$item"
         local safe_key
         safe_key="$(_escape_input "$key")"
 
