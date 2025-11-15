@@ -170,15 +170,19 @@ _escape_input() {
     local input="$1"
     # Remove ALL ANSI escape sequences (CSI, OSC, etc.) and control characters
     # Use printf to avoid echo -e interpretation of backslashes
-    printf '%s\n' "$input" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g' | tr -d '\000-\037\177'
+    # Use $'\033' for ESC character (portable across GNU and BSD sed)
+    local esc=$'\033'
+    printf '%s\n' "$input" | sed -E "s/${esc}\[[0-9;]*[A-Za-z]//g; s/${esc}].*($'\007'|${esc}\\\\)//g; s/${esc}[^[]]//g" | tr -d '\000-\037\177'
 }
 
 # Calculate visible length (ignoring ANSI codes)
 _visible_len() {
     local str="$1"
     # Remove ANSI codes before calculating length - use printf to avoid echo -e issues
+    # Use $'\033' for ESC character (portable across GNU and BSD sed)
+    local esc=$'\033'
     local clean
-    clean=$(printf '%s\n' "$str" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g')
+    clean=$(printf '%s\n' "$str" | sed -E "s/${esc}\[[0-9;]*[A-Za-z]//g; s/${esc}].*($'\007'|${esc}\\\\)//g; s/${esc}[^[]]//g")
     printf '%s\n' "${#clean}"
 }
 
