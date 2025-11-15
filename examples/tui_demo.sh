@@ -177,7 +177,7 @@ render_screen() {
     # Footer with instructions
     echo ""
     echo -e "${COLOR_DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+    echo -ne "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
 }
 
 # ==============================================================================
@@ -187,7 +187,7 @@ render_screen() {
 # Read a single character without waiting (non-blocking with timeout)
 read_key() {
     local key=""
-    # Read with 1 second timeout
+    # Read with 1 second timeout (balances responsiveness with refresh rate)
     IFS= read -rsn1 -t 1 key 2>/dev/null
     echo "$key"
 }
@@ -226,23 +226,40 @@ run_tui() {
     trap cleanup EXIT INT TERM
 
     local running=true
+    local last_view="$CURRENT_VIEW"
+    local need_full_redraw=false
+
+    # Initial render
+    render_screen
+    last_view="$CURRENT_VIEW"
 
     while $running; do
-        # Render the current screen
-        render_screen
-
         # Read input (non-blocking with 1s timeout)
         local key=$(read_key)
+
+        # Increment counter (simulates state changes)
+        COUNTER=$((COUNTER + 1))
 
         # Process input if key was pressed
         if [ -n "$key" ]; then
             if ! process_input "$key"; then
                 running=false
+                continue
+            else
+                need_full_redraw=true
             fi
         fi
 
-        # Increment counter (simulates state changes)
-        COUNTER=$((COUNTER + 1))
+        # Determine if we need full redraw
+        if [ "$need_full_redraw" = true ] || [ "$CURRENT_VIEW" != "$last_view" ]; then
+            render_screen
+            need_full_redraw=false
+            last_view="$CURRENT_VIEW"
+        else
+            # Selective update: just update the footer counter
+            # Move to beginning of current line and overwrite
+            echo -ne "\r\033[K${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+        fi
     done
 }
 
