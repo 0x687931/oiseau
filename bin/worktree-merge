@@ -144,8 +144,9 @@ MASS_DELETION_FILE_THRESHOLD=50
 MASS_DELETION_LINE_THRESHOLD=10000
 
 if [ "$PR_FILES_CHANGED" -gt "$MASS_DELETION_FILE_THRESHOLD" ] && [ "$PR_DELETIONS" -gt "$PR_ADDITIONS" ]; then
+    # Aggregate paginated counts (--paginate outputs one count per page, need to sum them)
     DELETED_FILES=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --paginate \
-        --jq '[.[] | select(.status == "removed")] | length' 2>/dev/null || echo "0")
+        --jq '[.[] | select(.status == "removed")] | length' 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
 
     if [ "$DELETED_FILES" -gt "$MASS_DELETION_FILE_THRESHOLD" ]; then
         echo ""
