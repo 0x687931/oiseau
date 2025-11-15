@@ -89,12 +89,12 @@ view::header() {
 view::navigation() {
     local current=${MODEL[view]}
 
-    echo -n "  "
-    [ "$current" = "home" ] && echo -n "${COLOR_SUCCESS}[Home]${RESET}" || echo -n "${COLOR_MUTED}Home${RESET}"
-    echo -n "  "
-    [ "$current" = "tasks" ] && echo -n "${COLOR_SUCCESS}[Tasks]${RESET}" || echo -n "${COLOR_MUTED}Tasks${RESET}"
-    echo -n "  "
-    [ "$current" = "about" ] && echo -n "${COLOR_SUCCESS}[About]${RESET}" || echo -n "${COLOR_MUTED}About${RESET}"
+    echo -en "  "
+    [ "$current" = "home" ] && echo -en "${COLOR_SUCCESS}[Home]${RESET}" || echo -en "${COLOR_MUTED}Home${RESET}"
+    echo -en "  "
+    [ "$current" = "tasks" ] && echo -en "${COLOR_SUCCESS}[Tasks]${RESET}" || echo -en "${COLOR_MUTED}Tasks${RESET}"
+    echo -en "  "
+    [ "$current" = "about" ] && echo -en "${COLOR_SUCCESS}[About]${RESET}" || echo -en "${COLOR_MUTED}About${RESET}"
     echo ""
     echo ""
 }
