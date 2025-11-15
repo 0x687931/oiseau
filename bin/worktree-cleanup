@@ -1,0 +1,262 @@
+#!/bin/bash
+# Clean up a worktree after PR is merged
+# Usage: bin/worktree-cleanup feature-name
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+# When installed in ~/.tild/bin/, use current working directory as project
+PROJECT_DIR="$(pwd)"
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
+
+# Load UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OISEAU_PATH="$(dirname "$SCRIPT_DIR")"
+if [ -f "$OISEAU_PATH/oiseau.sh" ]; then
+    source "$OISEAU_PATH/oiseau.sh"
+else
+    echo "Error: Cannot find oiseau.sh UI library" >&2
+    exit 1
+fi
+
+# Detect default branch
+DEFAULT_BRANCH=$(get_default_branch)
+
+# Check if feature name is provided
+if [ -z "$1" ]; then
+    print_error "Feature name is required"
+    echo ""
+    echo "Usage: bin/worktree-cleanup <feature-name>"
+    echo ""
+    echo "Examples:"
+    print_command "bin/worktree-cleanup user-authentication"
+    print_command "bin/worktree-cleanup fix-login-bug"
+    echo ""
+    exit 1
+fi
+
+FEATURE_NAME="$1"
+
+# Clean feature name (replace spaces/underscores with hyphens, lowercase)
+FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | tr ' ' '-')
+
+WORKTREE_PATH="../${PROJECT_NAME}-${FEATURE_NAME}"
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo ""
+    print_error "Not in a git repository"
+    echo ""
+    print_kv "Current directory" "$(pwd)"
+    echo ""
+    print_info "Please run this command from your git repository root"
+    echo ""
+    exit 1
+fi
+
+print_info "Cleaning up worktree for: $FEATURE_NAME"
+echo ""
+
+# Find branch name (could be feature/, fix/, or refactor/ prefix)
+BRANCH_NAME=""
+for prefix in "feature" "fix" "refactor"; do
+    if git show-ref --verify --quiet "refs/heads/$prefix/$FEATURE_NAME"; then
+        BRANCH_NAME="$prefix/$FEATURE_NAME"
+        break
+    fi
+done
+
+if [ -z "$BRANCH_NAME" ]; then
+    echo ""
+    print_error "Branch not found for feature: $FEATURE_NAME"
+    echo ""
+    print_info "Searched for branches:"
+    print_item "feature/$FEATURE_NAME"
+    print_item "fix/$FEATURE_NAME"
+    print_item "refactor/$FEATURE_NAME"
+    echo ""
+    print_info "Available feature branches:"
+    git branch --list 'feature/*' 'fix/*' 'refactor/*' | sed 's/^/  /'
+    echo ""
+    exit 1
+fi
+
+print_info "Found branch: $BRANCH_NAME"
+
+# Check if worktree directory exists
+if [ ! -d "$WORKTREE_PATH" ]; then
+    print_warning "Worktree directory not found at: $WORKTREE_PATH"
+    print_info "Will only clean up the branch"
+else
+    # Check if there are uncommitted changes in the worktree
+    cd "$WORKTREE_PATH"
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        print_error "Worktree has uncommitted changes"
+        echo ""
+        git status --short
+        echo ""
+        if ! ask_yes_no "Do you want to continue anyway? Changes will be lost."; then
+            echo ""
+            print_error "Cleanup aborted by user"
+            echo ""
+            print_info "Worktree preserved at: $WORKTREE_PATH"
+            echo ""
+            exit 1
+        fi
+    fi
+
+    # CRITICAL: Check for unpushed commits
+    # This prevents losing work when a worktree has local commits not pushed to remote
+    REMOTE_BRANCH="origin/$BRANCH_NAME"
+    if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
+        # Remote branch exists, check if we have unpushed commits
+        UNPUSHED_COUNT=$(git rev-list "$REMOTE_BRANCH..HEAD" --count 2>/dev/null || echo "0")
+
+        if [ "$UNPUSHED_COUNT" -gt 0 ]; then
+            echo ""
+            print_error "BLOCKING: Worktree has $UNPUSHED_COUNT unpushed commit(s)!"
+            echo ""
+            print_section "Unpushed commits:"
+            echo ""
+            git log "$REMOTE_BRANCH..HEAD" --oneline --no-decorate | sed 's/^/  /'
+            echo ""
+            print_error "These commits would be LOST if the worktree is deleted"
+            echo ""
+            print_info "To save your work, you must:"
+            print_step 1 "Push the commits:"
+            print_command "git push"
+            echo ""
+            print_step 2 "OR create a backup branch:"
+            print_command "git branch backup-$(date +%Y%m%d-%H%M%S)"
+            print_command "git push -u origin backup-$(date +%Y%m%d-%H%M%S)"
+            echo ""
+            print_warning "Cleanup aborted to protect your work"
+            echo ""
+            exit 1
+        fi
+    else
+        # Remote branch doesn't exist yet - check if we have any commits
+        AHEAD_OF_MAIN=$(git rev-list "$DEFAULT_BRANCH"..HEAD --count 2>/dev/null || echo "0")
+
+        if [ "$AHEAD_OF_MAIN" -gt 0 ]; then
+            echo ""
+            print_error "BLOCKING: Branch has $AHEAD_OF_MAIN commit(s) but was never pushed!"
+            echo ""
+            print_section "Local-only commits:"
+            echo ""
+            git log "$DEFAULT_BRANCH"..HEAD --oneline --no-decorate | sed 's/^/  /'
+            echo ""
+            print_error "These commits would be LOST if the worktree is deleted"
+            echo ""
+            print_info "To save your work, push the branch first:"
+            print_command "git push -u origin $BRANCH_NAME"
+            echo ""
+            print_warning "Cleanup aborted to protect your work"
+            echo ""
+            exit 1
+        fi
+    fi
+
+    cd "$PROJECT_DIR"
+
+    # Remove worktree
+    print_info "Removing worktree..."
+    git worktree remove "$WORKTREE_PATH" --force
+    print_success "Worktree removed"
+fi
+
+# Update default branch
+print_info "Updating $DEFAULT_BRANCH branch..."
+git checkout "$DEFAULT_BRANCH" -q
+git pull origin "$DEFAULT_BRANCH" -q
+print_success "$DEFAULT_BRANCH branch updated"
+
+# Check if branch has been merged
+if git branch --merged "$DEFAULT_BRANCH" --format '%(refname:short)' | grep -Fxq "$BRANCH_NAME"; then
+    print_success "Branch has been merged to $DEFAULT_BRANCH"
+
+    # Check for PR and review feedback
+    if command -v gh &> /dev/null && gh auth status &> /dev/null 2>&1; then
+        echo ""
+        print_info "Checking for review feedback..."
+
+        # Get PR number for the branch
+        PR_NUMBER=$(gh pr list --state merged --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+        if [ -n "$PR_NUMBER" ]; then
+            # Get review comments
+            REVIEW_COMMENTS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+            REVIEWS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews" --jq '. | length' 2>/dev/null || echo "0")
+            ISSUE_COMMENTS=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+
+            TOTAL_FEEDBACK=$((REVIEW_COMMENTS + REVIEWS + ISSUE_COMMENTS))
+
+            if [ "$TOTAL_FEEDBACK" -eq 0 ]; then
+                print_info "No review comments or feedback found"
+            else
+                echo ""
+                print_warning "Found $TOTAL_FEEDBACK review comments/feedback items for PR #$PR_NUMBER"
+                echo ""
+
+                # Display review summary
+                if [ "$REVIEWS" -gt 0 ]; then
+                    print_section "Review Comments ($REVIEWS):"
+                    echo ""
+                    gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews" --jq '.[] | "  • \(.user.login) (\(.state)): \(.body // "No comment")"' 2>/dev/null || echo "  (Could not fetch review comments)"
+                    echo ""
+                fi
+
+                if [ "$REVIEW_COMMENTS" -gt 0 ]; then
+                    print_section "Code Review Comments ($REVIEW_COMMENTS):"
+                    echo ""
+                    gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | "  • \(.user.login) on \(.path):\(.line // "?"):\n    \(.body)\n"' 2>/dev/null || echo "  (Could not fetch code review comments)"
+                    echo ""
+                fi
+
+                if [ "$ISSUE_COMMENTS" -gt 0 ]; then
+                    print_section "General Comments ($ISSUE_COMMENTS):"
+                    echo ""
+                    gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --jq '.[] | "  • \(.user.login):\n    \(.body)\n"' 2>/dev/null || echo "  (Could not fetch general comments)"
+                    echo ""
+                fi
+
+                print_warning "Please review the feedback above for learning and improvement"
+                echo ""
+                read -p "Press Enter to continue with cleanup..." -r
+                echo ""
+            fi
+        else
+            print_info "No PR found for this branch (may have been deleted)"
+        fi
+    fi
+
+    # Delete local branch
+    print_info "Deleting local branch: $BRANCH_NAME"
+    git branch -d "$BRANCH_NAME"
+    print_success "Local branch deleted"
+
+    # Check if remote branch exists and delete it
+    if git ls-remote --heads origin "$BRANCH_NAME" | grep -Fq "refs/heads/$BRANCH_NAME"; then
+        if ask_yes_no "Delete remote branch too?"; then
+            git push origin --delete "$BRANCH_NAME"
+            print_success "Remote branch deleted"
+        fi
+    fi
+else
+    print_warning "Branch has NOT been merged to $DEFAULT_BRANCH yet"
+    print_info "The branch will be kept for now"
+    if ask_yes_no "Do you want to delete it anyway?"; then
+        git branch -D "$BRANCH_NAME"
+        print_success "Local branch force-deleted"
+    fi
+fi
+
+echo ""
+print_success "Cleanup complete!"
+echo ""
+print_header

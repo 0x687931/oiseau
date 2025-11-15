@@ -1,0 +1,416 @@
+#!/bin/bash
+# Merge a PR from a worktree
+# Usage: bin/worktree-merge [merge|squash|rebase]
+#
+# Must be run from within the worktree directory
+# Default merge method: merge (creates merge commit)
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+# Load UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+if [ -f "$PROJECT_DIR/oiseau.sh" ]; then
+    source "$PROJECT_DIR/oiseau.sh"
+else
+    echo "Error: Cannot find oiseau.sh UI library" >&2
+    exit 1
+fi
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+# Check if gh CLI is installed
+if ! command -v gh &> /dev/null; then
+    print_error "GitHub CLI (gh) is not installed"
+    print_info "Install it with: brew install gh"
+    exit 1
+fi
+
+# Check if gh is authenticated
+if ! gh auth status &> /dev/null; then
+    print_error "GitHub CLI is not authenticated"
+    print_info "Run: gh auth login"
+    exit 1
+fi
+
+# Get current repository owner and name (now safe after gh checks)
+REPO_INFO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
+if [ -z "$REPO_INFO" ]; then
+    print_error "Failed to get repository information"
+    exit 1
+fi
+REPO_OWNER=$(echo "$REPO_INFO" | cut -d'/' -f1)
+REPO_NAME=$(echo "$REPO_INFO" | cut -d'/' -f2)
+
+# Detect default branch
+DEFAULT_BRANCH=$(get_default_branch)
+
+# Get current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Check if we're on default branch
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+    print_error "Already on $DEFAULT_BRANCH branch"
+    print_info "This script should be run from a worktree/feature branch"
+    exit 1
+fi
+
+# Get merge method from argument (default to merge)
+MERGE_METHOD="${1:-merge}"
+
+# Validate merge method
+if [[ ! "$MERGE_METHOD" =~ ^(merge|squash|rebase)$ ]]; then
+    print_error "Invalid merge method: $MERGE_METHOD"
+    echo ""
+    echo "Usage: bin/worktree-merge [merge|squash|rebase]"
+    echo ""
+    echo "Merge methods:"
+    print_item "merge  - Create a merge commit (default, preserves all commits)"
+    print_item "squash - Squash all commits into one"
+    print_item "rebase - Rebase and merge (linear history)"
+    echo ""
+    exit 1
+fi
+
+print_info "Looking for PR for branch: $CURRENT_BRANCH"
+echo ""
+
+# Get PR number for current branch
+PR_NUMBER=$(gh pr list --head "$CURRENT_BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+if [ -z "$PR_NUMBER" ]; then
+    echo ""
+    print_error "No pull request found for branch: $CURRENT_BRANCH"
+    echo ""
+    print_info "Create a PR first with:"
+    print_command "../$(basename "$PROJECT_DIR")/bin/worktree-pr"
+    echo ""
+    exit 1
+fi
+
+# Get PR details
+PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
+PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq '.url')
+
+print_header
+echo ""
+print_success "Found PR #$PR_NUMBER: $PR_TITLE"
+print_kv "URL" "$PR_URL"
+print_kv "State" "$PR_STATE"
+print_kv "Merge method" "$MERGE_METHOD"
+echo ""
+
+# Check if PR is already merged
+if [ "$PR_STATE" = "MERGED" ]; then
+    print_warning "This PR has already been merged"
+    echo ""
+    if ! ask_yes_no "Continue anyway?"; then
+        echo ""
+        print_error "Merge aborted by user"
+        echo ""
+        exit 1
+    fi
+elif [ "$PR_STATE" = "CLOSED" ]; then
+    print_error "This PR is closed (not merged)"
+    echo ""
+    if ! ask_yes_no "Do you want to reopen and merge it?"; then
+        echo ""
+        print_error "Merge aborted by user"
+        echo ""
+        exit 1
+    fi
+    gh pr reopen "$PR_NUMBER"
+    print_success "PR reopened"
+    echo ""
+fi
+
+# Check for mass deletions in PR (learned from PR #70 catastrophe)
+print_info "Checking for mass deletions..."
+
+PR_FILES_CHANGED=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.changed_files' 2>/dev/null || echo "0")
+PR_DELETIONS=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.deletions' 2>/dev/null || echo "0")
+PR_ADDITIONS=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER" --jq '.additions' 2>/dev/null || echo "0")
+
+# Critical threshold: >50 files deleted OR >10,000 lines deleted
+MASS_DELETION_FILE_THRESHOLD=50
+MASS_DELETION_LINE_THRESHOLD=10000
+
+if [ "$PR_FILES_CHANGED" -gt "$MASS_DELETION_FILE_THRESHOLD" ] && [ "$PR_DELETIONS" -gt "$PR_ADDITIONS" ]; then
+    # Aggregate paginated counts (--paginate outputs one count per page, need to sum them)
+    DELETED_FILES=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --paginate \
+        --jq '[.[] | select(.status == "removed")] | length' 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+
+    if [ "$DELETED_FILES" -gt "$MASS_DELETION_FILE_THRESHOLD" ]; then
+        echo ""
+        print_error "BLOCKING: Mass file deletion detected!"
+        echo ""
+        print_warning "This PR deletes $DELETED_FILES files (threshold: $MASS_DELETION_FILE_THRESHOLD)"
+        print_warning "Total deletions: $PR_DELETIONS lines"
+        echo ""
+        print_info "This is similar to PR #70 which accidentally deleted 169 files"
+        echo ""
+        print_info "Deleted files:"
+        gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER/files" --paginate \
+            --jq '.[] | select(.status == "removed") | "  - " + .filename' | head -20
+        echo ""
+        if [ "$DELETED_FILES" -gt 20 ]; then
+            print_info "... and $((DELETED_FILES - 20)) more files"
+            echo ""
+        fi
+
+        if ! ask_yes_no "Are you ABSOLUTELY SURE you want to delete all these files?"; then
+            print_error "Merge aborted - mass deletion prevented"
+            exit 1
+        fi
+
+        if ! ask_yes_no "FINAL CONFIRMATION: Delete $DELETED_FILES files?"; then
+            print_error "Merge aborted - mass deletion prevented"
+            exit 1
+        fi
+    fi
+elif [ "$PR_DELETIONS" -gt "$MASS_DELETION_LINE_THRESHOLD" ] && [ "$PR_DELETIONS" -gt $((PR_ADDITIONS * 2)) ]; then
+    echo ""
+    print_warning "Large deletion detected: $PR_DELETIONS lines deleted vs $PR_ADDITIONS lines added"
+    echo ""
+    if ! ask_yes_no "This PR has significant deletions. Continue?"; then
+        print_error "Merge aborted by user"
+        exit 1
+    fi
+fi
+
+# Check for unresolved review threads (GraphQL query for accurate status)
+print_info "Checking for unresolved code review threads..."
+
+# Use pagination to get ALL review threads, not just first 50
+UNRESOLVED_THREADS=$(gh api graphql --paginate -f query="
+query(\$endCursor: String) {
+  repository(owner: \"$REPO_OWNER\", name: \"$REPO_NAME\") {
+    pullRequest(number: $PR_NUMBER) {
+      reviewThreads(first: 100, after: \$endCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          isResolved
+        }
+      }
+    }
+  }
+}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>&1 | awk '{sum+=$1} END {print sum}')
+
+if [ -z "$UNRESOLVED_THREADS" ] || ! [[ "$UNRESOLVED_THREADS" =~ ^[0-9]+$ ]]; then
+    echo ""
+    print_error "Failed to check review thread status"
+    print_warning "Cannot verify if there are unresolved review threads"
+    echo ""
+    if ! ask_yes_no "Do you want to proceed with merge anyway (not recommended)?"; then
+        print_error "Merge aborted - fix GitHub API access first"
+        exit 1
+    fi
+    UNRESOLVED_THREADS=0
+fi
+
+if [ "$UNRESOLVED_THREADS" -gt 0 ]; then
+    echo ""
+    print_error "BLOCKING: $UNRESOLVED_THREADS unresolved review thread(s) found!"
+    echo ""
+    print_info "You must resolve all review threads before merging"
+    echo ""
+    print_info "To view and acknowledge fixes, run:"
+    print_command "../$(basename "$PROJECT_DIR")/bin/check-codex-reviews $PR_NUMBER --acknowledge"
+    echo ""
+    print_info "After acknowledging, resolve threads manually or use:"
+    print_command "gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: \"THREAD_ID\"}) { thread { id isResolved } } }'"
+    echo ""
+    if ! ask_yes_no "Have you resolved all review threads and want to proceed anyway?"; then
+        echo ""
+        print_error "Merge aborted - resolve review threads first"
+        echo ""
+        exit 1
+    fi
+else
+    print_success "No unresolved review threads"
+fi
+
+# Check CI status
+print_info "Checking CI status..."
+CI_STATUS=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != null) | .conclusion' 2>/dev/null || echo "")
+
+if echo "$CI_STATUS" | grep -q "FAILURE"; then
+    print_warning "Some CI checks have failed"
+    echo ""
+    if ! ask_yes_no "Do you want to merge anyway?"; then
+        echo ""
+        print_error "Merge aborted - CI failures must be fixed first"
+        echo ""
+        print_info "To view failed checks, run:"
+        print_command "gh pr checks $PR_NUMBER"
+        echo ""
+        print_info "Or view in browser:"
+        print_command "$PR_URL/checks"
+        echo ""
+        print_info "After fixing, try merge again:"
+        print_command "bin/worktree-merge"
+        echo ""
+        exit 1
+    fi
+fi
+
+# CRITICAL: Check PR completeness - ensure all local commits are pushed
+# This prevents the error from PR #30 where commit 050411b existed locally but wasn't pushed
+print_info "Checking PR completeness..."
+
+# Get current local commit
+LOCAL_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+# Get remote branch commit
+REMOTE_BRANCH="origin/$CURRENT_BRANCH"
+if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
+    REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH" 2>/dev/null || echo "")
+
+    # Check if local and remote are in sync
+    if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
+        # Check if we're ahead, behind, or diverged
+        AHEAD_COUNT=$(git rev-list "$REMOTE_BRANCH..HEAD" --count 2>/dev/null || echo "0")
+        BEHIND_COUNT=$(git rev-list "HEAD..$REMOTE_BRANCH" --count 2>/dev/null || echo "0")
+
+        if [ "$AHEAD_COUNT" -gt 0 ]; then
+            echo ""
+            print_error "BLOCKING: Local branch has $AHEAD_COUNT unpushed commit(s)!"
+            echo ""
+            print_section "Unpushed commits that would NOT be included in merge:"
+            echo ""
+            git log "$REMOTE_BRANCH..HEAD" --oneline --no-decorate | sed 's/^/  /'
+            echo ""
+            print_error "These commits exist locally but are NOT in the PR"
+            print_error "Merging now would leave this work behind!"
+            echo ""
+            print_info "To fix this:"
+            print_step 1 "Push the commits to include them in the PR:"
+            print_command "git push"
+            echo ""
+            print_step 2 "OR create a backup branch if you don't want to include them:"
+            print_command "git branch backup-$(date +%Y%m%d-%H%M%S)"
+            print_command "git push -u origin backup-$(date +%Y%m%d-%H%M%S)"
+            print_command "git reset --hard $REMOTE_BRANCH"
+            print_command "git push --force-with-lease"
+            echo ""
+            print_warning "Merge aborted to protect your work"
+            echo ""
+            exit 1
+        fi
+
+        if [ "$BEHIND_COUNT" -gt 0 ]; then
+            print_warning "Local branch is $BEHIND_COUNT commit(s) behind remote"
+            print_info "This is unusual - someone may have pushed to the PR branch"
+            echo ""
+            if ! ask_yes_no "Do you want to continue anyway?"; then
+                print_error "Aborted - sync your local branch first"
+                exit 1
+            fi
+        fi
+    else
+        print_success "Local and remote branches are in sync"
+    fi
+else
+    print_warning "Remote branch not found - this is unusual"
+    print_info "The PR branch may have been deleted or force-pushed"
+    echo ""
+    if ! ask_yes_no "Do you want to continue anyway?"; then
+        print_error "Aborted"
+        exit 1
+    fi
+fi
+
+echo ""
+
+# Confirm merge
+echo ""
+print_warning "Ready to merge PR #$PR_NUMBER"
+echo ""
+if ! ask_yes_no "Proceed with $MERGE_METHOD merge?"; then
+    print_error "Aborted"
+    exit 1
+fi
+
+echo ""
+print_info "Merging PR..."
+
+# Merge the PR using gh CLI
+case "$MERGE_METHOD" in
+    squash)
+        gh pr merge "$PR_NUMBER" --squash --delete-branch
+        ;;
+    rebase)
+        gh pr merge "$PR_NUMBER" --rebase --delete-branch
+        ;;
+    *)
+        gh pr merge "$PR_NUMBER" --merge --delete-branch
+        ;;
+esac
+
+echo ""
+print_success "PR #$PR_NUMBER merged successfully!"
+echo ""
+
+# Auto-acknowledge review comments if any existed
+if [ "$UNRESOLVED_THREADS" -gt 0 ] || command -v check-codex-reviews &>/dev/null; then
+    echo ""
+    print_info "Checking for review comments to acknowledge..."
+
+    # Get review comment count
+    REVIEW_COMMENT_COUNT=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --paginate \
+        --jq '[.[] | select(.user.login | contains("codex"))] | length' 2>/dev/null || echo "0")
+    ISSUE_COMMENT_COUNT=$(gh api "/repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --paginate \
+        --jq '[.[] | select(.user.login | contains("codex"))] | length' 2>/dev/null || echo "0")
+    TOTAL_COMMENTS=$((REVIEW_COMMENT_COUNT + ISSUE_COMMENT_COUNT))
+
+    if [ "$TOTAL_COMMENTS" -gt 0 ]; then
+        print_info "Found $TOTAL_COMMENTS review comment(s) from Codex"
+        echo ""
+
+        # Get recent commits for acknowledgment
+        RECENT_COMMITS=$(git log --oneline -5 2>/dev/null | sed 's/^/  /' || echo "")
+
+        # Create acknowledgment comment
+        ACK_COMMENT="## ✅ PR Merged - Review Feedback Addressed
+
+This PR has been merged. All review feedback has been addressed in the following commits:
+
+$RECENT_COMMITS
+
+Thank you for the code review feedback!"
+
+        if ask_yes_no "Post acknowledgment comment on PR #$PR_NUMBER?"; then
+            gh pr comment "$PR_NUMBER" --body "$ACK_COMMENT" 2>/dev/null && \
+                print_success "Acknowledgment comment posted" || \
+                print_warning "Failed to post acknowledgment comment"
+        fi
+    fi
+fi
+
+echo ""
+print_header
+echo ""
+
+# Extract feature name for cleanup command
+FEATURE_NAME=$(echo "$CURRENT_BRANCH" | sed 's/^feature\///' | sed 's/^fix\///' | sed 's/^refactor\///')
+
+print_next_steps \
+    "Return to main repo directory: $(print_command_inline "cd \$(git rev-parse --show-toplevel)")" \
+    "Clean up this worktree: $(print_command_inline "worktree-cleanup $FEATURE_NAME")"
+
+echo ""
+print_info "The cleanup script will check for review feedback automatically"
+echo ""
+print_header

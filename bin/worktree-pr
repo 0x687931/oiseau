@@ -1,0 +1,203 @@
+#!/bin/bash
+# Push current worktree branch and create a pull request
+# Usage: bin/worktree-pr [pr-title] [pr-body]
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+# Load UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+if [ -f "$PROJECT_DIR/oiseau.sh" ]; then
+    source "$PROJECT_DIR/oiseau.sh"
+else
+    echo "Error: Cannot find oiseau.sh UI library" >&2
+    exit 1
+fi
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+# Detect default branch
+DEFAULT_BRANCH=$(get_default_branch)
+
+# Get current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Check if we're on default branch
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+    print_error "Cannot create PR from $DEFAULT_BRANCH branch"
+    print_info "Please use a feature branch or worktree"
+    exit 1
+fi
+
+# Check if there are uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+    print_warning "You have uncommitted changes"
+    echo ""
+    git status --short
+    echo ""
+    if ask_yes_no "Do you want to commit them now?"; then
+        git add -A
+        COMMIT_MSG=$(ask_input "Enter commit message")
+        git commit -m "$COMMIT_MSG"
+        print_success "Changes committed"
+    else
+        print_error "Please commit or stash your changes first"
+        exit 1
+    fi
+fi
+
+# Check if gh CLI is installed
+if ! command -v gh &> /dev/null; then
+    print_error "GitHub CLI (gh) is not installed"
+    print_info "Install it with: brew install gh"
+    exit 1
+fi
+
+# Check if gh is authenticated
+if ! gh auth status &> /dev/null; then
+    print_error "GitHub CLI is not authenticated"
+    print_info "Run: gh auth login"
+    exit 1
+fi
+
+print_info "Pushing branch to remote..."
+git push -u origin "$CURRENT_BRANCH"
+print_success "Branch pushed successfully"
+
+echo ""
+
+# Get PR title and body from arguments or generate defaults
+if [ -n "$1" ]; then
+    PR_TITLE="$1"
+else
+    # Generate title from branch name
+    PR_TITLE=$(echo "$CURRENT_BRANCH" | sed 's/^feature\///' | sed 's/^fix\///' | sed 's/^refactor\///' | tr '-' ' ' | sed -e 's/\b\(.\)/\u\1/g')
+fi
+
+if [ -n "$2" ]; then
+    PR_BODY="$2"
+else
+    # Get commit messages since branching from default branch
+    COMMITS=$(git log --oneline "origin/$DEFAULT_BRANCH"..HEAD --pretty=format:"- %s")
+    if [ -n "$COMMITS" ]; then
+        PR_BODY="## Changes
+
+$COMMITS
+
+## Test Plan
+- [ ] Manual testing completed
+- [ ] All tests passing
+- [ ] No new warnings or errors
+
+🤖 Generated with Claude Code"
+    else
+        PR_BODY="## Summary
+Changes made in this PR.
+
+## Test Plan
+- [ ] Manual testing completed
+- [ ] All tests passing
+- [ ] No new warnings or errors
+
+🤖 Generated with Claude Code"
+    fi
+fi
+
+print_info "Creating pull request..."
+echo ""
+echo "Title: $PR_TITLE"
+echo ""
+
+# Check if PR already exists
+EXISTING_PR=$(gh pr list --head "$CURRENT_BRANCH" --json url --jq '.[0].url' 2>/dev/null || echo "")
+
+if [ -n "$EXISTING_PR" ]; then
+    echo ""
+    print_warning "Pull request already exists for this branch"
+    echo ""
+    print_header
+    echo ""
+    print_info "PR URL: $EXISTING_PR"
+    echo ""
+
+    # Extract feature name for cleanup command
+    FEATURE_NAME=$(echo "$CURRENT_BRANCH" | sed 's/^feature\///' | sed 's/^fix\///' | sed 's/^refactor\///')
+
+    print_next_steps \
+        "Wait for PR review and approval" \
+        "Merge the PR on GitHub" \
+        "Run cleanup script: $(print_command_inline "worktree-cleanup $FEATURE_NAME")"
+
+    print_header
+    exit 0
+fi
+
+# Create PR targeting the detected default branch
+if gh pr create --base "$DEFAULT_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"; then
+    echo ""
+    print_success "Pull request created successfully!"
+    echo ""
+
+    # Get PR URL and number
+    PR_URL=$(gh pr view --json url -q .url)
+    PR_NUMBER=$(gh pr view --json number -q .number)
+
+    # Check if Codex app is installed before requesting review
+    print_info "Checking if Codex is available..."
+    REPO_FULL_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+    # Check if Codex bot has commented on any issues/PRs in this repo
+    # This is a reliable way to detect if the app is installed without requiring app auth
+    CODEX_AVAILABLE=false
+    if gh api "/repos/$REPO_FULL_NAME/issues/comments?per_page=10" 2>/dev/null | grep -q 'chatgpt-codex-connector'; then
+        CODEX_AVAILABLE=true
+        # Codex is installed, request code review
+        print_info "Requesting code review from @codex..."
+        if gh pr comment "$PR_NUMBER" --body "@codex review" 2>/dev/null; then
+            print_success "Code review requested"
+        else
+            print_warning "Failed to request code review automatically"
+            print_info "You can manually comment '@codex review' on the PR"
+        fi
+    else
+        print_info "Codex app not installed - skipping automatic code review request"
+        print_info "You can install it from: https://github.com/apps/chatgpt-codex-connector"
+    fi
+
+    echo ""
+    print_header
+    echo ""
+    print_info "PR URL: $PR_URL"
+    echo ""
+
+    # Extract feature name for cleanup command
+    FEATURE_NAME=$(echo "$CURRENT_BRANCH" | sed 's/^feature\///' | sed 's/^fix\///' | sed 's/^refactor\///')
+
+    # Show next steps (conditional on Codex availability)
+    if [ "$CODEX_AVAILABLE" = true ]; then
+        print_next_steps \
+            "Wait for @codex code review" \
+            "Address any review comments" \
+            "Merge the PR on GitHub" \
+            "Run cleanup script: $(print_command_inline "worktree-cleanup $FEATURE_NAME")"
+    else
+        print_next_steps \
+            "Wait for PR review and approval" \
+            "Merge the PR on GitHub" \
+            "Run cleanup script: $(print_command_inline "worktree-cleanup $FEATURE_NAME")"
+    fi
+
+    print_header
+else
+    echo ""
+    print_error "Failed to create pull request"
+    print_info "Check that you have push access and gh CLI is properly configured"
+    exit 1
+fi

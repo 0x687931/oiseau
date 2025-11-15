@@ -1,0 +1,546 @@
+#!/bin/bash
+# Complete workflow: merge PR, check reviews, and cleanup worktree
+# Usage: bin/worktree-complete <feature-name> [merge-method]
+#
+# This script handles the complete workflow:
+# 1. Finds the PR for the feature branch
+# 2. Merges the PR (with optional merge method)
+# 3. Checks for review comments/feedback
+# 4. Cleans up the worktree and branches
+#
+# Must be run from the main repository directory
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+# When installed in ~/.tild/bin/, use current working directory as project
+PROJECT_DIR="$(pwd)"
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
+
+# Source UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OISEAU_PATH="$(dirname "$SCRIPT_DIR")"
+if [ -f "$OISEAU_PATH/oiseau.sh" ]; then
+    source "$OISEAU_PATH/oiseau.sh"
+else
+    echo "Error: Cannot find oiseau.sh UI library" >&2
+    exit 1
+fi
+
+# Detect default branch
+DEFAULT_BRANCH=$(get_default_branch)
+
+# Check if feature name is provided
+if [ -z "$1" ]; then
+    print_error "Feature name is required"
+    echo ""
+    echo "Usage: bin/worktree-complete <feature-name> [merge-method]"
+    echo ""
+    echo "Examples:"
+    print_command "bin/worktree-complete user-authentication"
+    print_command "bin/worktree-complete fix-login-bug squash"
+    print_command "bin/worktree-complete new-feature rebase"
+    echo ""
+    echo "Merge methods:"
+    print_item "merge  - Create a merge commit (default)"
+    print_item "squash - Squash all commits into one"
+    print_item "rebase - Rebase and merge (linear history)"
+    exit 1
+fi
+
+FEATURE_NAME="$1"
+MERGE_METHOD="${2:-merge}"
+
+# Clean feature name
+FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | tr ' ' '-')
+
+WORKTREE_PATH="../${PROJECT_NAME}-${FEATURE_NAME}"
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+# Check if gh CLI is installed
+if ! command -v gh &> /dev/null; then
+    print_error "GitHub CLI (gh) is not installed"
+    print_info "Install it with: brew install gh"
+    exit 1
+fi
+
+# Check if gh is authenticated
+if ! gh auth status &> /dev/null; then
+    print_error "GitHub CLI is not authenticated"
+    print_info "Run: gh auth login"
+    exit 1
+fi
+
+# Validate merge method
+if [[ ! "$MERGE_METHOD" =~ ^(merge|squash|rebase)$ ]]; then
+    print_error "Invalid merge method: $MERGE_METHOD"
+    echo ""
+    echo "Valid methods: merge, squash, rebase"
+    exit 1
+fi
+
+print_box "COMPLETE WORKFLOW FOR: $FEATURE_NAME"
+
+# Find branch name
+BRANCH_NAME=""
+for prefix in "feature" "fix" "refactor"; do
+    if git show-ref --verify --quiet "refs/heads/$prefix/$FEATURE_NAME"; then
+        BRANCH_NAME="$prefix/$FEATURE_NAME"
+        break
+    fi
+done
+
+if [ -z "$BRANCH_NAME" ]; then
+    print_error "Branch not found for feature: $FEATURE_NAME"
+    print_info "Tried: feature/$FEATURE_NAME, fix/$FEATURE_NAME, refactor/$FEATURE_NAME"
+    exit 1
+fi
+
+print_info "Found branch: $BRANCH_NAME"
+
+# Get PR number
+PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+if [ -z "$PR_NUMBER" ]; then
+    print_error "No pull request found for branch: $BRANCH_NAME"
+    print_info "Create a PR first or use bin/worktree-cleanup to just clean up"
+    exit 1
+fi
+
+# Get PR details
+PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
+PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq '.url')
+PR_MERGEABLE=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable' 2>/dev/null || echo "UNKNOWN")
+
+echo ""
+print_success "Found PR #$PR_NUMBER: $PR_TITLE"
+print_kv "URL" "$PR_URL"
+print_kv "State" "$PR_STATE"
+print_kv "Mergeable" "$PR_MERGEABLE"
+echo ""
+
+# ============================================================================
+# STEP 0: CHECK FOR MERGE CONFLICTS
+# ============================================================================
+
+if [ "$PR_MERGEABLE" = "CONFLICTING" ]; then
+    print_header
+    echo ""
+    print_error "BLOCKING: PR has merge conflicts!"
+    echo ""
+    print_section "This PR cannot be merged due to conflicts with the base branch."
+    echo ""
+    print_info "To resolve conflicts:"
+    echo ""
+    print_step 1 "Update your branch with latest $DEFAULT_BRANCH:"
+    print_command "git fetch origin $DEFAULT_BRANCH"
+    print_command "git merge origin/$DEFAULT_BRANCH"
+    echo ""
+    print_step 2 "Resolve conflicts in affected files:"
+    print_command "git status  # See conflicting files"
+    print_command "# Edit files and resolve <<<< ==== >>>> markers"
+    echo ""
+    print_step 3 "Mark conflicts as resolved:"
+    print_command "git add <resolved-files>"
+    print_command "git commit -m \"Resolve merge conflicts\""
+    echo ""
+    print_step 4 "Push the resolution:"
+    print_command "git push"
+    echo ""
+    print_step 5 "Re-run this command:"
+    print_command "worktree-complete $FEATURE_NAME"
+    echo ""
+    print_header
+    echo ""
+    exit 1
+fi
+
+# ============================================================================
+# STEP 1: CHECK FOR REVIEW FEEDBACK (P0/P1 GATE)
+# ============================================================================
+
+echo ""
+print_section "STEP 1: CHECKING FOR REVIEW FEEDBACK (P0/P1 GATE)"
+echo ""
+
+# Get review comments
+REVIEW_COMMENTS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+REVIEWS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews" --jq '. | length' 2>/dev/null || echo "0")
+ISSUE_COMMENTS=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+
+# Check for P0/P1 priority issues
+P0_COUNT=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '[.[] | select(.body | test("P0|\\bP0\\b"))] | length' 2>/dev/null || echo "0")
+P1_COUNT=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '[.[] | select(.body | test("P1|\\bP1\\b"))] | length' 2>/dev/null || echo "0")
+
+# Block if there are unresolved P0 issues
+if [ "$P0_COUNT" -gt 0 ]; then
+    print_error "❌ BLOCKING: Found $P0_COUNT unresolved P0 (critical) issues!"
+    echo ""
+    print_section "P0 Critical Issues:"
+    echo ""
+    gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P0|\\bP0\\b")) | "  🔴 \(.user.login) on \(.path):\(.line // "?")\n     \(.body | split("\n")[0])\n     URL: \(.html_url)\n"' 2>/dev/null
+    echo ""
+    print_error "Please fix all P0 issues before merging!"
+    print_info "Create a new commit with fixes or resolve comments inline"
+    echo ""
+    exit 1
+fi
+
+# Warn about P1 issues but allow merge
+if [ "$P1_COUNT" -gt 0 ]; then
+    print_warning "⚠️  Found $P1_COUNT P1 (high priority) issues"
+    echo ""
+    print_section "P1 High Priority Issues:"
+    echo ""
+    gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P1|\\bP1\\b")) | "  🟠 \(.user.login) on \(.path):\(.line // "?")\n     \(.body | split("\n")[0])\n     URL: \(.html_url)\n"' 2>/dev/null
+    echo ""
+    print_warning "Consider addressing these issues soon"
+    echo ""
+fi
+
+# ============================================================================
+# STEP 2: MERGE THE PR
+# ============================================================================
+
+echo ""
+print_section "STEP 2: MERGING PULL REQUEST"
+echo ""
+
+if [ "$PR_STATE" = "MERGED" ]; then
+    print_success "PR is already merged"
+    echo ""
+else
+    if [ "$PR_STATE" = "CLOSED" ]; then
+        print_warning "PR is closed (not merged)"
+        echo ""
+        read -p "Do you want to reopen and merge it? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Aborted"
+            exit 1
+        fi
+        gh pr reopen "$PR_NUMBER"
+        print_success "PR reopened"
+        echo ""
+    fi
+
+    # Check CI status
+    print_info "Checking CI status..."
+    CI_STATUS=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != null) | .conclusion' 2>/dev/null || echo "")
+
+    if echo "$CI_STATUS" | grep -q "FAILURE"; then
+        print_warning "Some CI checks have failed"
+        echo ""
+        read -p "Do you want to merge anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Aborted - fix CI failures first"
+            exit 1
+        fi
+    fi
+
+    # CRITICAL: Check PR completeness - ensure all local commits are pushed
+    # This prevents the error from PR #30 where commit 050411b existed locally but wasn't pushed
+    print_info "Checking PR completeness..."
+
+    if [ -d "$WORKTREE_PATH" ]; then
+        cd "$WORKTREE_PATH"
+
+        # Get current local commit
+        LOCAL_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+        # Get remote branch commit
+        REMOTE_BRANCH="origin/$BRANCH_NAME"
+        if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
+            REMOTE_COMMIT=$(git rev-parse "$REMOTE_BRANCH" 2>/dev/null || echo "")
+
+            # Check if local and remote are in sync
+            if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
+                # Check if we're ahead, behind, or diverged
+                AHEAD_COUNT=$(git rev-list "$REMOTE_BRANCH..HEAD" --count 2>/dev/null || echo "0")
+                BEHIND_COUNT=$(git rev-list "HEAD..$REMOTE_BRANCH" --count 2>/dev/null || echo "0")
+
+                if [ "$AHEAD_COUNT" -gt 0 ]; then
+                    echo ""
+                    print_error "BLOCKING: Local branch has $AHEAD_COUNT unpushed commit(s)!"
+                    echo ""
+                    print_section "Unpushed commits that would NOT be included in merge:"
+                    echo ""
+                    git log "$REMOTE_BRANCH..HEAD" --oneline --no-decorate | sed 's/^/  /'
+                    echo ""
+                    print_error "These commits exist locally but are NOT in the PR"
+                    print_error "Merging now would leave this work behind!"
+                    echo ""
+                    print_info "To fix this:"
+                    print_step 1 "Push the commits to include them in the PR:"
+                    print_command "cd $WORKTREE_PATH"
+                    print_command "git push"
+                    echo ""
+                    print_step 2 "OR create a backup branch if you don't want to include them:"
+                    print_command "git branch backup-$(date +%Y%m%d-%H%M%S)"
+                    print_command "git push -u origin backup-$(date +%Y%m%d-%H%M%S)"
+                    print_command "git reset --hard $REMOTE_BRANCH"
+                    print_command "git push --force-with-lease"
+                    echo ""
+                    print_warning "Merge aborted to protect your work"
+                    echo ""
+                    exit 1
+                fi
+
+                if [ "$BEHIND_COUNT" -gt 0 ]; then
+                    print_warning "Local branch is $BEHIND_COUNT commit(s) behind remote"
+                    print_info "This is unusual - someone may have pushed to the PR branch"
+                    echo ""
+                    read -p "Do you want to continue anyway? (y/n) " -n 1 -r
+                    echo
+                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                        print_error "Aborted - sync your local branch first"
+                        exit 1
+                    fi
+                fi
+            else
+                print_success "Local and remote branches are in sync"
+            fi
+        else
+            print_warning "Remote branch not found - this is unusual"
+            print_info "The PR branch may have been deleted or force-pushed"
+            echo ""
+            read -p "Do you want to continue anyway? (y/n) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_error "Aborted"
+                exit 1
+            fi
+        fi
+
+        cd "$PROJECT_DIR"
+    else
+        print_info "Worktree not found - skipping local commit check"
+    fi
+
+    echo ""
+
+    # Confirm merge
+    print_warning "Ready to merge PR #$PR_NUMBER using $MERGE_METHOD method"
+    echo ""
+    read -p "Proceed with merge? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_error "Aborted"
+        exit 1
+    fi
+
+    echo ""
+    print_info "Merging PR..."
+
+    # Merge the PR
+    case "$MERGE_METHOD" in
+        squash)
+            gh pr merge "$PR_NUMBER" --squash --delete-branch
+            ;;
+        rebase)
+            gh pr merge "$PR_NUMBER" --rebase --delete-branch
+            ;;
+        *)
+            gh pr merge "$PR_NUMBER" --merge --delete-branch
+            ;;
+    esac
+
+    echo ""
+    print_success "PR #$PR_NUMBER merged successfully!"
+    echo ""
+fi
+
+# ============================================================================
+# STEP 3: REVIEW FEEDBACK FOR LEARNING
+# ============================================================================
+
+echo ""
+print_section "STEP 3: REVIEW FEEDBACK FOR LEARNING"
+echo ""
+
+# Re-fetch review comments to include any added during merge
+REVIEW_COMMENTS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+REVIEWS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews" --jq '. | length' 2>/dev/null || echo "0")
+ISSUE_COMMENTS=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+
+TOTAL_FEEDBACK=$((REVIEW_COMMENTS + REVIEWS + ISSUE_COMMENTS))
+
+if [ "$TOTAL_FEEDBACK" -eq 0 ]; then
+    print_info "No review comments or feedback found"
+    echo ""
+else
+    print_warning "Found $TOTAL_FEEDBACK review comments/feedback items"
+
+    if [ "$P1_COUNT" -gt 0 ]; then
+        print_warning "⚠️  Includes $P1_COUNT P1 (high priority) issues"
+    fi
+    echo ""
+
+    # Display P1 issues prominently
+    if [ "$P1_COUNT" -gt 0 ]; then
+        print_section "P1 High Priority Issues ($P1_COUNT):"
+        echo ""
+        gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P1|\\bP1\\b")) | "  🟠 \(.user.login) on \(.path):\(.line // "?")\n     \(.body | split("\n")[0])\n     URL: \(.html_url)\n"' 2>/dev/null
+        echo ""
+        print_info "Consider addressing P1 issues in a follow-up PR"
+        echo ""
+    fi
+
+    # Display review summary
+    if [ "$REVIEWS" -gt 0 ]; then
+        print_section "Review Comments ($REVIEWS):"
+        echo ""
+        gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews" --jq '.[] | "  • \(.user.login) (\(.state)): \(.body // "No comment")"' 2>/dev/null || echo "  (Could not fetch review comments)"
+        echo ""
+    fi
+
+    if [ "$REVIEW_COMMENTS" -gt 0 ]; then
+        print_section "Code Review Comments ($REVIEW_COMMENTS total):"
+        echo ""
+        gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P0|P1") | not) | "  • \(.user.login) on \(.path):\(.line // "?"):\n    \(.body[0:100])\n"' 2>/dev/null || echo "  (Could not fetch code review comments)"
+        echo ""
+    fi
+
+    if [ "$ISSUE_COMMENTS" -gt 0 ]; then
+        print_section "General Comments ($ISSUE_COMMENTS):"
+        echo ""
+        gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --jq '.[] | "  • \(.user.login):\n    \(.body[0:100])\n"' 2>/dev/null || echo "  (Could not fetch general comments)"
+        echo ""
+    fi
+
+    print_warning "📚 Please review the feedback above for learning and improvement"
+    echo ""
+    read -p "Press Enter to continue with cleanup..." -r
+    echo ""
+fi
+
+# ============================================================================
+# STEP 4: CLEANUP WORKTREE
+# ============================================================================
+
+echo ""
+print_section "STEP 4: CLEANING UP WORKTREE"
+echo ""
+
+# Check if worktree exists
+if [ ! -d "$WORKTREE_PATH" ]; then
+    print_warning "Worktree directory not found at: $WORKTREE_PATH"
+    print_info "Will only clean up the branch"
+else
+    # Check for uncommitted changes
+    cd "$WORKTREE_PATH"
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        print_error "Worktree has uncommitted changes"
+        echo ""
+        git status --short
+        echo ""
+        read -p "Do you want to continue anyway? Changes will be lost. (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Aborted"
+            exit 1
+        fi
+    fi
+
+    # CRITICAL: Check for unpushed commits
+    # This prevents losing work when a worktree has local commits not pushed to remote
+    REMOTE_BRANCH="origin/$BRANCH_NAME"
+    if git rev-parse --verify "$REMOTE_BRANCH" >/dev/null 2>&1; then
+        # Remote branch exists, check if we have unpushed commits
+        UNPUSHED_COUNT=$(git rev-list "$REMOTE_BRANCH..HEAD" --count 2>/dev/null || echo "0")
+
+        if [ "$UNPUSHED_COUNT" -gt 0 ]; then
+            echo ""
+            print_error "BLOCKING: Worktree has $UNPUSHED_COUNT unpushed commit(s)!"
+            echo ""
+            print_section "Unpushed commits:"
+            echo ""
+            git log "$REMOTE_BRANCH..HEAD" --oneline --no-decorate | sed 's/^/  /'
+            echo ""
+            print_error "These commits would be LOST if the worktree is deleted"
+            echo ""
+            print_info "To save your work, you must:"
+            print_step 1 "Push the commits:"
+            print_command "git push"
+            echo ""
+            print_step 2 "OR create a backup branch:"
+            print_command "git branch backup-$(date +%Y%m%d-%H%M%S)"
+            print_command "git push -u origin backup-$(date +%Y%m%d-%H%M%S)"
+            echo ""
+            print_warning "Cleanup aborted to protect your work"
+            echo ""
+            exit 1
+        fi
+    else
+        # Remote branch doesn't exist yet - check if we have any commits
+        AHEAD_OF_MAIN=$(git rev-list "$DEFAULT_BRANCH"..HEAD --count 2>/dev/null || echo "0")
+
+        if [ "$AHEAD_OF_MAIN" -gt 0 ]; then
+            echo ""
+            print_error "BLOCKING: Branch has $AHEAD_OF_MAIN commit(s) but was never pushed!"
+            echo ""
+            print_section "Local-only commits:"
+            echo ""
+            git log "$DEFAULT_BRANCH"..HEAD --oneline --no-decorate | sed 's/^/  /'
+            echo ""
+            print_error "These commits would be LOST if the worktree is deleted"
+            echo ""
+            print_info "To save your work, push the branch first:"
+            print_command "git push -u origin $BRANCH_NAME"
+            echo ""
+            print_warning "Cleanup aborted to protect your work"
+            echo ""
+            exit 1
+        fi
+    fi
+
+    cd "$PROJECT_DIR"
+
+    print_info "Removing worktree..."
+    git worktree remove "$WORKTREE_PATH" --force
+    print_success "Worktree removed"
+fi
+
+# Update default branch
+print_info "Updating $DEFAULT_BRANCH branch..."
+git checkout "$DEFAULT_BRANCH" -q
+git pull origin "$DEFAULT_BRANCH" -q
+print_success "$DEFAULT_BRANCH branch updated"
+
+# Delete local branch
+if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+    print_info "Deleting local branch: $BRANCH_NAME"
+    git branch -d "$BRANCH_NAME" 2>/dev/null || git branch -D "$BRANCH_NAME"
+    print_success "Local branch deleted"
+fi
+
+# Check remote branch (may already be deleted by merge)
+if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+    print_info "Remote branch still exists"
+    read -p "Delete remote branch? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git push origin --delete "$BRANCH_NAME"
+        print_success "Remote branch deleted"
+    fi
+else
+    print_success "Remote branch already deleted"
+fi
+
+print_box "WORKFLOW COMPLETE!" \
+    "✓ PR #$PR_NUMBER merged" \
+    "✓ Review feedback checked ($TOTAL_FEEDBACK items)" \
+    "✓ Worktree cleaned up" \
+    "✓ Branches cleaned up"
