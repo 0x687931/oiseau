@@ -104,51 +104,47 @@ export NO_COLOR=1
 source oiseau/oiseau.sh
 ```
 
-### Override Box Width
-```bash
-# Default: Auto-detected terminal width minus 4 columns
-# Override: Set maximum box width
-export OISEAU_BOX_WIDTH=80
-source oiseau/oiseau.sh
-```
 
 ### Override Individual Colors
 ```bash
-# Override error color to use bright magenta instead
-export COLOR_ERROR='\033[38;5;201m'
+# Colors must be overridden AFTER sourcing (not before)
+# The library initializes all colors during sourcing
 source oiseau/oiseau.sh
 
-# Override multiple colors
-export COLOR_SUCCESS='\033[38;5;46m'
-export COLOR_WARNING='\033[38;5;208m'
-export COLOR_INFO='\033[38;5;45m'
-source oiseau/oiseau.sh
+# Now override specific colors
+export COLOR_ERROR='\033[38;5;201m'    # Bright magenta
+export COLOR_SUCCESS='\033[38;5;46m'   # Brighter green
+export COLOR_WARNING='\033[38;5;208m'  # Different orange
+export COLOR_INFO='\033[38;5;45m'      # Lighter blue
 ```
 
 ### Force Border Style
 ```bash
-# Force ASCII borders even in UTF-8 terminals
-export OISEAU_HAS_UTF8=0
+# Override must happen AFTER sourcing (not before)
+# The library auto-detects UTF-8 support during initialization
 source oiseau/oiseau.sh
 
-# Force UTF-8 borders (only if your terminal truly supports it)
+# Force ASCII borders even in UTF-8 terminals
+export OISEAU_HAS_UTF8=0
+
+# Or force UTF-8 borders (only if your terminal truly supports it)
 export OISEAU_HAS_UTF8=1
-source oiseau/oiseau.sh
 ```
 
 ### Force Display Mode
 ```bash
+# Override must happen AFTER sourcing (not before)
+# The library auto-detects the best mode during initialization
+source oiseau/oiseau.sh
+
 # Force plain mode (no colors, ASCII only)
 export OISEAU_MODE=plain
-source oiseau/oiseau.sh
 
-# Force color mode (colors but ASCII borders)
+# Or force color mode (colors but ASCII borders)
 export OISEAU_MODE=color
-source oiseau/oiseau.sh
 
-# Force rich mode (colors + UTF-8 borders)
+# Or force rich mode (colors + UTF-8 borders)
 export OISEAU_MODE=rich
-source oiseau/oiseau.sh
 ```
 
 ---
@@ -171,9 +167,10 @@ show_box error "Build Failed" "npm run build returned exit code 1"
 ### Example 2: Corporate Environment (ASCII Only)
 ```bash
 #!/bin/bash
-# Force ASCII for maximum compatibility
-export OISEAU_HAS_UTF8=0
 source oiseau/oiseau.sh
+
+# Force ASCII for maximum compatibility (override after sourcing)
+export OISEAU_HAS_UTF8=0
 
 show_success "Deployment started"
 show_box info "Status" "All systems operational"
@@ -186,11 +183,12 @@ show_box info "Status" "All systems operational"
 ### Example 3: Custom Brand Colors
 ```bash
 #!/bin/bash
-# Override colors to match company branding
+source oiseau/oiseau.sh
+
+# Override colors to match company branding (after sourcing)
 export COLOR_SUCCESS='\033[38;5;46m'   # Brighter green
 export COLOR_ERROR='\033[38;5;160m'    # Darker red
 export COLOR_INFO='\033[38;5;33m'      # Deeper blue
-source oiseau/oiseau.sh
 
 show_success "Build completed"
 show_error "Tests failed"
