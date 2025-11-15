@@ -375,6 +375,228 @@ OISEAU_GALLERY_AUTO=1 ./gallery.sh
 
 ---
 
+## 🎮 Building TUIs (Non-Scrolling UIs)
+
+Oiseau can build **non-scrolling Terminal User Interfaces** that refresh in place - like `htop`, `vim`, or monitoring dashboards.
+
+### Quick Start
+
+Run the TUI examples:
+
+```bash
+# Basic multi-view TUI
+./examples/tui_demo.sh
+
+# MVC pattern TUI with navigation
+./examples/tui_mvc.sh
+```
+
+### Scrolling vs Non-Scrolling
+
+**Scrolling (like `gallery.sh`):**
+- Output accumulates and scrolls down
+- Good for logs, reports, installation output
+- Simple sequential display
+
+**Non-Scrolling TUI:**
+- Takes over full screen, updates in place
+- Highly interactive with keyboard controls
+- Good for dashboards, monitors, editors
+
+### Basic TUI Pattern
+
+```bash
+#!/bin/bash
+source oiseau.sh
+
+# Terminal control
+clear_screen() { echo -en "\033[2J\033[H"; }
+hide_cursor() { echo -en "\033[?25l"; }
+show_cursor() { echo -en "\033[?25h"; }
+
+# Read single keypress
+read_key() {
+    local key=""
+    IFS= read -rsn1 -t 1 key 2>/dev/null
+    echo "$key"
+}
+
+# Render UI
+render() {
+    clear_screen
+    show_header "My Dashboard"
+    show_summary "Status" "Counter: $COUNTER"
+}
+
+# Main loop
+main() {
+    hide_cursor
+    trap 'show_cursor; clear_screen' EXIT
+
+    COUNTER=0
+    while true; do
+        render
+        key=$(read_key)
+
+        case "$key" in
+            q|Q) break ;;
+            ' ') COUNTER=$((COUNTER + 1)) ;;
+        esac
+    done
+}
+
+main
+```
+
+### Standard Key Bindings
+
+| Key | Purpose | Example Use |
+|-----|---------|-------------|
+| **Q** | Quit | Exit application |
+| **R** | Refresh | Force screen refresh |
+| **Tab** | Next | Cycle through views/items |
+| **Esc** | Back/Cancel | Return to previous view |
+| **↑↓** | Navigate | Move through lists |
+| **←→** | Horizontal | Switch tabs, adjust values |
+| **Space** | Toggle | Toggle checkboxes, select items |
+| **Enter** | Confirm | Submit, open item |
+| **1-9** | Jump | Quick navigation |
+
+### Reading Special Keys
+
+Arrow keys and special keys send multi-byte escape sequences:
+
+```bash
+read_key() {
+    local key=""
+    IFS= read -rsn1 -t 1 key 2>/dev/null
+
+    # Check for escape sequence (arrow keys, etc.)
+    if [ "$key" = $'\x1b' ]; then
+        local next
+        IFS= read -rsn2 -t 0.1 next 2>/dev/null
+        if [ -n "$next" ]; then
+            key="${key}${next}"
+        fi
+    fi
+
+    echo "$key"
+}
+
+# Handle keys
+case "$key" in
+    $'\x1b[A')  # Up arrow
+        move_up
+        ;;
+    $'\x1b[B')  # Down arrow
+        move_down
+        ;;
+    $'\t')      # Tab
+        next_view
+        ;;
+    ' ')        # Space
+        toggle_item
+        ;;
+    q|Q)        # Quit
+        return 1
+        ;;
+esac
+```
+
+### MVC Architecture
+
+For complex TUIs, use Model-View-Controller pattern:
+
+```bash
+# MODEL - Application state
+declare -A MODEL=(
+    [view]="home"
+    [counter]=0
+    [selected]=0
+)
+
+model::increment() {
+    MODEL[counter]=$((MODEL[counter] + 1))
+}
+
+# VIEW - Rendering (no logic)
+view::render() {
+    clear_screen
+    show_header "Counter: ${MODEL[counter]}"
+    show_summary "State" "View: ${MODEL[view]}"
+}
+
+# CONTROLLER - Input handling
+controller::handle_key() {
+    case "$1" in
+        q|Q) return 1 ;;
+        ' ') model::increment ;;
+    esac
+    return 0
+}
+
+# MAIN LOOP
+while true; do
+    view::render
+    key=$(read_key)
+    controller::handle_key "$key" || break
+done
+```
+
+### Terminal Control Reference
+
+Essential ANSI escape codes for TUIs:
+
+| Code | Function |
+|------|----------|
+| `\033[2J` | Clear entire screen |
+| `\033[H` | Move cursor to home (1,1) |
+| `\033[{row};{col}H` | Move cursor to position |
+| `\033[?25l` | Hide cursor |
+| `\033[?25h` | Show cursor |
+| `\033[K` | Clear line from cursor |
+| `\033[J` | Clear screen from cursor |
+
+### Best Practices
+
+1. **Always cleanup** - Restore cursor and terminal state on exit:
+   ```bash
+   cleanup() {
+       show_cursor
+       clear_screen
+   }
+   trap cleanup EXIT INT TERM
+   ```
+
+2. **Check for TTY** - TUIs require interactive terminal:
+   ```bash
+   if [ ! -t 0 ] || [ ! -t 1 ]; then
+       echo "Error: Requires interactive terminal"
+       exit 1
+   fi
+   ```
+
+3. **Use timeouts** - Allow auto-refresh with non-blocking reads:
+   ```bash
+   # -t 1 = 1 second timeout allows refresh every second
+   IFS= read -rsn1 -t 1 key 2>/dev/null
+   ```
+
+4. **Handle resize** - Detect terminal window resize:
+   ```bash
+   trap 'COLUMNS=$(tput cols); LINES=$(tput lines)' WINCH
+   ```
+
+### Complete Examples
+
+See `examples/` directory:
+
+- **`tui_demo.sh`** - Basic multi-view TUI with auto-refresh
+- **`tui_mvc.sh`** - MVC pattern with interactive task list
+- **`TUI_GUIDE.md`** - Comprehensive TUI development guide
+
+---
+
 ## 📖 Real-World Example
 
 ```bash
