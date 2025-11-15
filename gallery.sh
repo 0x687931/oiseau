@@ -231,27 +231,68 @@ echo "  Installation steps go here..."
 pause_between_sections
 
 # ==============================================================================
-# 8. INTERACTIVE PROMPTS (SIMULATED)
+# 8. ENHANCED TEXT INPUT (INTERACTIVE)
 # ==============================================================================
 
-print_section "8. Interactive Prompts"
+print_section "8. Enhanced Text Input with Validation"
 
-echo -e "${COLOR_MUTED}These prompts are interactive in real usage:${RESET}"
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "4 input modes: text, password, email, number"
+print_item "Auto-detects password fields from prompt keywords"
+print_item "Password masking with bullets (••••)"
+print_item "Email and number validation with error messages"
+print_item "Input sanitization built-in"
+print_item "Validation loops until valid input"
 echo ""
 
-echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}prompt_confirm \"Do you want to continue?\"${RESET}"
-echo -e "${COLOR_MUTED}Renders as:${RESET}"
-echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  Do you want to continue? [y/N]: _"
-
+echo -e "${COLOR_MUTED}Available modes:${RESET}"
 echo ""
-echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}ask_input \"Enter your name\" \"John\"${RESET}"
-echo -e "${COLOR_MUTED}Renders as:${RESET}"
-echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  Enter your name [John]: _"
 
+echo -e "${COLOR_MUTED}1. Text mode (default):${RESET}"
+echo -e "  ${COLOR_CODE}name=\$(ask_input \"Your name\" \"John\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    name=$(ask_input "Your name" "John")
+    show_success "You entered: $name"
+else
+    echo "  (Interactive in real usage)"
+fi
 echo ""
-echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}ask_yes_no \"Delete all files?\"${RESET}"
-echo -e "${COLOR_MUTED}Renders as:${RESET}"
-echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  Delete all files? [y/N]: _"
+
+echo -e "${COLOR_MUTED}2. Password mode (auto-detected):${RESET}"
+echo -e "  ${COLOR_CODE}pass=\$(ask_input \"Enter password\")${RESET}"
+echo "  Auto-detects keywords: password, pass, secret, token, key, api"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    pass=$(ask_input "Enter password")
+    show_success "Password set (hidden as ••••)"
+else
+    echo "  (Interactive in real usage - shows bullets)"
+fi
+echo ""
+
+echo -e "${COLOR_MUTED}3. Email validation:${RESET}"
+echo -e "  ${COLOR_CODE}email=\$(ask_input \"Email\" \"\" \"email\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    email=$(ask_input "Email address" "" "email")
+    show_success "Email saved: $email"
+else
+    echo "  (Interactive - validates format, loops on error)"
+fi
+echo ""
+
+echo -e "${COLOR_MUTED}4. Number validation:${RESET}"
+echo -e "  ${COLOR_CODE}age=\$(ask_input \"Age\" \"\" \"number\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    age=$(ask_input "Your age" "" "number")
+    show_success "Age recorded: $age"
+else
+    echo "  (Interactive - validates numeric input)"
+fi
+echo ""
+
+echo -e "${COLOR_MUTED}Security features:${RESET}"
+print_item "All input is sanitized with _escape_input()"
+print_item "Prompts are sanitized before display"
+print_item "No ANSI injection or command substitution possible"
 
 pause_between_sections
 

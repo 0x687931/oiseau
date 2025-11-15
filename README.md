@@ -24,7 +24,8 @@ show_box warning "Uncommitted Changes" "You have 3 uncommitted files" \
 - **🛡️ Security First** - Built-in input sanitization prevents code injection
 - **⚡ Fast** - Caches terminal detection for minimal overhead
 - **🌍 Universal** - Works in pipes, redirects, CI/CD, and all terminal emulators
-- **📝 30+ Widgets** - Messages, boxes, progress bars, checklists, headers, and more
+- **📝 30+ Widgets** - Messages, boxes, progress bars, checklists, spinners, validated inputs, and more
+- **🔐 Smart Input** - Password masking, email/number validation, auto-detection
 
 ---
 
@@ -231,7 +232,46 @@ show_success "Done!"
 |----------|---------|-------------|
 | `prompt_confirm "msg" [default]` | 0=yes, 1=no | Yes/no confirmation |
 | `ask_yes_no "msg"` | 0=yes, 1=no | Alias for prompt_confirm |
-| `ask_input "msg" [default]` | string | Text input prompt |
+| `ask_input "msg" [default] [mode]` | string | Enhanced text input with validation |
+
+#### Enhanced Text Input
+
+The `ask_input` function provides secure text input with validation, password masking, and auto-detection:
+
+**Modes:**
+- `text` (default) - Normal text input
+- `password` - Masked input with bullets (••••), backspace support
+- `email` - Validates email format, loops until valid
+- `number` - Validates numeric input only
+
+**Auto-detection:**
+Automatically switches to password mode when prompt contains: `password`, `passwd`, `pass`, `secret`, `token`, `key`, or `api`
+
+**Examples:**
+
+```bash
+# Basic text input with default
+name=$(ask_input "Your name" "John")
+
+# Password - auto-detected from prompt
+password=$(ask_input "Enter password")          # Shows bullets (••••)
+api_key=$(ask_input "API key")                  # Auto-detected as password
+
+# Explicit password mode
+password=$(ask_input "PIN" "" "password")
+
+# Email validation (loops until valid)
+email=$(ask_input "Email address" "" "email")
+
+# Number validation (loops until valid)
+age=$(ask_input "Your age" "" "number")
+```
+
+**Security features:**
+- All input sanitized with `_escape_input()`
+- Prompts sanitized before display
+- No ANSI injection or command substitution possible
+- Password mode never echoes sensitive data
 
 ### Formatting Helpers
 

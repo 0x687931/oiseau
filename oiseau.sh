@@ -698,19 +698,113 @@ ask_yes_no() {
     prompt_confirm "$@"
 }
 
-# Ask for text input
+#===============================================================================
+# FUNCTION: ask_input
+# DESCRIPTION: Prompt for text input with optional password masking and validation
+# PARAMETERS:
+#   $1 - prompt (string, required): Prompt message
+#   $2 - default (string, optional): Default value if user presses Enter
+#   $3 - mode (string, optional): Input mode (text|password|email|number)
+# RETURNS: User input (sanitized)
+# MODES:
+#   text     - Normal text input (default)
+#   password - Hidden input, shows bullets (••••)
+#   email    - Validates email format
+#   number   - Validates numeric input
+# BEHAVIOR:
+#   - Auto-detects password fields by prompt text (password, pass, secret, token, key)
+#   - Validates input based on mode
+#   - Loops until valid input received (for email/number modes)
+#   - Sanitizes all input for security
+# EXAMPLE:
+#   name=$(ask_input "Your name")
+#   pass=$(ask_input "Password" "" "password")
+#   email=$(ask_input "Email" "" "email")
+#   age=$(ask_input "Age" "" "number")
+#===============================================================================
 ask_input() {
-    local msg="$1"
+    local prompt="$1"
     local default="${2:-}"
+    local mode="${3:-text}"
 
-    if [ -n "$default" ]; then
-        echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${msg} [${default}]: "
-    else
-        echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${msg}: "
+    # Auto-detect password mode from prompt text
+    if [ "$mode" = "text" ]; then
+        local prompt_lower=$(echo "$prompt" | tr '[:upper:]' '[:lower:]')
+        if [[ "$prompt_lower" =~ (password|passwd|pass|secret|token|key|api) ]]; then
+            mode="password"
+        fi
     fi
 
-    read -r response
-    echo "${response:-$default}"
+    # Sanitize prompt
+    local safe_prompt="$(_escape_input "$prompt")"
+
+    local response=""
+    local valid=0
+
+    while [ $valid -eq 0 ]; do
+        # Display prompt (to stderr so it doesn't interfere with return value)
+        if [ -n "$default" ] && [ "$mode" != "password" ]; then
+            echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${safe_prompt} [${default}]: " >&2
+        else
+            echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${safe_prompt}: " >&2
+        fi
+
+        # Read input based on mode
+        if [ "$mode" = "password" ]; then
+            # Password mode: hide input, show bullets
+            response=""
+            while IFS= read -r -s -n1 char; do
+                # Handle Enter key
+                if [ -z "$char" ]; then
+                    break
+                fi
+
+                # Handle backspace
+                if [ "$char" = $'\177' ] || [ "$char" = $'\b' ]; then
+                    if [ -n "$response" ]; then
+                        response="${response%?}"
+                        echo -ne "\b \b" >&2
+                    fi
+                else
+                    response+="$char"
+                    echo -n "•" >&2
+                fi
+            done
+            echo "" >&2  # Newline after password input
+        else
+            # Normal text input
+            read -r response
+        fi
+
+        # Use default if empty
+        response="${response:-$default}"
+
+        # Validate based on mode
+        case "$mode" in
+            email)
+                if [[ "$response" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+                    valid=1
+                else
+                    show_error "Invalid email format. Please try again."
+                fi
+                ;;
+            number)
+                if [[ "$response" =~ ^[0-9]+$ ]]; then
+                    valid=1
+                else
+                    show_error "Please enter a valid number."
+                fi
+                ;;
+            *)
+                # text or password - always valid
+                valid=1
+                ;;
+        esac
+    done
+
+    # Sanitize and return
+    local safe_response="$(_escape_input "$response")"
+    echo "$safe_response"
 }
 
 # ==============================================================================
