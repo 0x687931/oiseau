@@ -297,6 +297,52 @@ _repeat_char() {
     printf "%${count}s" | tr ' ' "$char"
 }
 
+# Truncate text to a specific display width with ellipsis
+# Usage: _truncate_to_width "long text here" 20
+# Returns: Text truncated to fit within the display width, with "..." appended
+_truncate_to_width() {
+    local text="$1"
+    local max_width="$2"
+    local current_width
+    current_width=$(_display_width "$text")
+
+    # If text fits, return as-is
+    if [ "$current_width" -le "$max_width" ]; then
+        echo -n "$text"
+        return
+    fi
+
+    # Need to truncate - reserve 3 chars for ellipsis
+    local target_width=$((max_width - 3))
+    if [ "$target_width" -lt 1 ]; then
+        # Max width too small, just return ellipsis
+        echo -n "..."
+        return
+    fi
+
+    # Character-by-character truncation to respect display width
+    # This ensures we don't cut multibyte characters in the middle
+    local result=""
+    local i=0
+    local text_len=${#text}
+
+    while [ "$i" -lt "$text_len" ]; do
+        local char="${text:$i:1}"
+        local test_result="${result}${char}"
+        local test_width
+        test_width=$(_display_width "$test_result")
+
+        if [ "$test_width" -le "$target_width" ]; then
+            result="$test_result"
+            i=$((i + 1))
+        else
+            break
+        fi
+    done
+
+    echo -n "${result}..."
+}
+
 # Truncate string to max width with ellipsis
 _truncate() {
     local str="$1"
@@ -620,7 +666,9 @@ show_checklist() {
     eval "local items=(\"\${${array_name}[@]}\")"
 
     for item in "${items[@]}"; do
-        IFS='|' read -r status label details <<< "$item"
+        # Use local IFS to avoid corrupting global field separator
+        local IFS='|'
+        read -r status label details <<< "$item"
 
         local icon color
         case "$status" in
@@ -1711,14 +1759,11 @@ show_table() {
             local cell_width
             cell_width=$(_display_width "$cell")
 
-            # Truncate if needed
+            # Truncate if needed using display-width-aware truncation
             if [ "$cell_width" -gt "$col_width" ]; then
-                # Truncate with ellipsis
-                local truncated="${cell:0:$((col_width - 3))}..."
-                cell="$truncated"
-                # CRITICAL: Recalculate display width after truncation
-                # because byte-position truncation doesn't guarantee visual width
-                # especially with multi-byte UTF-8 characters (CJK, emojis, etc.)
+                # Use _truncate_to_width to safely handle multibyte characters (CJK, emojis)
+                # This prevents cutting characters in the middle of a multibyte sequence
+                cell=$(_truncate_to_width "$cell" "$col_width")
                 cell_width=$(_display_width "$cell")
             fi
 
@@ -1815,7 +1860,9 @@ show_help() {
     # Process and display help items
     for item in "${help_items[@]}"; do
         # Split on | delimiter
-        IFS='|' read -r key description <<< "$item"
+        # Use local IFS to avoid corrupting global field separator
+        local IFS='|'
+        read -r key description <<< "$item"
 
         local safe_key
         safe_key="$(_escape_input "$key")"
@@ -1834,7 +1881,8 @@ show_help() {
     echo ""
 
     # Press any key to continue (TTY only)
-    if [ "$OISEAU_IS_TTY" = "1" ]; then
+    # Skip if OISEAU_HELP_NO_KEYPRESS is set (used by show_help_paged)
+    if [ "$OISEAU_IS_TTY" = "1" ] && [ "${OISEAU_HELP_NO_KEYPRESS:-}" != "1" ]; then
         echo -ne "${COLOR_DIM}Press any key to continue...${RESET}"
         read -r -s -n1
         echo ""
@@ -1866,9 +1914,10 @@ show_help_paged() {
         return 1
     fi
 
-    # Generate help content
+    # Generate help content without the interactive "Press any key" prompt
+    # Set OISEAU_HELP_NO_KEYPRESS to suppress the prompt in show_help
     local help_content
-    help_content=$(show_help "$title" "$array_name" "$key_width" 2>&1)
+    help_content=$(OISEAU_HELP_NO_KEYPRESS=1 show_help "$title" "$array_name" "$key_width" 2>&1)
 
     # Display in pager
     show_pager "$help_content" "$title"
