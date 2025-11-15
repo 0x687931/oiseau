@@ -359,6 +359,7 @@ app::cleanup() {
     tui::move 1 1
     echo -e "${COLOR_SUCCESS}MVC TUI exited cleanly. Thank you! 👋${RESET}"
     echo ""
+    exit 0
 }
 
 # ==============================================================================

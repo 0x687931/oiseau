@@ -253,6 +253,7 @@ cleanup() {
     move_cursor 1 1
     echo -e "${COLOR_SUCCESS}TUI Demo exited cleanly. Goodbye! 👋${RESET}"
     echo ""
+    exit 0
 }
 
 # ==============================================================================
