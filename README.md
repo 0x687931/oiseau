@@ -240,7 +240,7 @@ The `ask_input` function provides secure text input with validation, password ma
 
 **Modes:**
 - `text` (default) - Normal text input
-- `password` - Masked input with bullets (••••), backspace support
+- `password` - Masked input (• in UTF-8, * in ASCII/Plain), backspace support
 - `email` - Validates email format, loops until valid
 - `number` - Validates numeric input only
 
@@ -254,7 +254,7 @@ Automatically switches to password mode when prompt contains: `password`, `passw
 name=$(ask_input "Your name" "John")
 
 # Password - auto-detected from prompt
-password=$(ask_input "Enter password")          # Shows bullets (••••)
+password=$(ask_input "Enter password")          # Shows • (UTF-8) or * (ASCII)
 api_key=$(ask_input "API key")                  # Auto-detected as password
 
 # Explicit password mode

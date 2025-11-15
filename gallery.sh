@@ -239,7 +239,7 @@ print_section "8. Enhanced Text Input with Validation"
 echo -e "${COLOR_MUTED}Features:${RESET}"
 print_item "4 input modes: text, password, email, number"
 print_item "Auto-detects password fields from prompt keywords"
-print_item "Password masking with bullets (••••)"
+print_item "Password masking (• in UTF-8, * in ASCII/Plain)"
 print_item "Email and number validation with error messages"
 print_item "Input sanitization built-in"
 print_item "Validation loops until valid input"
@@ -263,9 +263,13 @@ echo -e "  ${COLOR_CODE}pass=\$(ask_input \"Enter password\")${RESET}"
 echo "  Auto-detects keywords: password, pass, secret, token, key, api"
 if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
     pass=$(ask_input "Enter password")
-    show_success "Password set (hidden as ••••)"
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        show_success "Password set (hidden as ••••)"
+    else
+        show_success "Password set (hidden as ****)"
+    fi
 else
-    echo "  (Interactive in real usage - shows bullets)"
+    echo "  (Interactive - shows • in UTF-8, * in ASCII)"
 fi
 echo ""
 

@@ -751,7 +751,17 @@ ask_input() {
 
         # Read input based on mode
         if [ "$mode" = "password" ]; then
-            # Password mode: hide input, show bullets
+            # Password mode: hide input, show mask character
+            # Respect terminal mode for visual consistency
+            local mask_char="*"
+            if [ "$OISEAU_MODE" = "rich" ]; then
+                mask_char="•"  # UTF-8 bullet
+            elif [ "$OISEAU_MODE" = "color" ]; then
+                mask_char="*"  # ASCII asterisk
+            else
+                mask_char="*"  # Plain mode asterisk
+            fi
+
             response=""
             while IFS= read -r -s -n1 char; do
                 # Handle Enter key
@@ -767,7 +777,7 @@ ask_input() {
                     fi
                 else
                     response+="$char"
-                    echo -n "•" >&2
+                    echo -n "$mask_char" >&2
                 fi
             done
             echo "" >&2  # Newline after password input

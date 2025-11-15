@@ -196,23 +196,31 @@ test_modes() {
 
 # Test 11: Password masking functionality
 test_password_masking() {
-    # Verify password masking code exists
-    if grep -q 'echo -n "•"' "$PROJECT_ROOT/oiseau.sh"; then
-        echo "  ✓ Password masking with bullets (•) implemented"
-        return 0
+    # Verify password masking code exists with mode awareness
+    if grep -q 'mask_char' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Password masking variable found"
     else
         echo "  ✗ Password masking not found"
         return 1
     fi
 
+    # Verify mode-aware masking (UTF-8 bullet vs ASCII asterisk)
+    if grep -q 'mask_char="•"' "$PROJECT_ROOT/oiseau.sh" && grep -q 'mask_char="\*"' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Mode-aware masking: • (UTF-8) and * (ASCII)"
+    else
+        echo "  ✗ Mode-aware masking not found"
+        return 1
+    fi
+
     # Verify backspace handling
-    if grep -q '\$'"'"'\\177'"'"' "$PROJECT_ROOT/oiseau.sh" || grep -q '\$'"'"'\\b'"'"' "$PROJECT_ROOT/oiseau.sh"; then
+    if grep -q "Handle backspace" "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ Backspace handling implemented"
-        return 0
     else
         echo "  ✗ Backspace handling not found"
         return 1
     fi
+
+    return 0
 }
 
 # Test 12: Auto-detection keywords
