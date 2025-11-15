@@ -19,10 +19,11 @@ Oiseau is a well-designed bash UI library that successfully implements its core 
 ### ✅ Strengths
 
 #### 1. Terminal Detection (Lines 23-72)
-- **Excellent:** Robust detection of TTY, color support, and UTF-8
+- **Good:** Detection of TTY, color support, and UTF-8 logic is sound
 - **Excellent:** Proper fallback chain (rich → color → plain)
 - **Excellent:** Respects NO_COLOR and UI_DISABLE standards
 - **Excellent:** Cached terminal width detection
+- **Issue:** Uses `local` at top level (lines 39, 54) which causes errors in strict bash environments. Should use regular variables instead.
 
 #### 2. Security (Line 151-155)
 - **Excellent:** Input sanitization via `_escape_input()`
@@ -155,12 +156,12 @@ BOX_DTL / BOX_DTR / BOX_DBL / BOX_DBR  # Another set
 - Breaking changes: **Zero**
 - Learning curve: **None** (optional, documented)
 
-### Security Validation: ✅ PASSES
+### Security Validation: ✅ PASSES (with caveats)
 
 - Input sanitization: **Implemented correctly**
 - ANSI injection prevention: **Working**
 - Control character stripping: **Working**
-- No eval usage: **Confirmed**
+- Eval usage: **Limited to one function** (`show_checklist` line 402 uses eval for bash 3.x/4.x array compatibility). Usage is controlled (nameref-style array dereferencing) but should be documented as a security consideration.
 
 ### Compatibility Validation: ✅ PASSES
 
