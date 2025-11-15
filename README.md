@@ -181,9 +181,27 @@ Types: `error`, `warning`, `info`, `success`
 
 | Function | Description |
 |----------|-------------|
-| `show_progress_bar <current> <total> [label]` | Progress bar with percentage |
+| `show_progress_bar <current> <total> [label]` | Animated progress bar with percentage |
 | `show_checklist <array_name>` | Checklist with status icons |
 | `show_summary "title" "item1" "item2" ...` | Summary box with items |
+
+**Progress Bar Features:**
+- **Auto-animation:** Updates in place when in TTY
+- **Smart fallback:** Prints new lines in pipes/redirects
+- **Validation:** Prevents division by zero, validates numeric input
+- **Customizable:** Width and animation can be overridden
+
+**Environment Variables:**
+- `OISEAU_PROGRESS_ANIMATE` - Force animation on/off (default: auto-detect)
+- `OISEAU_PROGRESS_WIDTH` - Bar width in characters (default: 20)
+
+**Example:**
+```bash
+for i in {1..100}; do
+  show_progress_bar $i 100 "Downloading"
+  sleep 0.05
+done
+```
 
 ### Spinner (Loading Indicators)
 

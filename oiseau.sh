@@ -501,21 +501,114 @@ show_box() {
 # PROGRESS & CHECKLIST
 # ==============================================================================
 
-# Show a progress bar
-# Usage: show_progress_bar <current> <total> [label]
+#===============================================================================
+# FUNCTION: show_progress_bar
+# DESCRIPTION: Display a progress bar with optional animation
+# PARAMETERS:
+#   $1 - current (number, required): Current progress value
+#   $2 - total (number, required): Total/maximum value
+#   $3 - label (string, optional): Label text (default: "Progress")
+# ENVIRONMENT VARIABLES:
+#   OISEAU_PROGRESS_ANIMATE - Enable in-place animation (1=yes, 0=no, default: auto)
+#   OISEAU_PROGRESS_WIDTH   - Bar width in characters (default: 20)
+# RETURNS: 0 on success, 1 on error
+# MODES:
+#   Rich:  UTF-8 filled/empty blocks (█░)
+#   Color: ASCII filled/empty (#-)
+#   Plain: Percentage only
+# BEHAVIOR:
+#   - Auto-detects animation: if called rapidly in TTY, updates in place
+#   - Prints newline when progress reaches 100%
+#   - Non-TTY or Plain mode: always prints new line
+# EXAMPLE:
+#   for i in {1..100}; do
+#     show_progress_bar $i 100 "Downloading"
+#     sleep 0.05
+#   done
+#===============================================================================
 show_progress_bar() {
     local current="$1"
     local total="$2"
     local label="${3:-Progress}"
 
+    # Validate inputs
+    if [ -z "$current" ] || [ -z "$total" ]; then
+        echo "ERROR: show_progress_bar requires current and total arguments" >&2
+        return 1
+    fi
+
+    # Ensure numeric values
+    if ! [[ "$current" =~ ^[0-9]+$ ]] || ! [[ "$total" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: show_progress_bar requires numeric arguments" >&2
+        return 1
+    fi
+
+    # Prevent division by zero
+    if [ "$total" -eq 0 ]; then
+        echo "ERROR: show_progress_bar total cannot be zero" >&2
+        return 1
+    fi
+
+    # Sanitize label
+    local safe_label="$(_escape_input "$label")"
+
+    # Calculate progress
     local percent=$((current * 100 / total))
-    local bar_width=20
+    local bar_width="${OISEAU_PROGRESS_WIDTH:-20}"
     local filled=$((current * bar_width / total))
     local empty=$((bar_width - filled))
 
-    local bar="${COLOR_SUCCESS}$(_repeat_char '█' "$filled")${COLOR_DIM}$(_repeat_char '░' "$empty")${RESET}"
+    # Determine if we should animate (update in place)
+    local should_animate=0
 
-    echo -e "${label}: ${bar} ${percent}% (${current}/${total})"
+    # Check explicit override
+    if [ -n "${OISEAU_PROGRESS_ANIMATE+x}" ]; then
+        if [ "$OISEAU_PROGRESS_ANIMATE" = "1" ]; then
+            should_animate=1
+        fi
+    else
+        # Auto-detect: animate if TTY and not plain mode
+        if [ "$OISEAU_IS_TTY" = "1" ] && [ "$OISEAU_MODE" != "plain" ]; then
+            should_animate=1
+        fi
+    fi
+
+    # Build progress bar based on mode
+    local bar_display
+    if [ "$OISEAU_MODE" = "plain" ]; then
+        # Plain mode: just percentage
+        bar_display="${percent}%"
+    else
+        # Build visual bar
+        local filled_char empty_char
+        if [ "$OISEAU_MODE" = "rich" ]; then
+            filled_char="█"
+            empty_char="░"
+        else
+            filled_char="#"
+            empty_char="-"
+        fi
+
+        local bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
+        bar_display="${bar} ${percent}%"
+    fi
+
+    # Add count if space allows
+    local full_display="${safe_label}: ${bar_display} (${current}/${total})"
+
+    # Output
+    if [ "$should_animate" = "1" ]; then
+        # In-place update (carriage return, clear to end of line)
+        echo -en "\r${full_display}\033[K"
+
+        # Print newline when complete
+        if [ "$current" -ge "$total" ]; then
+            echo ""
+        fi
+    else
+        # Static mode: print new line each time
+        echo -e "${full_display}"
+    fi
 }
 
 # Show a checklist with status indicators

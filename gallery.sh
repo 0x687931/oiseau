@@ -104,15 +104,28 @@ pause_between_sections
 # 4. PROGRESS BAR
 # ==============================================================================
 
-print_section "4. Progress Bar"
+print_section "4. Progress Bar (Now with Animation!)"
 
-echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_progress_bar <current> <total> \"Label\"${RESET}"
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "  ${COLOR_CODE}for i in {1..100}; do${RESET}"
+echo -e "  ${COLOR_CODE}  show_progress_bar \$i 100 \"Downloading\"${RESET}"
+echo -e "  ${COLOR_CODE}  sleep 0.05${RESET}"
+echo -e "  ${COLOR_CODE}done${RESET}"
 echo ""
 
-for i in 0 2 5 8 10; do
-    show_progress_bar "$i" 10 "Installation"
-    sleep 0.3
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "Auto-animates in TTY (updates in place)"
+print_item "Prints new line in pipes/redirects"
+print_item "Customizable width and override controls"
+print_item "Input validation and sanitization"
+echo ""
+
+echo -e "${COLOR_MUTED}Renders as:${RESET}"
+for i in {1..50}; do
+    show_progress_bar "$i" 50 "Processing"
+    sleep 0.03
 done
+echo ""
 
 pause_between_sections
 
