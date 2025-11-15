@@ -36,7 +36,7 @@ else
     # Detect color support
     if [ "$OISEAU_IS_TTY" = "1" ] && [ "$TERM" != "dumb" ] && [ -n "$TERM" ]; then
         if command -v tput >/dev/null 2>&1; then
-            local colors=$(tput colors 2>/dev/null || echo 0)
+            colors=$(tput colors 2>/dev/null || echo 0)
             if [ "$colors" -ge 256 ]; then
                 export OISEAU_HAS_COLOR=1
             else
@@ -51,7 +51,7 @@ else
 
     # Detect UTF-8 support
     if [ "$OISEAU_IS_TTY" = "1" ]; then
-        local locale_check="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+        locale_check="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
         if [[ "$locale_check" =~ [Uu][Tt][Ff]-?8 ]]; then
             export OISEAU_HAS_UTF8=1
         else

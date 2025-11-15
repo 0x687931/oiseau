@@ -1,150 +1,88 @@
-# Oiseau Widget Specification & Design Reference
+# Oiseau Widget Reference
 
-This document establishes the design principles and implementation standards for all Oiseau UI widgets based on industry-standard terminal UI libraries (Rich, Lip Gloss, Textual, Bubbletea).
+**Philosophy**: Zero config by default, 3 env vars for global customization:
+- `OISEAU_BORDER_STYLE` - Global border style (rounded/double/ascii)
+- `OISEAU_BOX_WIDTH` - Default box width (60)
+- `COLOR_*` - Standard color variables for theming
 
-## Design Philosophy
+## Border Styles
 
-### Core Principles
+**ROUNDED** (default): `╭─╮ │ ╰─╯`
+**DOUBLE**: `╔═╗ ║ ╚═╝`
+**SQUARE**: `┌─┐ │ └─┘`
+**ASCII**: `+--+ | +--+`
 
-1. **Consistency First**: All widgets should follow the same patterns for borders, padding, alignment, and sizing
-2. **Graceful Degradation**: Support rich mode (UTF-8 + color), color mode (color + ASCII), and plain mode (ASCII only)
-3. **Wide Character Support**: Properly handle emoji, CJK characters, and full-width characters (2-column display width)
-4. **Security**: All user input must be sanitized to prevent ANSI injection and control character exploits
-5. **Flexibility**: Widgets should adapt to terminal width with sensible defaults
+## Widget Reference
 
-### Industry Standards (from Rich, Lip Gloss, Textual)
+### Bordered Box Widgets
 
-**Border Design Patterns:**
-- **ROUNDED**: `╭─╮ │ ╰─╯` - Default for modern panels, friendly appearance
-- **SQUARE**: `┌─┐ │ └─┘` - Traditional box drawing, widely compatible
-- **DOUBLE**: `╔═╗ ║ ╚═╝` - Heavy emphasis, used for important containers
-- **HEAVY**: `┏━┓ ┃ ┗━┛` - Bold emphasis, headers and critical messages
-- **ASCII**: `+--+ | +--+` - Maximum compatibility, fallback mode
+#### `show_box <type> <title> <message> [commands...]`
+Display important messages in a bordered container.
 
-**Padding Conventions (CSS-like):**
-- Internal spacing inside borders
-- Minimum 1 space on each side for readability
-- Consistent horizontal padding (typically 2 spaces)
-- Vertical padding for breathing room (blank lines)
+**Parameters**:
+- `type`: error, warning, info, success
+- `title`: Box title (displays with icon)
+- `message`: Main message content (word-wrapped)
+- `commands`: Optional command suggestions (prefixed, code-styled)
 
-**Alignment Standards:**
-- Left-aligned content by default
-- Centered titles/headers
-- Right-aligned metadata (step counters, percentages)
-- Full-width boxes extend to fill available space (with margins)
+**Border**: DOUBLE (`╔═╗`)
+**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
+**Colors**: error=red, warning=orange, info=blue, success=green
+**Padding**: 2 spaces horizontal, 1 line vertical
 
-**Text Wrapping:**
-- Word-aware wrapping (`fold -s` behavior)
-- Respect max width minus padding
-- Preserve alignment after wrapping
-- No mid-word breaks
-
----
-
-## Widget Catalog & Specifications
-
-### 1. Bordered Box Widgets
-
-#### 1.1 `show_box <type> <title> <message> [commands...]`
-
-**Purpose**: Display important messages in a bordered container with optional action commands.
-
-**Design Reference**: Rich Panel, Lip Gloss Box
-- **Border Style**: DOUBLE (`╔═╗ ║ ╚═╝`)
-- **Color by Type**: error (red), warning (orange), info (blue), success (green)
-- **Internal Padding**: 1 blank line top/bottom, 2 spaces left/right
-- **Width**: Default 60 columns, clamped to terminal width - 4
-
-**Required Structure**:
 ```
 ╔══════════════════════════════════════════════════════════╗
 ║  [icon]  Title                                           ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
-║  Message content here (wrapped if long)                  ║
+║  Message content here                                    ║
 ║                                                          ║
 ║  To resolve:                                             ║
 ║    command one                                           ║
-║    command two                                           ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-**Critical Requirements**:
-- ✅ All lines MUST have both left AND right borders
-- ✅ Title line includes icon, styled bold
-- ✅ Divider line separates title from content
-- ✅ Message text word-wrapped at inner_width - 4
-- ✅ Commands prefixed with 4 spaces, styled as code
-- ✅ Empty lines above/below message and commands
-- ✅ All content padded to exact inner_width
-
-**Validation Checklist**:
-- [ ] Right border present on title line
-- [ ] Right border present on all empty lines
-- [ ] Right border present on all message lines
-- [ ] Right border present on all command lines
-- [ ] Right border present on "To resolve:" line
-- [ ] Text wrapping maintains borders
-- [ ] CJK/emoji correctly measured for padding
-- [ ] Long text doesn't overflow box width
-- [ ] Empty message doesn't break structure
-
 ---
 
-#### 1.2 `show_header_box <title> [subtitle]`
+#### `show_header_box <title> [subtitle]`
+Display prominent page/section header.
 
-**Purpose**: Display prominent page/section header in decorative bordered box.
+**Parameters**:
+- `title`: Main header text (word-wrapped)
+- `subtitle`: Optional subtitle (word-wrapped)
 
-**Design Reference**: Lip Gloss styled header, Textual header widget
-- **Border Style**: ROUNDED (`╭─╮ │ ╰─╯`)
-- **Color**: Header color (bold cyan/blue)
-- **Internal Padding**: 1 blank line top, 1 blank line bottom, 3 spaces left/right
-- **Width**: Default 60 columns, clamped to terminal width - 4
+**Border**: ROUNDED (`╭─╮`)
+**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
+**Color**: Bold cyan/blue
+**Padding**: 3 spaces horizontal, 1 line vertical
 
-**Required Structure**:
 ```
   ╭──────────────────────────────────────────────────────────╮
   │                                                          │
-  │   Title Text Here (wrapped if needed)                   │
+  │   Title Text Here                                       │
   │                                                          │
-  │   Subtitle text here (optional, wrapped if needed)      │
+  │   Subtitle text here                                    │
   │                                                          │
   ╰──────────────────────────────────────────────────────────╯
 ```
 
-**Critical Requirements**:
-- ✅ All lines MUST have both left AND right borders
-- ✅ Title text word-wrapped at inner_width - 6
-- ✅ Subtitle text word-wrapped at inner_width - 6
-- ✅ Empty line before title
-- ✅ Empty line between title and subtitle (if subtitle exists)
-- ✅ Empty line after content
-- ✅ All content lines indented 3 spaces
-- ✅ All content padded to exact inner_width
-
-**Validation Checklist**:
-- [ ] Right border on all lines
-- [ ] Title wrapping works correctly
-- [ ] Subtitle wrapping works correctly
-- [ ] Works without subtitle
-- [ ] Empty title doesn't break box
-- [ ] CJK/emoji in title measured correctly
-- [ ] Long title wraps without overflow
-
 ---
 
-#### 1.3 `show_section_header <title> [step] [total] [subtitle]`
+#### `show_section_header <title> [step] [total] [subtitle]`
+Display section header with optional step counter.
 
-**Purpose**: Display section header with optional step counter for multi-step workflows.
+**Parameters**:
+- `title`: Section title
+- `step`: Current step number (optional)
+- `total`: Total steps (optional)
+- `subtitle`: Subtitle text (optional)
 
-**Design Reference**: Rich Panel with title/subtitle, Progress step indicators
-- **Border Style**: ROUNDED (`╭─╮ │ ╰─╯`)
-- **Color**: Muted/dim
-- **Width**: Default 60 columns, clamped to terminal width - 4
-- **Step Counter**: "Step X of Y › subtitle" format
+**Border**: ROUNDED (`╭─╮`)
+**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
+**Color**: Muted/dim
+**Format**: `Step X of Y › subtitle`
 
-**Required Structure**:
 ```
 ╭────────────────────────────────────────────────────────────╮
 │  Title                                                     │
@@ -152,79 +90,47 @@ This document establishes the design principles and implementation standards for
 ╰────────────────────────────────────────────────────────────╯
 ```
 
-**Critical Requirements**:
-- ✅ Title line padded to inner_width with right border
-- ✅ Step counter line padded to inner_width with right border
-- ✅ Step counter only shown if step and total provided
-- ✅ Subtitle only shown if provided
-- ✅ All content indented 2 spaces
-- ✅ No wrapping (single-line title/subtitle expected)
-
-**Validation Checklist**:
-- [ ] Right border on title line
-- [ ] Right border on step counter line
-- [ ] Works without step counter
-- [ ] Works without subtitle
-- [ ] Works with just title
-- [ ] CJK/emoji measured correctly
-- [ ] Long text clamped or wrapped
-
 ---
 
-#### 1.4 `show_summary <title> <items...>`
+#### `show_summary <title> <items...>`
+Display summary information in a bordered list.
 
-**Purpose**: Display summary information in a clean bordered list.
+**Parameters**:
+- `title`: Summary title
+- `items`: List items (one per line)
 
-**Design Reference**: Rich Panel with list items
-- **Border Style**: SQUARE (`┌─┐ │ └─┘`)
-- **Color**: Muted
-- **Width**: Default 60 columns, clamped to terminal width - 4
+**Border**: SQUARE (`┌─┐`)
+**Width**: 60 cols (respects OISEAU_BOX_WIDTH)
+**Color**: Muted
+**Padding**: 2 spaces horizontal
 
-**Required Structure**:
 ```
   ┌──────────────────────────────────────────────────────────┐
   │  Title                                                   │
   ├──────────────────────────────────────────────────────────┤
   │  Item 1                                                  │
   │  Item 2                                                  │
-  │  Item 3                                                  │
   └──────────────────────────────────────────────────────────┘
 ```
 
-**Critical Requirements**:
-- ✅ All lines have both left AND right borders
-- ✅ Title line padded to inner_width
-- ✅ Divider after title
-- ✅ Each item padded to inner_width
-- ✅ Items indented 2 spaces
-- ✅ No empty lines between items
-
-**Validation Checklist**:
-- [ ] Right border on title line
-- [ ] Right border on all item lines
-- [ ] Divider correctly sized
-- [ ] Empty items handled
-- [ ] CJK/emoji measured correctly
-- [ ] Long items wrapped or truncated
-
 ---
 
-### 2. Status Message Widgets
+### Status Message Widgets
 
-#### 2.1 `show_success <message>`
-#### 2.2 `show_error <message>`
-#### 2.3 `show_warning <message>`
-#### 2.4 `show_info <message>`
+#### `show_success <message>`
+#### `show_error <message>`
+#### `show_warning <message>`
+#### `show_info <message>`
 
-**Purpose**: Display inline status messages with icons.
+Display inline status messages with icons.
 
-**Design Reference**: Rich console.print with icons/styles
-- **Format**: `  [icon]  Message text`
-- **Icons**: ✓ (success), ✗ (error), ⚠ (warning), ℹ (info)
-- **Colors**: Green, red, orange, blue respectively
-- **Indentation**: 2 spaces prefix, 2 spaces after icon
+**Parameters**:
+- `message`: Status message text (word-wrapped)
 
-**Required Structure**:
+**Icons**: ✓ (success), ✗ (error), ⚠ (warning), ℹ (info)
+**Colors**: green, red, orange, blue
+**Format**: `  [icon]  Message text`
+
 ```
   ✓  Operation completed successfully
   ✗  Failed to connect
@@ -232,65 +138,39 @@ This document establishes the design principles and implementation standards for
   ℹ  Processing 50 files...
 ```
 
-**Critical Requirements**:
-- ✅ Icon displayed in rich/color mode, text marker in plain mode
-- ✅ Message text wraps at terminal width
-- ✅ Color applied to icon and message (rich/color mode)
-- ✅ Input sanitized
-
-**Validation Checklist**:
-- [ ] Icons display correctly in UTF-8 mode
-- [ ] Fallback to ASCII in plain mode
-- [ ] Long messages wrap correctly
-- [ ] CJK/emoji measured correctly
-- [ ] Empty message handled
-
 ---
 
-### 3. Progress Widgets
+### Progress Widgets
 
-#### 3.1 `show_progress_bar <current> <total> [label]`
+#### `show_progress_bar <current> <total> [label]`
+Display progress bar with percentage.
 
-**Purpose**: Display progress bar with percentage.
+**Parameters**:
+- `current`: Current progress value
+- `total`: Total value (100%)
+- `label`: Optional label text
 
-**Design Reference**: Rich Progress, Textual ProgressBar
-- **Format**: `Label: ████████░░░░░░░░░░ 40% (4/10)`
-- **Bar Width**: 20 characters default
-- **Fill Character**: `█` (rich), `#` (plain)
-- **Empty Character**: `░` (rich), `-` (plain)
+**Bar Width**: 20 characters
+**Fill**: `█` (rich), `#` (plain)
+**Empty**: `░` (rich), `-` (plain)
+**Format**: `Label: ████████░░░░░░░░░░ 40% (4/10)`
 
-**Required Structure**:
 ```
 Installation: ████████████░░░░░░░░ 60% (6/10)
 ```
 
-**Critical Requirements**:
-- ✅ Percentage calculated as (current/total * 100)
-- ✅ Bar filled proportionally
-- ✅ Label optional
-- ✅ Current/total counts shown
-- ✅ Handle edge cases: 0%, 100%, divide by zero
-
-**Validation Checklist**:
-- [ ] 0% shows empty bar
-- [ ] 100% shows full bar
-- [ ] 50% shows half-filled bar
-- [ ] Label with emoji/CJK works
-- [ ] Handles total=0 gracefully
-- [ ] Handles current > total gracefully
-
 ---
 
-#### 3.2 `show_checklist <array_name>`
+#### `show_checklist <array_name>`
+Display task checklist with status indicators.
 
-**Purpose**: Display task checklist with status indicators.
+**Parameters**:
+- `array_name`: Name of bash array containing "status|label|detail" items
 
-**Design Reference**: GitHub markdown task lists, Rich tree with status
-- **Format**: `  [icon]  Task name     Status detail`
-- **Statuses**: done (✓), active (●), pending (○), skip (—)
-- **Colors**: done (green), active (blue), pending (dim), skip (yellow)
+**Statuses**: done (✓), active (●), pending (○), skip (—)
+**Colors**: done=green, active=blue, pending=dim, skip=yellow
+**Columns**: Label width 24 chars, detail fills remaining
 
-**Required Structure**:
 ```
   ✓  Build Docker image     Completed in 45s
   ●  Run tests              156 tests running...
@@ -298,221 +178,140 @@ Installation: ████████████░░░░░░░░ 60% (
   —  Run linter             Skipped (--no-lint flag)
 ```
 
-**Critical Requirements**:
-- ✅ Each item: "status|label|detail" format
-- ✅ Icon and color based on status
-- ✅ Label and detail columns aligned
-- ✅ Label column width: 24 characters
-- ✅ Detail column fills remaining space
-
-**Validation Checklist**:
-- [ ] All four statuses render correctly
-- [ ] Column alignment with CJK labels
-- [ ] Column alignment with emoji labels
-- [ ] Long labels truncated or wrapped
-- [ ] Long details wrapped
-- [ ] Empty details handled
-
 ---
 
-### 4. Header Widgets
+### Header Widgets
 
-#### 4.1 `show_header <title>`
+#### `show_header <title>`
+Simple bold header without borders.
 
-**Purpose**: Simple bold header without borders.
+**Parameters**:
+- `title`: Header text
 
-**Design Reference**: Markdown H1, Rich heading
-- **Format**: Bold text with spacing
-- **No borders**: Just styled text
+**Format**: Bold text with blank lines before/after
 
-**Required Structure**:
 ```
 
 Title Text Here
 
 ```
 
-**Critical Requirements**:
-- ✅ Blank line before
-- ✅ Bold styling applied
-- ✅ Blank line after
-- ✅ No wrapping
-
 ---
 
-#### 4.2 `show_subheader <title>`
+#### `show_subheader <title>`
+Secondary header, muted style.
 
-**Purpose**: Secondary header, muted style.
+**Parameters**:
+- `title`: Subheader text
 
-**Design Reference**: Markdown H2
-- **Format**: Muted/dim text
-- **No borders**: Just styled text
+**Format**: Muted/dim text, no blank lines
 
-**Required Structure**:
 ```
 Subtitle Text Here
 ```
 
-**Critical Requirements**:
-- ✅ Muted color
-- ✅ No blank lines
-- ✅ No wrapping
-
 ---
 
-### 5. Formatting Helper Widgets
+### Formatting Helpers
 
-#### 5.1 `print_kv <key> <value> [width]`
+#### `print_kv <key> <value> [width]`
+Display key-value pairs in aligned columns.
 
-**Purpose**: Display key-value pairs in aligned columns.
+**Parameters**:
+- `key`: Key name
+- `value`: Value text
+- `width`: Key column width (default: 20)
 
-**Design Reference**: Configuration displays, property lists
-- **Format**: `  Key:     Value`
-- **Default Width**: 20 characters for key column
+**Format**: `  Key:     Value`
 
-**Required Structure**:
 ```
   Project:              my-awesome-app
   Version:              1.2.3
-  Environment:          production
 ```
 
-**Critical Requirements**:
-- ✅ Key column right-padded to width
-- ✅ Colon after key
-- ✅ Value starts at fixed column
-- ✅ CJK in key/value measured correctly
+---
+
+#### `print_command <command>`
+Display command in code/monospace style.
+
+**Parameters**:
+- `command`: Command text
+
+**Format**: `  command text` (dim/code color)
 
 ---
 
-#### 5.2 `print_command <command>`
+#### `print_item <text>`
+Display bulleted list item.
 
-**Purpose**: Display command in code/monospace style.
+**Parameters**:
+- `text`: Item text
 
-**Design Reference**: Markdown code blocks, Rich syntax
-- **Format**: `  command text`
-- **Styling**: Dim/code color
-
----
-
-#### 5.3 `print_item <text>`
-
-**Purpose**: Display bulleted list item.
-
-**Design Reference**: Markdown lists
-- **Format**: `  • Text` (rich), `  - Text` (plain)
+**Format**: `  • Text` (rich), `  - Text` (plain)
 
 ---
 
-#### 5.4 `print_step <number> <text>`
+#### `print_step <number> <text>`
+Display numbered step.
 
-**Purpose**: Display numbered step.
+**Parameters**:
+- `number`: Step number
+- `text`: Step text
 
-**Design Reference**: Ordered lists, tutorials
-- **Format**: `  1. Text`
-
----
-
-#### 5.5 `print_section <title>`
-
-**Purpose**: Display section divider.
-
-**Design Reference**: Markdown headers, section breaks
-- **Format**: Bold title with decorative line
+**Format**: `  1. Text`
 
 ---
 
-#### 5.6 `print_next_steps <items...>`
+#### `print_section <title>`
+Display section divider.
 
-**Purpose**: Display numbered list of next steps.
+**Parameters**:
+- `title`: Section title
 
-**Design Reference**: GitHub issue templates, workflow guides
-- **Format**: Numbered list in a styled block
-
----
-
-## Cross-Widget Requirements
-
-### Universal Padding & Alignment Rules
-
-1. **Inner Width Calculation**: `box_width - 2` (for left/right borders)
-2. **Content Padding**: All content must be padded to exact inner_width
-3. **Right Borders**: EVERY content line must have a right border
-4. **Text Wrapping**: Use `fold -s` at `inner_width - left_padding - right_padding`
-5. **Empty Lines**: Must be padded to inner_width with borders
-
-### Wide Character Support Requirements
-
-1. **Display Width Function**: Use `_display_width()` for ALL width calculations
-2. **Padding Function**: Use `_pad_to_width()` for ALL content line padding
-3. **Never Use**: `${#string}`, `wc -c`, or `wc -m` for display width
-4. **Test Coverage**: All widgets must be tested with emoji, CJK, full-width chars
-
-### Security Requirements
-
-1. **Input Sanitization**: Use `_escape_input()` on ALL user-provided strings
-2. **Strip ANSI**: Remove existing ANSI codes from input
-3. **Strip Control**: Remove control characters (newlines, tabs, etc.)
-4. **No Injection**: User input cannot inject colors, formatting, or commands
+**Format**: Bold title with decorative line
 
 ---
 
-## Validation Matrix
+#### `print_next_steps <items...>`
+Display numbered list of next steps.
 
-| Widget | Right Borders | Padding | Wrapping | CJK/Emoji | Empty Input | Long Input |
-|--------|---------------|---------|----------|-----------|-------------|------------|
-| show_box | ✅ | ✅ | ✅ | ✅ | ⚠️  | ⚠️  |
-| show_header_box | ✅ | ✅ | ✅ | ⚠️  | ⚠️  | ⚠️  |
-| show_section_header | ✅ | ✅ | ❌ | ⚠️  | ⚠️  | ⚠️  |
-| show_summary | ⚠️  | ⚠️  | ❌ | ⚠️  | ⚠️  | ⚠️  |
-| show_progress_bar | N/A | N/A | N/A | ⚠️  | ⚠️  | N/A |
-| show_checklist | N/A | ⚠️  | ❌ | ⚠️  | ⚠️  | ⚠️  |
-| Status messages | N/A | N/A | ✅ | ⚠️  | ⚠️  | ⚠️  |
+**Parameters**:
+- `items`: Step items
 
-**Legend**:
-- ✅ Implemented and validated
-- ⚠️  Needs validation
-- ❌ Not implemented
-- N/A Not applicable
+**Format**: Numbered list in styled block
 
 ---
 
-## Implementation Checklist
+## Implementation Requirements
 
-For each widget implementation:
+### Width Calculations
+- **Always use `_display_width()`** for measuring text (handles CJK, emoji, full-width chars)
+- **Never use** `${#string}`, `wc -c`, `wc -m` for display width
 
-- [ ] Function signature matches specification
-- [ ] Border style matches specification
-- [ ] Color scheme matches specification
-- [ ] Width/sizing behavior matches specification
-- [ ] Padding follows specification
-- [ ] Text wrapping implemented (if applicable)
-- [ ] Right borders on ALL content lines
-- [ ] Uses `_display_width()` for width calculations
-- [ ] Uses `_pad_to_width()` for padding
-- [ ] Uses `_escape_input()` for sanitization
-- [ ] Tested with ASCII text
-- [ ] Tested with emoji
-- [ ] Tested with CJK characters
-- [ ] Tested with full-width characters
-- [ ] Tested with empty input
-- [ ] Tested with very long input
-- [ ] Tested with special characters
-- [ ] Tested in rich mode
-- [ ] Tested in color mode
-- [ ] Tested in plain mode
-- [ ] Documented in README.md
-- [ ] Demonstrated in gallery.sh
-- [ ] Included in validate_widgets.sh
+### Padding
+- **Always use `_pad_to_width()`** for padding content to exact width
+- **All bordered lines must have right borders** (no missing borders)
 
----
+### Security
+- **Always use `_escape_input()`** on user-provided strings
+- Strips ANSI codes, control characters, prevents injection
 
-## Next Steps
+### Border Box Rules
+1. Inner width = `box_width - 2` (subtract left/right borders)
+2. Content padding = `inner_width - left_padding - right_padding`
+3. Word wrap at content padding width using `fold -s`
+4. Every content line padded to exact inner_width
+5. Every line has both left AND right borders
 
-1. ✅ Research industry standards (Rich, Lip Gloss, Textual) - COMPLETED
-2. ✅ Document widget specifications - COMPLETED
-3. ⚠️  Validate current implementation against specification
-4. ⚠️  Document inconsistencies and missing features
-5. ⚠️  Fix all validation failures
-6. ⚠️  Update README.md examples to match actual output
-7. ⚠️  Expand validate_widgets.sh with specification tests
+### Wide Character Support
+Test all widgets with:
+- ASCII text
+- Emoji (2-column width)
+- CJK characters (2-column width)
+- Full-width characters
+- Mixed content
+
+### Fallback Modes
+- **Rich mode**: UTF-8 + color (default)
+- **Color mode**: ASCII + color
+- **Plain mode**: ASCII only
