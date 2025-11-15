@@ -763,8 +763,12 @@ show_spinner() {
     # Hide cursor
     echo -en "\033[?25l"
 
-    # Cleanup on exit
-    trap 'echo -en "\r\033[K\033[?25h"' EXIT INT TERM
+    # Cleanup on exit - clear line and show cursor
+    cleanup_spinner() {
+        echo -en "\r\033[K\033[?25h"
+        exit 0
+    }
+    trap cleanup_spinner EXIT INT TERM
 
     # Animation loop
     while true; do

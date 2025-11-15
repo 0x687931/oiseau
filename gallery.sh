@@ -254,13 +254,14 @@ echo -e "  ${COLOR_CODE}# ... do work ...${RESET}"
 echo -e "  ${COLOR_CODE}stop_spinner${RESET}"
 echo ""
 
-echo -e "${COLOR_MUTED}Renders as:${RESET}"
+echo -e "${COLOR_MUTED}Renders as (showing 3 styles for 1.5 seconds each):${RESET}"
+echo ""
 
-# Demo all spinner styles
+# Demo all spinner styles with shorter duration
 echo -e "${COLOR_MUTED}Style: dots (default)${RESET}"
 export OISEAU_SPINNER_STYLE="dots"
 start_spinner "Loading with dots spinner..."
-sleep 2
+sleep 1.5
 stop_spinner
 show_success "Done!"
 
@@ -268,7 +269,7 @@ echo ""
 echo -e "${COLOR_MUTED}Style: circle${RESET}"
 export OISEAU_SPINNER_STYLE="circle"
 start_spinner "Loading with circle spinner..."
-sleep 2
+sleep 1.5
 stop_spinner
 show_success "Done!"
 
@@ -276,11 +277,12 @@ echo ""
 echo -e "${COLOR_MUTED}Style: pulse${RESET}"
 export OISEAU_SPINNER_STYLE="pulse"
 start_spinner "Loading with pulse spinner..."
-sleep 2
+sleep 1.5
 stop_spinner
 show_success "Done!"
 
 unset OISEAU_SPINNER_STYLE
+echo ""
 
 echo ""
 echo -e "${COLOR_MUTED}Features:${RESET}"
