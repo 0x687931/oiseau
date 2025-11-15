@@ -1716,7 +1716,10 @@ show_table() {
                 # Truncate with ellipsis
                 local truncated="${cell:0:$((col_width - 3))}..."
                 cell="$truncated"
-                cell_width="$col_width"
+                # CRITICAL: Recalculate display width after truncation
+                # because byte-position truncation doesn't guarantee visual width
+                # especially with multi-byte UTF-8 characters (CJK, emojis, etc.)
+                cell_width=$(_display_width "$cell")
             fi
 
             # Pad to column width
@@ -2221,16 +2224,18 @@ show_pager() {
 
     # Main input loop
     while true; do
-        # Read single character
-        IFS= read -r -s -n1 key
+        # Read single character from /dev/tty (not stdin)
+        # This allows piped input (cat file | show_pager "-") to work
+        # because content comes from stdin but keyboard input from /dev/tty
+        IFS= read -r -s -n1 key </dev/tty
 
         # Handle escape sequences (arrow keys, page keys)
         if [ "$key" = $'\x1b' ]; then
-            read -r -s -n2 -t 0.1 key
+            read -r -s -n2 -t 0.1 key </dev/tty
 
             # Check for extended sequences (Page Up/Down are 5 chars total)
             if [ "$key" = "[5" ] || [ "$key" = "[6" ]; then
-                read -r -s -n1 -t 0.1 extra
+                read -r -s -n1 -t 0.1 extra </dev/tty
                 key="${key}${extra}"
             fi
         fi
