@@ -162,6 +162,50 @@ _visible_len() {
     echo "${#clean}"
 }
 
+# Calculate display width (accounts for wide characters like emojis)
+# Emojis and some Unicode characters take 2 columns, this estimates the width
+_display_width() {
+    local str="$1"
+    # Remove ANSI codes first
+    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+
+    # Try perl for accurate display width calculation if the module is available
+    if command -v perl >/dev/null 2>&1; then
+        local perl_result
+        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
+            echo "$perl_result"
+            return
+        fi
+    fi
+
+    # Fallback: simple estimation using heuristics
+    # Count characters and add extra width for emojis (which take 2 columns)
+    local char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
+
+    # Count common emojis and special characters that take 2 columns
+    local emoji_count=$(echo "$clean" | grep -o '[🐦🎯✓✗⚠ℹ⏳◆⬤○◇▶●◉⚡🔄❌✔⚙🎨📦🚀💡🔍📝💬💭]' 2>/dev/null | wc -l | tr -d ' ')
+
+    # Display width = character count + emoji count (since emojis take 2 columns but count as 1 char)
+    echo $((char_count + emoji_count))
+}
+
+# Pad a string to a specific display width
+# Usage: _pad_to_width "text" 60
+_pad_to_width() {
+    local text="$1"
+    local target_width="$2"
+    local current_width=$(_display_width "$text")
+    local padding=$((target_width - current_width))
+
+    if [ "$padding" -gt 0 ]; then
+        echo -n "$text"
+        printf "%${padding}s" ""
+    else
+        echo -n "$text"
+    fi
+}
+
 # Repeat a character N times
 _repeat_char() {
     local char="$1"
