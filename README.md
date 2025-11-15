@@ -24,7 +24,8 @@ show_box warning "Uncommitted Changes" "You have 3 uncommitted files" \
 - **🛡️ Security First** - Built-in input sanitization prevents code injection
 - **⚡ Fast** - Caches terminal detection for minimal overhead
 - **🌍 Universal** - Works in pipes, redirects, CI/CD, and all terminal emulators
-- **📝 30+ Widgets** - Messages, boxes, progress bars, checklists, headers, and more
+- **📝 30+ Widgets** - Messages, boxes, progress bars, checklists, spinners, validated inputs, and more
+- **🔐 Smart Input** - Password masking, email/number validation, auto-detection
 
 ---
 
@@ -231,7 +232,92 @@ show_success "Done!"
 |----------|---------|-------------|
 | `prompt_confirm "msg" [default]` | 0=yes, 1=no | Yes/no confirmation |
 | `ask_yes_no "msg"` | 0=yes, 1=no | Alias for prompt_confirm |
-| `ask_input "msg" [default]` | string | Text input prompt |
+| `ask_input "msg" [default] [mode]` | string | Enhanced text input with validation |
+| `ask_list "prompt" array_name [mode]` | string(s) | Interactive list selection with arrow keys |
+
+#### Enhanced Text Input
+
+The `ask_input` function provides secure text input with validation, password masking, and auto-detection:
+
+**Modes:**
+- `text` (default) - Normal text input
+- `password` - Masked input (• in UTF-8, * in ASCII/Plain), backspace support
+- `email` - Validates email format, loops until valid
+- `number` - Validates numeric input only
+
+**Auto-detection:**
+Automatically switches to password mode when prompt contains: `password`, `passwd`, `pass`, `secret`, `token`, `key`, or `api`
+
+**Examples:**
+
+```bash
+# Basic text input with default
+name=$(ask_input "Your name" "John")
+
+# Password - auto-detected from prompt
+password=$(ask_input "Enter password")          # Shows • (UTF-8) or * (ASCII)
+api_key=$(ask_input "API key")                  # Auto-detected as password
+
+# Explicit password mode
+password=$(ask_input "PIN" "" "password")
+
+# Email validation (loops until valid)
+email=$(ask_input "Email address" "" "email")
+
+# Number validation (loops until valid)
+age=$(ask_input "Your age" "" "number")
+```
+
+**Security features:**
+- All input sanitized with `_escape_input()`
+- Prompts sanitized before display
+- No ANSI injection or command substitution possible
+- Password mode never echoes sensitive data
+
+#### Interactive List Selection
+
+The `ask_list` function provides interactive list selection with arrow key navigation:
+
+**Modes:**
+- `single` (default) - Select one item with Enter
+- `multi` - Toggle multiple items with Space, confirm with Enter
+
+**Navigation:**
+- Arrow keys (↑↓) or vim keys (j/k) to navigate
+- Enter to select (single mode) or confirm (multi mode)
+- Space to toggle selection (multi mode only)
+- q or Esc to cancel
+
+**Auto-detection:**
+Automatically falls back to numbered list in non-TTY environments (pipes, redirects)
+
+**Mode-aware:**
+- UTF-8 mode: › cursor, ✓ checkbox
+- ASCII mode: > cursor, X checkbox
+
+**Examples:**
+
+```bash
+# Single-select
+options=("Deploy to staging" "Deploy to production" "Rollback")
+choice=$(ask_list "Select action:" options)
+echo "You selected: $choice"
+
+# Multi-select
+files=("app.log" "error.log" "access.log" "debug.log")
+selected=$(ask_list "Select files to delete:" files "multi")
+
+# Process multi-select results (newline-separated)
+echo "$selected" | while IFS= read -r file; do
+    echo "Deleting: $file"
+done
+```
+
+**Features:**
+- Bash 3.x compatible (works on macOS default bash)
+- Input sanitization built-in
+- Real-time screen updates with smooth navigation
+- Graceful non-TTY fallback
 
 ### Formatting Helpers
 
