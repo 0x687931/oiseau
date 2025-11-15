@@ -338,7 +338,7 @@ app::run() {
 
     local running=true
     local last_view="${MODEL[view]}"
-    local need_full_redraw=true
+    local need_full_redraw=false
 
     # Initial render
     view::render

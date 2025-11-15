@@ -227,7 +227,7 @@ run_tui() {
 
     local running=true
     local last_view="$CURRENT_VIEW"
-    local need_full_redraw=true
+    local need_full_redraw=false
 
     # Initial render
     render_screen
