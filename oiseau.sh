@@ -72,7 +72,8 @@ else
 fi
 
 # Get terminal width (cached)
-export OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
+OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
+export OISEAU_WIDTH
 
 # ==============================================================================
 # COLOR DEFINITIONS (ANSI 256-Color Palette)
@@ -158,7 +159,8 @@ _escape_input() {
 _visible_len() {
     local str="$1"
     # Remove ANSI codes before calculating length
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean
+    clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
     echo "${#clean}"
 }
 
@@ -167,13 +169,13 @@ _visible_len() {
 _display_width() {
     local str="$1"
     # Remove ANSI codes first
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean
+    clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
 
     # Try perl for accurate display width calculation if the module is available
     if command -v perl >/dev/null 2>&1; then
         local perl_result
-        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
-        if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
+        if perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null) && [ -n "$perl_result" ]; then
             echo "$perl_result"
             return
         fi
@@ -183,7 +185,7 @@ _display_width() {
     # This handles CJK, emojis, and other wide characters more accurately
     if command -v perl >/dev/null 2>&1; then
         local perl_width
-        perl_width=$(echo -n "$clean" | perl -C -ne '
+        if perl_width=$(echo -n "$clean" | perl -C -ne '
             use utf8;
             binmode(STDIN, ":utf8");
             binmode(STDOUT, ":utf8");
@@ -240,8 +242,7 @@ _display_width() {
                 }
             }
             print $width;
-        ' 2>/dev/null)
-        if [ $? -eq 0 ] && [ -n "$perl_width" ]; then
+        ' 2>/dev/null) && [ -n "$perl_width" ]; then
             echo "$perl_width"
             return
         fi
@@ -249,19 +250,22 @@ _display_width() {
 
     # Last resort: basic heuristic for systems without perl
     # This is less accurate but better than nothing
-    local char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
+    local char_count
+    char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
 
     # Count characters that are likely wide (multibyte UTF-8 sequences of 3+ bytes)
     # CJK and emoji are typically 3-4 byte sequences
     # Use LC_ALL=C to get actual byte count instead of character count
-    local byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
+    local byte_count
+    byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
     local estimated_wide=$(( (byte_count - char_count) / 2 ))
 
     # Adjust for common icon characters that are narrow in modern terminals
     # These have 3-byte UTF-8 encoding but render as width 1
     local icon_count=0
     for icon in "✓" "✗" "⚠" "ℹ" "○" "●" "⊘"; do
-        local count=$(echo -n "$clean" | grep -o "$icon" 2>/dev/null | wc -l | tr -d ' ')
+        local count
+        count=$(echo -n "$clean" | grep -o "$icon" 2>/dev/null | wc -l | tr -d ' ')
         icon_count=$((icon_count + count))
     done
     estimated_wide=$((estimated_wide - icon_count))
@@ -279,7 +283,8 @@ _display_width() {
 _pad_to_width() {
     local text="$1"
     local target_width="$2"
-    local current_width=$(_display_width "$text")
+    local current_width
+    current_width=$(_display_width "$text")
     local padding=$((target_width - current_width))
 
     if [ "$padding" -gt 0 ]; then
@@ -301,7 +306,8 @@ _repeat_char() {
 _truncate() {
     local str="$1"
     local max_width="$2"
-    local visible_len=$(_visible_len "$str")
+    local visible_len
+    visible_len=$(_visible_len "$str")
 
     if [ "$visible_len" -le "$max_width" ]; then
         echo "$str"
@@ -328,25 +334,29 @@ _clamp_width() {
 
 # Show success message with green checkmark
 show_success() {
-    local msg="$(_escape_input "$1")"
+    local msg
+    msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  $msg"
 }
 
 # Show error message with red X
 show_error() {
-    local msg="$(_escape_input "$1")"
+    local msg
+    msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_ERROR}${ICON_ERROR}${RESET}  $msg"
 }
 
 # Show warning message with orange warning icon
 show_warning() {
-    local msg="$(_escape_input "$1")"
+    local msg
+    msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_WARNING}${ICON_WARNING}${RESET}  $msg"
 }
 
 # Show info message with blue info icon
 show_info() {
-    local msg="$(_escape_input "$1")"
+    local msg
+    msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  $msg"
 }
 
@@ -357,19 +367,22 @@ show_info() {
 # Show section header with optional step counter
 # Usage: show_section_header "Title" [step_num] [total_steps] [subtitle]
 show_section_header() {
-    local title="$(_escape_input "$1")"
+    local title
+    title="$(_escape_input "$1")"
     local step_num="${2:-}"
     local total_steps="${3:-}"
     local subtitle="${4:-}"
 
-    local width=$(_clamp_width 60)
+    local width
+    width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo ""
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
 
     # Title line
-    local title_display_width=$(_display_width "$title")
+    local title_display_width
+    title_display_width=$(_display_width "$title")
     local title_padding=$((inner_width - title_display_width - 2))
     echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
 
@@ -379,7 +392,8 @@ show_section_header() {
         if [ -n "$subtitle" ]; then
             step_text="${step_text} › ${subtitle}"
         fi
-        local step_display_width=$(_display_width "$step_text")
+        local step_display_width
+        step_display_width=$(_display_width "$step_text")
         local step_padding=$((inner_width - step_display_width - 2))
         echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}$(_repeat_char " " "$step_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     fi
@@ -390,23 +404,28 @@ show_section_header() {
 
 # Simple header
 show_header() {
-    local title="$(_escape_input "$1")"
+    local title
+    title="$(_escape_input "$1")"
     echo -e "\n${COLOR_HEADER}${BOLD}${title}${RESET}\n"
 }
 
 # Muted subheader
 show_subheader() {
-    local title="$(_escape_input "$1")"
+    local title
+    title="$(_escape_input "$1")"
     echo -e "${COLOR_MUTED}${title}${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
 # Usage: show_header_box "title" ["subtitle"]
 show_header_box() {
-    local title="$(_escape_input "$1")"
-    local subtitle="$(_escape_input "$2")"
+    local title
+    title="$(_escape_input "$1")"
+    local subtitle
+    subtitle="$(_escape_input "$2")"
 
-    local width=$(_clamp_width 60)
+    local width
+    width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo ""
@@ -449,8 +468,10 @@ show_header_box() {
 # Types: error, warning, info, success
 show_box() {
     local type="$1"; shift
-    local title="$(_escape_input "$1")"; shift
-    local message="$(_escape_input "$1")"; shift
+    local title
+    title="$(_escape_input "$1")"; shift
+    local content
+    content="$(_escape_input "$1")"; shift
     local commands=("$@")
 
     # Determine colors and icon based on type
@@ -462,7 +483,8 @@ show_box() {
         *)       color="$COLOR_INFO"; icon="$ICON_INFO" ;;
     esac
 
-    local width=$(_clamp_width 60)
+    local width
+    width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     # Top border
@@ -479,7 +501,7 @@ show_box() {
     echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "" "$inner_width")${color}${BOX_DV}${RESET}"
 
     # Message (word-wrapped if needed)
-    echo "$message" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
+    echo "$content" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
         echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "  $line" "$inner_width")${color}${BOX_DV}${RESET}"
     done
 
@@ -550,7 +572,8 @@ show_progress_bar() {
     fi
 
     # Sanitize label
-    local safe_label="$(_escape_input "$label")"
+    local safe_label
+    safe_label="$(_escape_input "$label")"
 
     # Calculate progress
     local percent=$((current * 100 / total))
@@ -590,7 +613,8 @@ show_progress_bar() {
             empty_char="-"
         fi
 
-        local bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
+        local bar
+        bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
         bar_display="${bar} ${percent}%"
     fi
 
@@ -649,20 +673,23 @@ show_summary() {
     local title="$1"; shift
     local items=("$@")
 
-    local width=$(_clamp_width 60)
+    local width
+    width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
 
     local title_content="  ${ICON_SUCCESS}  ${title}"
-    local title_display_width=$(_display_width "$title_content")
+    local title_display_width
+    title_display_width=$(_display_width "$title_content")
     local title_padding=$((inner_width - title_display_width))
     echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
 
     echo -e "${COLOR_BORDER}${BOX_VR}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_VL}${RESET}"
 
     for item in "${items[@]}"; do
-        local item_display_width=$(_display_width "$item")
+        local item_display_width
+        item_display_width=$(_display_width "$item")
         local item_padding=$((inner_width - item_display_width - 2))
         echo -e "${COLOR_BORDER}${BOX_V}${RESET}  $item$(_repeat_char " " "$item_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     done
@@ -804,7 +831,8 @@ show_spinner() {
     local message="${1:-Loading...}"
 
     # Sanitize input
-    local safe_message="$(_escape_input "$message")"
+    local safe_message
+    safe_message="$(_escape_input "$message")"
 
     # Non-TTY: just print message once and return
     if [ "$OISEAU_IS_TTY" != "1" ]; then
@@ -856,7 +884,8 @@ show_spinner() {
         fps=10  # Fallback to default
     fi
 
-    local delay=$(awk "BEGIN {print 1/$fps}")
+    local delay
+    delay=$(awk "BEGIN {print 1/$fps}")
     local frame_idx=0
     local num_frames=${#frames[@]}
 
@@ -864,6 +893,7 @@ show_spinner() {
     echo -en "\033[?25l"
 
     # Cleanup on exit - clear line and show cursor, then exit
+    # shellcheck disable=SC2329  # Function is invoked via trap
     cleanup_spinner() {
         echo -en "\r\033[K\033[?25h"
         trap - EXIT INT TERM  # Remove trap to prevent recursion
