@@ -89,17 +89,17 @@ show_box error "Connection Failed" \
 
 Output:
 ```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ✗  Connection Failed                         ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃                                                ┃
-┃  Unable to reach database at localhost:5432   ┃
-┃                                                ┃
-┃  To resolve:                                   ┃
-┃    systemctl start postgresql                 ┃
-┃    pg_isready -h localhost                    ┃
-┃                                                ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ✗  Connection Failed                                    ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                          ┃
+┃  Unable to reach database at localhost:5432             ┃
+┃                                                          ┃
+┃  To resolve:                                             ┃
+┃    systemctl start postgresql                           ┃
+┃    pg_isready -h localhost                              ┃
+┃                                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 ### Progress Bar
@@ -142,10 +142,10 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 
 Output:
 ```
-╭──────────────────────────────────────────────────────────╮
-│  Deploy Application                                      │
-│  Step 2 of 4 › Building Docker image                     │
-╰──────────────────────────────────────────────────────────╯
+╭────────────────────────────────────────────────────────────╮
+│  Deploy Application                                        │
+│  Step 2 of 4 › Building Docker image                       │
+╰────────────────────────────────────────────────────────────╯
 ```
 
 ---
