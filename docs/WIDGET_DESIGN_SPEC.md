@@ -6,9 +6,10 @@
 
 ## Table of Contents
 
-1. [Naming Convention](#naming-convention)
-2. [Design Principles](#design-principles)
-3. [Widget Specifications](#widget-specifications)
+1. [Visual Consistency Guidelines](#visual-consistency-guidelines)
+2. [Naming Convention](#naming-convention)
+3. [Design Principles](#design-principles)
+4. [Widget Specifications](#widget-specifications)
    - [Phase 1: Spinner](#phase-1-spinner)
    - [Phase 2: Animated Progress Bar](#phase-2-animated-progress-bar)
    - [Phase 3: Enhanced Text Input](#phase-3-enhanced-text-input)
@@ -19,8 +20,254 @@
    - [Phase 8: Window Resize Handler](#phase-8-window-resize-handler)
    - [Phase 9: Pager Widget](#phase-9-pager-widget)
    - [Phase 10: Quit Confirmation](#phase-10-quit-confirmation)
-4. [Testing Strategy](#testing-strategy)
-5. [Implementation Order](#implementation-order)
+5. [Validation Framework](#validation-framework)
+6. [Implementation Guidelines](#implementation-guidelines)
+7. [Testing Strategy](#testing-strategy)
+8. [Implementation Order](#implementation-order)
+
+---
+
+## Visual Consistency Guidelines
+
+**Critical:** All widgets must maintain visual consistency within each mode.
+
+### Three Rendering Modes
+
+Oiseau automatically detects terminal capabilities and selects the appropriate mode:
+
+| Mode | Trigger | Characters | Colors | Use Case |
+|------|---------|------------|--------|----------|
+| **Rich** | UTF-8 + 256-color | UTF-8 box drawing, Unicode icons | Full 256-color ANSI | Modern terminals (iTerm2, Alacritty, VS Code) |
+| **Color** | 256-color only | ASCII box drawing, ASCII icons | Full 256-color ANSI | Older terminals without UTF-8 |
+| **Plain** | No TTY or NO_COLOR | ASCII only | No colors | Pipes, redirects, CI/CD, logs |
+
+### Character Sets by Mode
+
+#### Rich Mode (UTF-8 + Color)
+
+**Box Drawing Characters:**
+```
+Rounded (default):  ╭─╮ │ ╰─╯ ├─┤
+Double (emphasis):  ┏━┓ ┃ ┗━┛ ┣━┫
+Single:             ┌─┐ │ └─┘ ├─┤
+```
+
+**Status Icons:**
+```
+Success: ✓    Error: ✗    Warning: ⚠    Info: ℹ
+Active:  ●    Pending: ○   Done: ✓      Skip: ⊘
+```
+
+**Progress Characters:**
+```
+Filled: █  Partial: ▓▒░  Empty: ░
+```
+
+**Spinner Styles:**
+```
+Dots:   ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+Line:   ⎯⎼⎽⎼
+Circle: ◐◓◑◒
+Pulse:  ●○●○
+Arc:    ◜◝◞◟
+```
+
+**Selection/Navigation:**
+```
+Selected: ▸  Unselected: ·  Checkbox: ☐☑  Radio: ○●
+```
+
+#### Color Mode (ASCII + Color)
+
+**Box Drawing Characters:**
+```
+Rounded equivalent: +--+ | +--+ |--|
+Double equivalent:  +==+ | +==+ |==|
+Single:             +--+ | +--+ |--|
+```
+
+**Status Icons:**
+```
+Success: [OK]  Error: [X]   Warning: [!]  Info: [i]
+Active:  [*]   Pending: [ ] Done: [+]     Skip: [-]
+```
+
+**Progress Characters:**
+```
+Filled: #  Partial: =~-  Empty: -
+```
+
+**Spinner Styles:**
+```
+Dots:   | / - \
+Line:   - = ≡ =
+Circle: | / - \
+Pulse:  * o * o
+Arc:    . o O o
+```
+
+**Selection/Navigation:**
+```
+Selected: >  Unselected: ·  Checkbox: [ ][X]  Radio: ( )(*)
+```
+
+#### Plain Mode (ASCII only, no color)
+
+**Box Drawing Characters:**
+```
+All styles: +--+ | +--+ |--|
+```
+
+**Status Icons:**
+```
+Success: [OK]  Error: [X]   Warning: [!]  Info: [i]
+Active:  [*]   Pending: [ ] Done: [+]     Skip: [-]
+```
+
+**Progress Characters:**
+```
+Filled: #  Empty: -
+```
+
+**Spinner:**
+```
+Static text only: "Loading..."
+```
+
+**Selection/Navigation:**
+```
+Selected: >  Unselected: -  Checkbox: [ ][X]  Radio: ( )(*)
+```
+
+### Visual Consistency Rules
+
+**1. Border Style Consistency**
+
+All widgets in the same rendering session must use consistent borders:
+
+```bash
+# Rich mode - all widgets use UTF-8
+show_header_box "Title"    # Uses ┏━┓
+show_box error "Error"     # Uses ┏━┓
+show_table data            # Uses ╭─╮ or ┏━┓
+
+# Color mode - all widgets use ASCII
+show_header_box "Title"    # Uses +==+
+show_box error "Error"     # Uses +==+
+show_table data            # Uses +--+ or +==+
+```
+
+**2. Icon Consistency**
+
+All status icons within the same mode must match:
+
+```bash
+# Rich mode
+show_success "Done"        # ✓
+show_checklist tasks       # ✓ ● ○
+show_list items            # ✓ ✗ ⚠
+
+# Color mode
+show_success "Done"        # [OK]
+show_checklist tasks       # [+] [*] [ ]
+show_list items            # [OK] [X] [!]
+```
+
+**3. Spacing Consistency**
+
+All widgets must maintain consistent internal spacing:
+
+```bash
+# 2-space padding inside boxes
+┏━━━━━━━━━━━━━━━━━━━━┓
+┃  Content here      ┃   # 2 spaces before, fill to right border
+┗━━━━━━━━━━━━━━━━━━━━┛
+
+# 2-space indent for list items
+  ✓  Item 1             # 2 spaces, icon, 2 spaces, text
+  ●  Item 2
+  ○  Item 3
+```
+
+**4. Width Consistency**
+
+All widgets must respect terminal width and use consistent clamping:
+
+```bash
+# Max width: terminal width - 4
+local max_width=$((OISEAU_WIDTH - 4))
+
+# Default box width: 60 columns (or max_width if smaller)
+local width=$(_clamp_width 60)
+```
+
+**5. Color Palette Consistency**
+
+Use the same color codes across all widgets (from oiseau.sh):
+
+```bash
+# Status colors (consistent across all widgets)
+COLOR_SUCCESS='\033[38;5;40m'    # Bright green
+COLOR_ERROR='\033[38;5;196m'     # Bright red
+COLOR_WARNING='\033[38;5;214m'   # Orange
+COLOR_INFO='\033[38;5;39m'       # Bright blue
+
+# UI colors
+COLOR_ACCENT='\033[38;5;99m'     # Purple
+COLOR_HEADER='\033[38;5;117m'    # Light blue
+COLOR_BORDER='\033[38;5;240m'    # Gray
+COLOR_MUTED='\033[38;5;246m'     # Light gray
+COLOR_DIM='\033[38;5;238m'       # Dark gray
+```
+
+### Mode Detection Logic
+
+```bash
+# Already implemented in oiseau.sh
+if [ "$OISEAU_HAS_COLOR" = "1" ] && [ "$OISEAU_HAS_UTF8" = "1" ]; then
+    OISEAU_MODE="rich"      # UTF-8 + Colors
+elif [ "$OISEAU_HAS_COLOR" = "1" ]; then
+    OISEAU_MODE="color"     # ASCII + Colors
+else
+    OISEAU_MODE="plain"     # ASCII only
+fi
+```
+
+### Widget-Specific Consistency
+
+**Borders:**
+- Headers: Rounded (`╭─╮` or `+--+`)
+- Errors/Warnings: Double (`┏━┓` or `+==+`)
+- Info boxes: Rounded (`╭─╮` or `+--+`)
+- Tables: Rounded (`╭─╮` or `+--+`)
+
+**Icons:**
+- Success messages: Always `✓` / `[OK]`
+- Error messages: Always `✗` / `[X]`
+- Warning messages: Always `⚠` / `[!]`
+- Info messages: Always `ℹ` / `[i]`
+
+**Progress indicators:**
+- Filled: `█` / `#`
+- Empty: `░` / `-`
+- Partial: Not used in plain mode
+
+### Testing Visual Consistency
+
+For each widget, verify:
+
+```bash
+# 1. Rich mode uses only UTF-8 characters
+LANG=en_US.UTF-8 ./test.sh | grep -P '[^\x00-\x7F]' # Should find UTF-8
+
+# 2. Color mode uses only ASCII + ANSI codes
+export OISEAU_HAS_UTF8=0
+./test.sh | grep -P '[^\x00-\x7F]' # Should find nothing except ANSI codes
+
+# 3. Plain mode uses only printable ASCII
+export NO_COLOR=1
+./test.sh | grep -P '[^\x20-\x7E\n\t]' # Should find nothing
+```
 
 ---
 
@@ -924,6 +1171,795 @@ OISEAU_QUIT_CONFIRM=0  # Ask before quit (default: 0 = no confirmation)
 
 ---
 
+## Validation Framework
+
+Every widget must pass comprehensive validation before merging.
+
+### Input Validation
+
+All user input must be sanitized to prevent security vulnerabilities:
+
+#### 1. Escape User Input
+
+**Required for all display functions:**
+
+```bash
+show_custom_widget() {
+    local user_input="$1"
+
+    # ALWAYS escape before displaying
+    local safe_input="$(_escape_input "$user_input")"
+
+    echo -e "  ${COLOR_INFO}${safe_input}${RESET}"
+}
+```
+
+**What `_escape_input` does:**
+- Removes ANSI escape sequences (`\033[...m`)
+- Strips control characters (`\x00-\x1F`, `\x7F`)
+- Prevents code injection attacks
+- Allows safe display of untrusted data
+
+#### 2. Validate Input Types
+
+For interactive widgets, validate input matches expected type:
+
+```bash
+ask_number() {
+    local prompt="$1"
+    local input=""
+
+    while true; do
+        input=$(ask_text "$prompt")
+
+        # Validate: only digits allowed
+        if [[ "$input" =~ ^[0-9]+$ ]]; then
+            echo "$input"
+            return 0
+        fi
+
+        show_error "Please enter a valid number"
+    done
+}
+```
+
+**Common validation patterns:**
+
+```bash
+# Number (integer)
+[[ "$input" =~ ^[0-9]+$ ]]
+
+# Number (float)
+[[ "$input" =~ ^[0-9]+\.?[0-9]*$ ]]
+
+# Email (basic)
+[[ "$input" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
+
+# Filename (safe characters)
+[[ "$input" =~ ^[a-zA-Z0-9._-]+$ ]]
+
+# Path (exists)
+[[ -e "$input" ]]
+
+# Yes/No
+[[ "$input" =~ ^[YyNn]$ ]]
+```
+
+#### 3. Validate Array Inputs
+
+For widgets that accept arrays, validate array structure:
+
+```bash
+show_table() {
+    local array_name="$1"
+
+    # Check array exists
+    if ! declare -p "$array_name" &>/dev/null; then
+        show_error "Array '$array_name' does not exist"
+        return 1
+    fi
+
+    # Check array has elements
+    eval "local count=\${#${array_name}[@]}"
+    if [ "$count" -eq 0 ]; then
+        show_warning "Table has no rows"
+        return 0
+    fi
+
+    # Validate format (pipe-delimited)
+    eval "local first_row=\"\${${array_name}[0]}\""
+    if [[ ! "$first_row" =~ \| ]]; then
+        show_error "Table rows must be pipe-delimited (Name|Age|City)"
+        return 1
+    fi
+
+    # Proceed with rendering
+    # ...
+}
+```
+
+#### 4. Validate Terminal State
+
+Before interactive operations, ensure terminal is suitable:
+
+```bash
+ask_list() {
+    # Check if running in TTY
+    if [ ! -t 0 ] || [ ! -t 1 ]; then
+        show_error "Interactive list requires a terminal (not piped/redirected)"
+        return 1
+    fi
+
+    # Check terminal size is adequate
+    if [ "$OISEAU_WIDTH" -lt 20 ] || [ "$OISEAU_HEIGHT" -lt 5 ]; then
+        show_error "Terminal too small for interactive list"
+        return 1
+    fi
+
+    # Proceed with interactive mode
+    # ...
+}
+```
+
+#### 5. Validate Environment Variables
+
+For widgets with configuration, validate environment variable values:
+
+```bash
+# In spinner implementation
+validate_spinner_style() {
+    local style="${OISEAU_SPINNER_STYLE:-dots}"
+
+    case "$style" in
+        dots|line|circle|pulse|arc)
+            return 0
+            ;;
+        *)
+            show_warning "Invalid OISEAU_SPINNER_STYLE='$style', using 'dots'"
+            export OISEAU_SPINNER_STYLE="dots"
+            return 1
+            ;;
+    esac
+}
+```
+
+### Output Validation
+
+Ensure output is correct in all modes:
+
+#### 1. Character Set Validation
+
+**UTF-8 mode must only output UTF-8:**
+
+```bash
+test_utf8_output() {
+    local output=$(show_widget_test)
+
+    # Should contain UTF-8 characters
+    if echo "$output" | grep -qP '[^\x00-\x7F]'; then
+        echo "✓ UTF-8 output detected"
+    else
+        echo "✗ FAIL: No UTF-8 in rich mode"
+        return 1
+    fi
+}
+```
+
+**Color mode must only output ASCII + ANSI:**
+
+```bash
+test_color_output() {
+    export OISEAU_HAS_UTF8=0
+    local output=$(show_widget_test)
+
+    # Remove ANSI codes
+    local clean=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+
+    # Should contain only ASCII
+    if echo "$clean" | grep -qP '[^\x00-\x7F]'; then
+        echo "✗ FAIL: Non-ASCII in color mode"
+        return 1
+    else
+        echo "✓ ASCII output only"
+    fi
+}
+```
+
+**Plain mode must only output printable ASCII:**
+
+```bash
+test_plain_output() {
+    export NO_COLOR=1
+    local output=$(show_widget_test)
+
+    # Should contain only printable ASCII (no ANSI codes)
+    if echo "$output" | grep -qP '[^\x20-\x7E\n\t\r]'; then
+        echo "✗ FAIL: Non-printable characters in plain mode"
+        return 1
+    else
+        echo "✓ Printable ASCII only"
+    fi
+}
+```
+
+#### 2. Width Validation
+
+Ensure output respects terminal width:
+
+```bash
+test_width_compliance() {
+    export OISEAU_WIDTH=80
+    local output=$(show_widget_test)
+
+    # Check each line doesn't exceed terminal width
+    while IFS= read -r line; do
+        # Remove ANSI codes
+        local clean=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g')
+        local len=${#clean}
+
+        if [ "$len" -gt 80 ]; then
+            echo "✗ FAIL: Line exceeds terminal width ($len > 80)"
+            echo "Line: $clean"
+            return 1
+        fi
+    done <<< "$output"
+
+    echo "✓ All lines within terminal width"
+}
+```
+
+#### 3. Visual Consistency Validation
+
+Ensure consistent use of characters:
+
+```bash
+test_border_consistency() {
+    local output=$(show_widget_test)
+
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        # Should use UTF-8 box drawing
+        if echo "$output" | grep -q '[+|=-]'; then
+            echo "✗ FAIL: ASCII borders in UTF-8 mode"
+            return 1
+        fi
+
+        if echo "$output" | grep -qP '[╭╮╯╰─│┏┓┛┗━┃]'; then
+            echo "✓ UTF-8 borders consistent"
+        else
+            echo "✗ FAIL: No UTF-8 borders found"
+            return 1
+        fi
+    fi
+}
+```
+
+### Security Validation
+
+Critical security checks for all widgets:
+
+#### 1. Code Injection Prevention
+
+```bash
+test_code_injection() {
+    # Malicious input attempts
+    local malicious_inputs=(
+        "$(echo -e '\033[2J\033[H')hacked"    # Screen clear
+        "; rm -rf /"                           # Command injection
+        "\$(echo pwned)"                       # Command substitution
+        "\`whoami\`"                           # Backtick substitution
+        "foo\nbar"                            # Newline injection
+    )
+
+    for input in "${malicious_inputs[@]}"; do
+        local output=$(show_widget "$input")
+
+        # Check that malicious code was escaped
+        if echo "$output" | grep -q "pwned\|hacked"; then
+            echo "✗ FAIL: Code injection vulnerability"
+            echo "Input: $input"
+            echo "Output: $output"
+            return 1
+        fi
+    done
+
+    echo "✓ Code injection prevented"
+}
+```
+
+#### 2. ANSI Escape Injection
+
+```bash
+test_ansi_injection() {
+    # Try to inject color codes
+    local input="Red text \033[31mINJECTED\033[0m normal"
+    local output=$(show_success "$input")
+
+    # Should not contain the injected ANSI codes
+    if echo "$output" | grep -F "INJECTED" | grep -qF $'\033[31m'; then
+        echo "✗ FAIL: ANSI injection not escaped"
+        return 1
+    else
+        echo "✓ ANSI injection prevented"
+    fi
+}
+```
+
+#### 3. Control Character Injection
+
+```bash
+test_control_chars() {
+    # Try to inject control characters
+    local input=$(printf "Text\x00NULL\x01SOH\x02STX")
+    local output=$(show_info "$input")
+
+    # Should not contain control characters
+    if echo "$output" | tr -d '\n\t\r' | grep -qP '[\x00-\x1F\x7F]'; then
+        echo "✗ FAIL: Control characters not stripped"
+        return 1
+    else
+        echo "✓ Control characters stripped"
+    fi
+}
+```
+
+### Functional Validation
+
+Test widget behavior and features:
+
+#### 1. Zero-Config Test
+
+```bash
+test_zero_config() {
+    # Unset all OISEAU overrides
+    unset OISEAU_SPINNER_STYLE
+    unset OISEAU_PROGRESS_ANIMATE
+    # etc...
+
+    # Should work with no configuration
+    local output=$(show_spinner "Loading..." &)
+    local pid=$!
+    sleep 1
+    kill $pid 2>/dev/null
+
+    if [ $? -eq 0 ]; then
+        echo "✓ Zero-config works"
+    else
+        echo "✗ FAIL: Widget requires configuration"
+        return 1
+    fi
+}
+```
+
+#### 2. Override Test
+
+```bash
+test_overrides() {
+    # Test environment variable override
+    export OISEAU_SPINNER_STYLE="circle"
+
+    local output=$(show_spinner_frame)
+
+    # Should use circle spinner (◐◓◑◒)
+    if echo "$output" | grep -qP '[◐◓◑◒]'; then
+        echo "✓ Environment override works"
+    else
+        echo "✗ FAIL: Override not applied"
+        return 1
+    fi
+
+    unset OISEAU_SPINNER_STYLE
+}
+```
+
+#### 3. Error Handling Test
+
+```bash
+test_error_handling() {
+    # Test with invalid input
+    local result
+
+    # Empty array
+    result=$(show_table "" 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "✓ Handles empty array"
+    else
+        echo "✗ FAIL: Should reject empty array"
+        return 1
+    fi
+
+    # Non-existent array
+    result=$(show_table "nonexistent_array" 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "✓ Handles missing array"
+    else
+        echo "✗ FAIL: Should reject non-existent array"
+        return 1
+    fi
+}
+```
+
+### Validation Test Script Template
+
+For each widget, create a `test_<widget>.sh` script:
+
+```bash
+#!/bin/bash
+# Test script for show_spinner
+
+source oiseau.sh
+
+# Test counter
+TESTS_RUN=0
+TESTS_PASSED=0
+
+run_test() {
+    local test_name="$1"
+    local test_func="$2"
+
+    TESTS_RUN=$((TESTS_RUN + 1))
+    echo ""
+    echo "━━━ Test: $test_name ━━━"
+
+    if $test_func; then
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        show_success "$test_name"
+    else
+        show_error "$test_name"
+    fi
+}
+
+# Define test functions
+test_utf8_output() { ... }
+test_color_output() { ... }
+test_plain_output() { ... }
+test_code_injection() { ... }
+test_zero_config() { ... }
+test_overrides() { ... }
+
+# Run all tests
+run_test "UTF-8 Output" test_utf8_output
+run_test "Color Mode Output" test_color_output
+run_test "Plain Mode Output" test_plain_output
+run_test "Code Injection Prevention" test_code_injection
+run_test "Zero Configuration" test_zero_config
+run_test "Environment Overrides" test_overrides
+
+# Summary
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Tests run: $TESTS_RUN"
+echo "Tests passed: $TESTS_PASSED"
+echo "Tests failed: $((TESTS_RUN - TESTS_PASSED))"
+
+if [ $TESTS_PASSED -eq $TESTS_RUN ]; then
+    show_success "All tests passed!"
+    exit 0
+else
+    show_error "Some tests failed"
+    exit 1
+fi
+```
+
+---
+
+## Implementation Guidelines
+
+Detailed implementation patterns and best practices.
+
+### Code Structure
+
+Every widget function should follow this structure:
+
+```bash
+show_widget_name() {
+    # 1. PARAMETER VALIDATION
+    local param1="$1"
+    local param2="${2:-default}"
+
+    if [ -z "$param1" ]; then
+        show_error "show_widget_name: parameter required"
+        return 1
+    fi
+
+    # 2. INPUT SANITIZATION
+    local safe_param1="$(_escape_input "$param1")"
+
+    # 3. MODE DETECTION (if needed)
+    local char_set
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        char_set="UTF8"
+    elif [ "$OISEAU_MODE" = "color" ]; then
+        char_set="ASCII"
+    else
+        char_set="PLAIN"
+    fi
+
+    # 4. DIMENSION CALCULATION
+    local width=$(_clamp_width 60)
+    local inner_width=$((width - 2))
+
+    # 5. CONTENT PREPARATION
+    local display_text="$(_pad_to_width "$safe_param1" "$inner_width")"
+
+    # 6. RENDERING
+    echo -e "${COLOR_BORDER}${BOX_RTL}...${BOX_RTR}${RESET}"
+    echo -e "${COLOR_BORDER}${BOX_V}${display_text}${BOX_V}${RESET}"
+    echo -e "${COLOR_BORDER}${BOX_RBL}...${BOX_RBR}${RESET}"
+
+    # 7. CLEANUP (if needed)
+    # Return cursor, etc.
+
+    return 0
+}
+```
+
+### Error Handling
+
+Consistent error handling across all widgets:
+
+```bash
+# Use show_error for user-facing errors
+if [ ! -f "$config_file" ]; then
+    show_error "Configuration file not found: $config_file"
+    return 1
+fi
+
+# Use stderr for programmer errors
+if [ $# -lt 1 ]; then
+    echo "ERROR: show_widget requires at least 1 argument" >&2
+    return 1
+fi
+
+# Fail gracefully in non-interactive contexts
+if [ ! -t 0 ]; then
+    # Fallback to simple output
+    echo "$message"
+    return 0
+fi
+```
+
+### Performance Considerations
+
+#### 1. Minimize Subprocess Calls
+
+```bash
+# BAD: Multiple subprocess calls in loop
+for item in "${items[@]}"; do
+    len=$(echo "$item" | wc -c)  # Slow!
+done
+
+# GOOD: Use bash built-ins
+for item in "${items[@]}"; do
+    len=${#item}  # Fast!
+done
+```
+
+#### 2. Cache Terminal Dimensions
+
+```bash
+# GOOD: Cache at start of function
+local term_width=$OISEAU_WIDTH
+local term_height=$OISEAU_HEIGHT
+
+# Don't call tput repeatedly in loops
+```
+
+#### 3. Use Built-in String Operations
+
+```bash
+# BAD: External commands
+trimmed=$(echo "$str" | sed 's/^ *//')
+
+# GOOD: Bash parameter expansion
+trimmed="${str#"${str%%[![:space:]]*}"}"
+
+# Or simply:
+read -r trimmed <<< "$str"
+```
+
+### Cursor Management
+
+For interactive widgets:
+
+```bash
+# Hide cursor at start
+hide_cursor() {
+    echo -en "\033[?25l"
+}
+
+# Show cursor at end
+show_cursor() {
+    echo -en "\033[?25h"
+}
+
+# Always restore cursor on exit
+cleanup() {
+    show_cursor
+    clear_screen
+}
+trap cleanup EXIT INT TERM
+
+# Main widget function
+interactive_widget() {
+    hide_cursor
+
+    # ... interactive code ...
+
+    show_cursor
+}
+```
+
+### Key Reading
+
+Consistent key reading for interactive widgets:
+
+```bash
+# Standard key reading function (already in TUI guide)
+read_key() {
+    local key=""
+    IFS= read -rsn1 -t 0.1 key 2>/dev/null
+
+    # Handle escape sequences (arrow keys, etc.)
+    if [ "$key" = $'\x1b' ]; then
+        local next
+        IFS= read -rsn2 -t 0.1 next 2>/dev/null
+        if [ -n "$next" ]; then
+            key="${key}${next}"
+        fi
+    fi
+
+    echo "$key"
+}
+
+# Key code constants
+readonly KEY_UP=$'\x1b[A'
+readonly KEY_DOWN=$'\x1b[B'
+readonly KEY_LEFT=$'\x1b[D'
+readonly KEY_RIGHT=$'\x1b[C'
+readonly KEY_ENTER=$'\n'
+readonly KEY_ESC=$'\x1b'
+readonly KEY_SPACE=' '
+readonly KEY_TAB=$'\t'
+```
+
+### Screen Refresh
+
+For TUI widgets that update in place:
+
+```bash
+# Clear screen and reset cursor
+refresh_screen() {
+    echo -en "\033[2J\033[H"
+}
+
+# Update single line (for progress bars, spinners)
+update_line() {
+    local text="$1"
+    echo -en "\r${text}\033[K"  # \r = return, \033[K = clear to end
+}
+
+# Save/restore cursor position
+save_cursor() { echo -en "\033[s"; }
+restore_cursor() { echo -en "\033[u"; }
+```
+
+### Animation Framework
+
+For animated widgets (spinner, progress):
+
+```bash
+# Animation loop template
+animate_widget() {
+    local message="$1"
+    local frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+    local fps=10
+    local delay=$(awk "BEGIN {print 1/$fps}")  # 0.1 for 10 FPS
+
+    local frame_idx=0
+    local num_frames=${#frames[@]}
+
+    while true; do
+        local frame="${frames[$frame_idx]}"
+        echo -en "\r${frame} ${message}\033[K"
+
+        frame_idx=$(( (frame_idx + 1) % num_frames ))
+        sleep "$delay"
+    done
+}
+
+# Background animation with PID tracking
+start_animation() {
+    animate_widget "$1" &
+    OISEAU_ANIMATION_PID=$!
+}
+
+stop_animation() {
+    if [ -n "$OISEAU_ANIMATION_PID" ]; then
+        kill "$OISEAU_ANIMATION_PID" 2>/dev/null
+        wait "$OISEAU_ANIMATION_PID" 2>/dev/null
+        echo -en "\r\033[K"  # Clear line
+        unset OISEAU_ANIMATION_PID
+    fi
+}
+```
+
+### Array Handling
+
+Consistent array handling for widgets that accept arrays:
+
+```bash
+process_array_widget() {
+    local array_name="$1"
+
+    # Method 1: eval (works in bash 3.x+)
+    eval "local items=(\"\${${array_name}[@]}\")"
+
+    # Method 2: nameref (bash 4.3+ only, avoid for compatibility)
+    # local -n items="$array_name"
+
+    # Iterate over items
+    for item in "${items[@]}"; do
+        # Process each item
+        echo "$item"
+    done
+}
+```
+
+### Compatibility Notes
+
+Ensure compatibility with bash 3.2+ (macOS default):
+
+```bash
+# AVOID: nameref (bash 4.3+)
+local -n arr_ref="$array_name"
+
+# USE: eval (bash 3.x+)
+eval "local arr=(\"\${${array_name}[@]}\")"
+
+# AVOID: associative arrays (bash 4.0+)
+declare -A assoc_arr
+
+# USE: indexed arrays (bash 3.x+)
+declare -a indexed_arr
+
+# AVOID: ${var,,} lowercase (bash 4.0+)
+lowercase="${var,,}"
+
+# USE: tr for case conversion
+lowercase=$(echo "$var" | tr '[:upper:]' '[:lower:]')
+```
+
+### Documentation Standards
+
+Every widget function must have a header comment:
+
+```bash
+#===============================================================================
+# FUNCTION: show_spinner
+# DESCRIPTION: Display an animated loading spinner
+# PARAMETERS:
+#   $1 - message (string, required): Message to display next to spinner
+# ENVIRONMENT VARIABLES:
+#   OISEAU_SPINNER_STYLE - Spinner animation style (dots|line|circle|pulse|arc)
+#   OISEAU_SPINNER_FPS   - Animation frame rate (default: 10)
+# RETURNS: 0 on success, 1 on error
+# MODES:
+#   Rich:  Animated UTF-8 spinner (⠋⠙⠹⠸...)
+#   Color: Animated ASCII spinner (|/-\)
+#   Plain: Static message only
+# EXAMPLE:
+#   show_spinner "Loading data..." &
+#   SPINNER_PID=$!
+#   # ... do work ...
+#   kill $SPINNER_PID
+#===============================================================================
+show_spinner() {
+    # Implementation...
+}
+```
+
+---
+
 ## Testing Strategy
 
 For each widget, test in **4 modes**:
@@ -961,14 +1997,15 @@ export NO_COLOR=1
 
 For each widget:
 
-- [ ] Works in all 4 modes
+- [ ] Works in all 4 modes (Rich, Color, Plain, Non-TTY)
 - [ ] Zero-config default works beautifully
 - [ ] Environment variable overrides work
-- [ ] Handles malicious input (security)
-- [ ] Respects terminal width
-- [ ] Documented in README
-- [ ] Added to gallery.sh
-- [ ] Backward compatible (old names aliased)
+- [ ] Handles malicious input (security tests pass)
+- [ ] Respects terminal width (no overflow)
+- [ ] Visual consistency within mode (UTF-8/ASCII/Plain)
+- [ ] Documented in README.md widget reference
+- [ ] Added to gallery.sh with examples
+- [ ] Validation tests pass (test_<widget>.sh)
 
 ---
 
