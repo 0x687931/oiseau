@@ -1,0 +1,130 @@
+#!/bin/bash
+# List all worktrees for this project
+# Usage: bin/worktree-list
+# This script can be edited on main branch (whitelisted for emergency fixes)
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Load UI framework
+if [ -f "$PROJECT_DIR/oiseau.sh" ]; then
+    source "$PROJECT_DIR/oiseau.sh"
+else
+    echo "Error: Cannot find oiseau.sh UI library" >&2
+    exit 1
+fi
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+echo ""
+echo -e "${UI_BOLD}${UI_COLOR_HEADER}Git Worktrees${UI_RESET}"
+print_header
+echo ""
+
+# Get worktree list
+WORKTREES=$(git worktree list --porcelain)
+
+# Parse and display worktrees using theme colors
+echo "$WORKTREES" | awk -v cyan="$UI_CYAN" -v green="$UI_GREEN" -v yellow="$UI_YELLOW" -v blue="$UI_BLUE" -v nc="$UI_RESET" -v icon_main="$UI_ICON_MAIN" -v icon_feature="$UI_ICON_FEATURE" -v icon_fix="$UI_ICON_FIX" -v icon_refactor="$UI_ICON_REFACTOR" '
+BEGIN {
+    count = 0
+}
+/^worktree / {
+    if (count > 0) print ""
+    count++
+    path = substr($0, 10)
+    printf "%s%s%s\n", cyan, path, nc
+}
+/^branch / {
+    branch = substr($0, 8)
+    # Color code based on branch type
+    if (branch ~ /main|master/) {
+        color = green
+        icon = icon_main
+    } else if (branch ~ /^feature\//) {
+        color = blue
+        icon = icon_feature
+    } else if (branch ~ /^fix\//) {
+        color = yellow
+        icon = icon_fix
+    } else if (branch ~ /^refactor\//) {
+        color = nc
+        icon = icon_refactor
+    } else {
+        color = nc
+        icon = "○"
+    }
+    printf "  %s%s%s %s\n", color, icon, nc, branch
+}
+/^HEAD / {
+    head = substr($0, 6)
+    printf "  %s\n", head
+}
+/^detached$/ {
+    printf "  %sdetached HEAD%s\n", yellow, nc
+}
+END {
+    if (count == 0) {
+        printf "No worktrees found\n"
+    }
+}
+'
+
+echo ""
+print_header
+echo ""
+
+# Count worktrees
+WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
+
+if [ "$WORKTREE_COUNT" -eq 1 ]; then
+    print_info "1 worktree (main repository only)"
+else
+    print_info "$WORKTREE_COUNT worktrees"
+fi
+
+# Show feature branches that might not have worktrees
+echo ""
+echo -e "${UI_BOLD}${UI_COLOR_HEADER}Feature Branches${UI_RESET}"
+print_header
+echo ""
+
+FEATURE_BRANCHES=$(git branch 2>/dev/null | grep -E "^\*? +(feature|fix|refactor)/" | sed 's/^[* ]*//')
+
+if [ -n "$FEATURE_BRANCHES" ]; then
+    # Get worktree list once for efficiency
+    WORKTREE_LIST=$(git worktree list)
+
+    echo "$FEATURE_BRANCHES" | while read -r branch; do
+        # Check if this branch has a worktree
+        if echo "$WORKTREE_LIST" | grep -q "$branch"; then
+            echo -e "  ${UI_COLOR_SUCCESS}${UI_ICON_MAIN}${UI_RESET} $branch ${UI_COLOR_HEADER}(has worktree)${UI_RESET}"
+        else
+            echo -e "  ${UI_COLOR_WARNING}○${UI_RESET} $branch ${UI_COLOR_WARNING}(no worktree)${UI_RESET}"
+        fi
+    done
+else
+    echo "  No feature branches"
+fi
+
+echo ""
+print_header
+echo ""
+
+print_info "Commands:"
+echo -e "  ${UI_CYAN}bin/worktree-new <name>${UI_RESET}      Create new worktree"
+echo -e "  ${UI_CYAN}bin/worktree-pr${UI_RESET}              Push and create PR"
+echo -e "  ${UI_CYAN}bin/worktree-cleanup <name>${UI_RESET}  Clean up after merge"
+echo ""

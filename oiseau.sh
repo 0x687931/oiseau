@@ -71,8 +71,26 @@ else
     fi
 fi
 
-# Get terminal width (cached)
+# Get terminal width (cached - call refresh_width to update)
 export OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
+
+# Refresh terminal width (call before rendering large widgets)
+refresh_width() {
+    OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
+}
+
+# Cache perl availability for _display_width to avoid repeated spawning
+_OISEAU_HAS_PERL=""
+_check_perl_once() {
+    if [ -z "$_OISEAU_HAS_PERL" ]; then
+        if command -v perl >/dev/null 2>&1; then
+            _OISEAU_HAS_PERL="1"
+        else
+            _OISEAU_HAS_PERL="0"
+        fi
+    fi
+    return $(( 1 - _OISEAU_HAS_PERL ))
+}
 
 # ==============================================================================
 # COLOR DEFINITIONS (ANSI 256-Color Palette)
@@ -150,38 +168,41 @@ fi
 # Escape user input to prevent code injection
 _escape_input() {
     local input="$1"
-    # Remove ANSI escape sequences and control characters
-    echo "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037' | tr -d '\177'
+    # Remove ALL ANSI escape sequences (CSI, OSC, etc.) and control characters
+    # Use printf to avoid echo -e interpretation of backslashes
+    printf '%s\n' "$input" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g' | tr -d '\000-\037\177'
 }
 
 # Calculate visible length (ignoring ANSI codes)
 _visible_len() {
     local str="$1"
-    # Remove ANSI codes before calculating length
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
-    echo "${#clean}"
+    # Remove ANSI codes before calculating length - use printf to avoid echo -e issues
+    local clean
+    clean=$(printf '%s\n' "$str" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g')
+    printf '%s\n' "${#clean}"
 }
 
 # Calculate display width (accounts for wide characters like emojis)
 # Emojis and some Unicode characters take 2 columns, this estimates the width
 _display_width() {
     local str="$1"
-    # Remove ANSI codes first
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    # Remove ANSI codes first - use printf to avoid echo -e issues
+    local clean
+    clean=$(printf '%s\n' "$str" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\x1b].*(\x07|\x1b\\)//g; s/\x1b[^[]]//g')
 
-    # Try perl for accurate display width calculation if the module is available
-    if command -v perl >/dev/null 2>&1; then
+    # Try perl for accurate display width calculation if available (cached check)
+    if _check_perl_once; then
         local perl_result
-        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
+        perl_result=$(printf '%s\n' "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
-            echo "$perl_result"
+            printf '%s\n' "$perl_result"
             return
         fi
     fi
 
     # Fallback: Perl-based wcwidth estimation without external modules
     # This handles CJK, emojis, and other wide characters more accurately
-    if command -v perl >/dev/null 2>&1; then
+    if [ "$_OISEAU_HAS_PERL" = "1" ]; then
         local perl_width
         perl_width=$(echo -n "$clean" | perl -C -ne '
             use utf8;
@@ -320,6 +341,40 @@ _clamp_width() {
     else
         echo "$requested"
     fi
+}
+
+# Get default branch for current git repository
+# Returns the default branch name (e.g., "main", "master", "trunk")
+get_default_branch() {
+    # Try to get from remote HEAD
+    local default_branch
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||')
+
+    if [ -n "$default_branch" ]; then
+        printf '%s\n' "$default_branch"
+        return 0
+    fi
+
+    # Fallback: try gh if available
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+        default_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null)
+        if [ -n "$default_branch" ]; then
+            printf '%s\n' "$default_branch"
+            return 0
+        fi
+    fi
+
+    # Last resort: check which common default branch exists
+    for branch in main master trunk; do
+        if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+            printf '%s\n' "$branch"
+            return 0
+        fi
+    done
+
+    # Ultimate fallback
+    printf 'main\n'
+    return 1
 }
 
 # ==============================================================================
@@ -508,12 +563,30 @@ show_progress_bar() {
     local total="$2"
     local label="${3:-Progress}"
 
+    # Guard against invalid input
+    if [ "$total" -le 0 ]; then
+        echo -e "${label}: Invalid total ($total)"
+        return 1
+    fi
+
+    # Clamp current to valid range [0, total]
+    if [ "$current" -lt 0 ]; then
+        current=0
+    elif [ "$current" -gt "$total" ]; then
+        current="$total"
+    fi
+
     local percent=$((current * 100 / total))
     local bar_width=20
     local filled=$((current * bar_width / total))
     local empty=$((bar_width - filled))
 
-    local bar="${COLOR_SUCCESS}$(_repeat_char '█' "$filled")${COLOR_DIM}$(_repeat_char '░' "$empty")${RESET}"
+    # Use ASCII fallback when UTF-8 is not available
+    if [ "$OISEAU_HAS_UTF8" = "1" ]; then
+        local bar="${COLOR_SUCCESS}$(_repeat_char '█' "$filled")${COLOR_DIM}$(_repeat_char '░' "$empty")${RESET}"
+    else
+        local bar="${COLOR_SUCCESS}$(_repeat_char '#' "$filled")${COLOR_DIM}$(_repeat_char '-' "$empty")${RESET}"
+    fi
 
     echo -e "${label}: ${bar} ${percent}% (${current}/${total})"
 }
@@ -523,11 +596,27 @@ show_progress_bar() {
 # Array format: "status|label|details" where status is: done, active, pending, skip
 show_checklist() {
     local array_name="$1"
-    # Use eval for bash 3.x/4.x compatibility (nameref requires bash 4.3+)
-    eval "local items=(\"\${${array_name}[@]}\")"
+
+    # Validate array name to prevent injection (only allow valid bash identifiers)
+    if ! [[ "$array_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        echo "Error: Invalid array name '$array_name'" >&2
+        return 1
+    fi
+
+    # Use declare -n for nameref if bash 4.3+, otherwise eval with validated input
+    if [ "${BASH_VERSINFO[0]}" -gt 4 ] || ([ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 3 ]); then
+        declare -n items="$array_name"
+    else
+        # Safe to use eval now that array_name is validated
+        eval "local items=(\"\${${array_name}[@]}\")"
+    fi
 
     for item in "${items[@]}"; do
         IFS='|' read -r status label details <<< "$item"
+
+        # Escape all user-provided fields
+        label=$(_escape_input "$label")
+        details=$(_escape_input "$details")
 
         local icon color
         case "$status" in
@@ -538,9 +627,9 @@ show_checklist() {
         esac
 
         if [ -n "$details" ]; then
-            echo -e "  ${color}${icon}${RESET}  ${BOLD}${label}${RESET}  ${COLOR_MUTED}${details}${RESET}"
+            printf "  %b%s%b  %b%s%b  %b%s%b\n" "$color" "$icon" "$RESET" "$BOLD" "$label" "$RESET" "$COLOR_MUTED" "$details" "$RESET"
         else
-            echo -e "  ${color}${icon}${RESET}  ${label}"
+            printf "  %b%s%b  %s\n" "$color" "$icon" "$RESET" "$label"
         fi
     done
 }
@@ -626,42 +715,42 @@ ask_input() {
 
 # Print key-value pair
 print_kv() {
-    local key="$1"
-    local value="$2"
+    local key="$(_escape_input "$1")"
+    local value="$(_escape_input "$2")"
     local key_width="${3:-20}"
 
-    printf "  ${COLOR_MUTED}%-${key_width}s${RESET} %s\n" "$key" "$value"
+    printf "  %b%-${key_width}s%b %s\n" "$COLOR_MUTED" "$key" "$RESET" "$value"
 }
 
 # Print command in code style
 print_command() {
-    local cmd="$1"
-    echo -e "  ${COLOR_CODE}${cmd}${RESET}"
+    local cmd="$(_escape_input "$1")"
+    printf "  %b%s%b\n" "$COLOR_CODE" "$cmd" "$RESET"
 }
 
 # Print inline command
 print_command_inline() {
-    local cmd="$1"
-    echo -e "${COLOR_CODE}${cmd}${RESET}"
+    local cmd="$(_escape_input "$1")"
+    printf "%b%s%b" "$COLOR_CODE" "$cmd" "$RESET"
 }
 
 # Print bulleted item
 print_item() {
-    local item="$1"
-    echo -e "  • $item"
+    local item="$(_escape_input "$1")"
+    printf "  • %s\n" "$item"
 }
 
 # Print section title
 print_section() {
-    local title="$1"
-    echo -e "\n${COLOR_HEADER}${title}${RESET}"
+    local title="$(_escape_input "$1")"
+    printf "\n%b%s%b\n" "$COLOR_HEADER" "$title" "$RESET"
 }
 
 # Print numbered step
 print_step() {
     local num="$1"
-    local text="$2"
-    echo -e "  ${COLOR_INFO}${num}.${RESET} ${text}"
+    local text="$(_escape_input "$2")"
+    printf "  %b%s.%b %s\n" "$COLOR_INFO" "$num" "$RESET" "$text"
 }
 
 # Print "next steps" list

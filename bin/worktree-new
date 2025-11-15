@@ -1,0 +1,246 @@
+#!/bin/bash
+# Create a new worktree for feature development
+# Usage: bin/worktree-new feature-name [base-branch]
+
+set -e
+
+# Export bypass flag for git hooks (allows tild scripts to run git commands)
+export TILD_BYPASS_HOOK=1
+
+# When installed in ~/.tild/bin/, use current working directory as project
+PROJECT_DIR="$(pwd)"
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_info() { echo -e "${BLUE}ℹ${NC} $1"; }
+print_success() { echo -e "${GREEN}✓${NC} $1"; }
+print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
+print_error() { echo -e "${RED}✗${NC} $1"; }
+
+stat_mtime() {
+    local file="$1"
+    if [ ! -e "$file" ]; then
+        echo 0
+        return 0
+    fi
+    if stat -f %m "$file" >/dev/null 2>&1; then
+        stat -f %m "$file"
+    else
+        stat -c %Y "$file"
+    fi
+}
+
+seconds_to_human() {
+    local total=$1
+    local hours=$((total / 3600))
+    local minutes=$(((total % 3600) / 60))
+    local seconds=$((total % 60))
+    local parts=()
+    if [ "$hours" -gt 0 ]; then
+        parts+=("${hours}h")
+    fi
+    if [ "$minutes" -gt 0 ]; then
+        parts+=("${minutes}m")
+    fi
+    parts+=("${seconds}s")
+    printf "%s" "${parts[*]}"
+}
+
+wait_for_git_lock_clear() {
+    local timeout="${1:-45}"
+    local context="${2:-Git operation}"
+    local git_dir
+    git_dir=$(git rev-parse --git-dir 2>/dev/null) || return 0
+
+    if [[ "$git_dir" != /* ]]; then
+        git_dir="$(pwd)/$git_dir"
+    fi
+
+    local lock_file="$git_dir/index.lock"
+    if [ ! -f "$lock_file" ]; then
+        return 0
+    fi
+
+    print_warning "$context blocked: git index lock detected ($lock_file)"
+    local start
+    start=$(date +%s)
+    while [ -f "$lock_file" ]; do
+        local elapsed=$(( $(date +%s) - start ))
+        if [ $((elapsed % 5)) -eq 0 ]; then
+            print_info "Waiting for git lock to clear... $(seconds_to_human "$elapsed") elapsed"
+        fi
+        if [ "$elapsed" -ge "$timeout" ]; then
+            local lock_mtime
+            lock_mtime=$(stat_mtime "$lock_file")
+            local age=0
+            if [ "$lock_mtime" -gt 0 ]; then
+                age=$(( $(date +%s) - lock_mtime ))
+            fi
+            print_error "Git lock persisted for $(seconds_to_human "$elapsed") (lock age $(seconds_to_human "$age"))"
+            print_info "Likely culprit: stuck git worktree remove (e.g. bin/worktree-prune-merged)"
+            print_info "Safe recovery:"
+            print_info "  1. Inspect processes: ps -eo pid,command | grep worktree"
+            print_info "  2. Stop the offender: kill -TERM <pid>  (kill -9 only if needed)"
+            print_info "  3. Remove lock: rm -f \"$lock_file\""
+            if [ -x "./bin/worktree-prune-merged" ]; then
+                print_info "  4. Check status: bin/worktree-prune-merged --status"
+            fi
+            return 1
+        fi
+        sleep 1
+    done
+    return 0
+}
+
+# Check if feature name is provided
+if [ -z "$1" ]; then
+    print_error "Feature name is required"
+    echo ""
+    echo "Usage: bin/worktree-new <feature-name> [base-branch]"
+    echo ""
+    echo "Examples:"
+    echo "  bin/worktree-new user-authentication"
+    echo "  bin/worktree-new fix-login-bug"
+    echo "  bin/worktree-new refactor-events main"
+    exit 1
+fi
+
+FEATURE_NAME="$1"
+BASE_BRANCH="${2:-main}"
+
+# Clean feature name (replace spaces/underscores with hyphens, lowercase)
+FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | tr ' ' '-')
+
+# Determine branch name prefix based on feature name
+if [[ "$FEATURE_NAME" == fix-* ]] || [[ "$FEATURE_NAME" == *-fix ]] || [[ "$FEATURE_NAME" == *-bug ]]; then
+    BRANCH_PREFIX="fix"
+elif [[ "$FEATURE_NAME" == refactor-* ]] || [[ "$FEATURE_NAME" == *-refactor ]]; then
+    BRANCH_PREFIX="refactor"
+else
+    BRANCH_PREFIX="feature"
+fi
+
+BRANCH_NAME="$BRANCH_PREFIX/$FEATURE_NAME"
+WORKTREE_PATH="../${PROJECT_NAME}-${FEATURE_NAME}"
+
+print_info "Creating worktree for: $FEATURE_NAME"
+echo ""
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+wait_for_git_lock_clear 45 "Preparing worktree" || exit 1
+
+# Check if base branch exists
+if ! git show-ref --verify --quiet "refs/heads/$BASE_BRANCH"; then
+    print_error "Base branch '$BASE_BRANCH' does not exist"
+    exit 1
+fi
+
+# Check if branch already exists
+if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+    print_warning "Branch '$BRANCH_NAME' already exists"
+    read -p "Do you want to use the existing branch? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_error "Aborted"
+        exit 1
+    fi
+    CREATE_NEW_BRANCH=false
+else
+    CREATE_NEW_BRANCH=true
+fi
+
+# Check if worktree path already exists
+if [ -d "$WORKTREE_PATH" ]; then
+    print_error "Directory '$WORKTREE_PATH' already exists"
+    exit 1
+fi
+
+# Fetch latest changes from remote
+print_info "Fetching latest changes from remote..."
+wait_for_git_lock_clear 45 "Fetching latest changes" || exit 1
+git fetch origin
+
+# Update base branch
+print_info "Updating $BASE_BRANCH branch..."
+wait_for_git_lock_clear 45 "Updating $BASE_BRANCH" || exit 1
+git checkout "$BASE_BRANCH" -q
+git pull origin "$BASE_BRANCH" -q
+
+# Create worktree
+print_info "Creating worktree at $WORKTREE_PATH..."
+wait_for_git_lock_clear 45 "Creating worktree" || exit 1
+if [ "$CREATE_NEW_BRANCH" = true ]; then
+    git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME"
+else
+    git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
+fi
+# CRITICAL: Verify worktree is fully checked out before proceeding
+# This prevents race conditions where git operations run before checkout completes
+print_info "Verifying worktree checkout is complete..."
+max_wait_seconds=30  # Maximum seconds to wait
+sleep_interval=0.5
+max_iterations=$((max_wait_seconds * 2))  # 30 seconds / 0.5s per iteration = 60 iterations
+iteration=0
+
+while [ $iteration -lt $max_iterations ]; do
+    # Check if .git file exists (it's a file in worktrees, not a directory)
+    if [ -f "$WORKTREE_PATH/.git" ]; then
+        # Verify git status works in the worktree
+        if git -C "$WORKTREE_PATH" status --porcelain > /dev/null 2>&1; then
+            echo ""  # New line after progress dots
+            break
+        fi
+    fi
+
+    # Print progress indicator every 2 seconds (4 iterations)
+    if [ $((iteration % 4)) -eq 0 ] && [ $iteration -gt 0 ]; then
+        echo -n "."
+    fi
+
+    sleep $sleep_interval
+    iteration=$((iteration + 1))
+done
+
+if [ $iteration -ge $max_iterations ]; then
+    echo ""  # New line after progress dots
+    print_error "Worktree checkout did not complete within $max_wait_seconds seconds"
+    print_error "Cleaning up incomplete worktree..."
+    git worktree remove "$WORKTREE_PATH" --force
+    exit 1
+fi
+
+
+print_success "Worktree created successfully!"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+print_info "Next steps:"
+echo ""
+echo "  1. Move to the worktree:"
+echo -e "     ${GREEN}cd $WORKTREE_PATH${NC}"
+echo ""
+echo "  2. Make your changes and commit them"
+echo ""
+echo "  3. Push and create PR:"
+echo -e "     ${GREEN}../$PROJECT_NAME/bin/worktree-pr${NC}"
+echo ""
+echo "  4. After PR is merged, clean up:"
+echo -e "     ${GREEN}cd $PROJECT_DIR${NC}"
+echo -e "     ${GREEN}bin/worktree-cleanup $FEATURE_NAME${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

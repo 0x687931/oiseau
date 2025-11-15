@@ -1,0 +1,149 @@
+#!/bin/bash
+# PR Review Dashboard - Check all open PRs for code review issues
+# Usage: bin/pr-review-dashboard
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_info() { echo -e "${BLUE}ℹ${NC} $1"; }
+print_success() { echo -e "${GREEN}✓${NC} $1"; }
+print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
+print_error() { echo -e "${RED}✗${NC} $1"; }
+print_header() { echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
+print_section() { echo -e "${MAGENTA}▸ $1${NC}"; }
+
+# Check if gh CLI is installed
+if ! command -v gh &> /dev/null; then
+    print_error "GitHub CLI (gh) is not installed"
+    print_info "Install it with: brew install gh"
+    exit 1
+fi
+
+# Check if gh is authenticated
+if ! gh auth status &> /dev/null; then
+    print_error "GitHub CLI is not authenticated"
+    print_info "Run: gh auth login"
+    exit 1
+fi
+
+echo ""
+print_header
+echo ""
+echo -e "${CYAN}📊 CODE REVIEW DASHBOARD${NC}"
+echo ""
+print_header
+echo ""
+
+# Get all open PRs
+PR_LIST=$(gh pr list --state open --json number,title,url,author 2>/dev/null)
+
+if [ "$(echo "$PR_LIST" | jq '. | length')" -eq 0 ]; then
+    print_success "No open pull requests"
+    echo ""
+    exit 0
+fi
+
+# Track totals
+TOTAL_PRS=0
+PRS_WITH_P0=0
+PRS_WITH_P1=0
+PRS_CLEAN=0
+
+# Process each PR
+while read -r pr; do
+    PR_NUMBER=$(echo "$pr" | jq -r '.number')
+    PR_TITLE=$(echo "$pr" | jq -r '.title')
+    PR_URL=$(echo "$pr" | jq -r '.url')
+    PR_AUTHOR=$(echo "$pr" | jq -r '.author.login')
+
+    TOTAL_PRS=$((TOTAL_PRS + 1))
+
+    # Get review comments
+    P0_COUNT=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '[.[] | select(.body | test("P0|\\bP0\\b"))] | length' 2>/dev/null || echo "0")
+    P1_COUNT=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '[.[] | select(.body | test("P1|\\bP1\\b"))] | length' 2>/dev/null || echo "0")
+    TOTAL_COMMENTS=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '. | length' 2>/dev/null || echo "0")
+
+    # Skip PRs with no issues
+    if [ "$P0_COUNT" -eq 0 ] && [ "$P1_COUNT" -eq 0 ]; then
+        PRS_CLEAN=$((PRS_CLEAN + 1))
+        continue
+    fi
+
+    # Track PRs with issues
+    if [ "$P0_COUNT" -gt 0 ]; then
+        PRS_WITH_P0=$((PRS_WITH_P0 + 1))
+    fi
+    if [ "$P1_COUNT" -gt 0 ]; then
+        PRS_WITH_P1=$((PRS_WITH_P1 + 1))
+    fi
+
+    # Display PR with issues
+    print_section "PR #$PR_NUMBER: $PR_TITLE"
+    echo ""
+    print_info "Author: $PR_AUTHOR"
+    print_info "URL: $PR_URL"
+
+    if [ "$P0_COUNT" -gt 0 ]; then
+        print_error "  🔴 $P0_COUNT P0 (critical) issues - BLOCKING"
+    fi
+
+    if [ "$P1_COUNT" -gt 0 ]; then
+        print_warning "  🟠 $P1_COUNT P1 (high priority) issues"
+    fi
+
+    echo "  📝 $TOTAL_COMMENTS total review comments"
+    echo ""
+
+    # Show P0 issues inline
+    if [ "$P0_COUNT" -gt 0 ]; then
+        echo "  P0 Issues:"
+        gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P0|\\bP0\\b")) | "    • \(.path):\(.line // "?") - \(.body | split("\n")[0][0:80])..."' 2>/dev/null
+        echo ""
+    fi
+
+    # Show P1 issues inline
+    if [ "$P1_COUNT" -gt 0 ]; then
+        echo "  P1 Issues:"
+        gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --jq '.[] | select(.body | test("P1|\\bP1\\b")) | "    • \(.path):\(.line // "?") - \(.body | split("\n")[0][0:80])..."' 2>/dev/null
+        echo ""
+    fi
+
+    print_header
+    echo ""
+done < <(echo "$PR_LIST" | jq -c '.[]')
+
+# Summary
+echo ""
+print_section "SUMMARY"
+echo ""
+echo "  Total Open PRs: $TOTAL_PRS"
+echo "  PRs with P0 issues: $PRS_WITH_P0 🔴"
+echo "  PRs with P1 issues: $PRS_WITH_P1 🟠"
+echo "  Clean PRs: $PRS_CLEAN ✅"
+echo ""
+
+if [ "$PRS_WITH_P0" -gt 0 ]; then
+    print_error "⚠️  $PRS_WITH_P0 PRs have blocking P0 issues!"
+    echo ""
+    print_info "Use: bin/worktree-complete <feature-name>"
+    print_info "The script will detect P0 issues and guide you through fixes"
+elif [ "$PRS_WITH_P1" -gt 0 ]; then
+    print_warning "⚠️  $PRS_WITH_P1 PRs have P1 issues to address"
+    echo ""
+    print_info "Consider creating follow-up PRs for P1 fixes"
+else
+    print_success "All open PRs are clean! 🎉"
+fi
+
+echo ""
+print_header
+echo ""
