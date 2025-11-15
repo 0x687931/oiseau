@@ -783,11 +783,23 @@ ask_input() {
             echo "" >&2  # Newline after password input
         else
             # Normal text input
-            read -r response
+            if ! read -r response; then
+                # EOF encountered, break out of loop
+                if [ -n "$default" ]; then
+                    response="$default"
+                    valid=1
+                else
+                    echo "" >&2
+                    echo "ERROR: EOF encountered, no valid input" >&2
+                    return 1
+                fi
+            fi
         fi
 
-        # Use default if empty
-        response="${response:-$default}"
+        # Use default if empty (only if read succeeded)
+        if [ -z "$response" ] && [ -n "$default" ]; then
+            response="$default"
+        fi
 
         # Validate based on mode
         case "$mode" in
@@ -795,14 +807,14 @@ ask_input() {
                 if [[ "$response" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
                     valid=1
                 else
-                    show_error "Invalid email format. Please try again."
+                    show_error "Invalid email format. Please try again." >&2
                 fi
                 ;;
             number)
                 if [[ "$response" =~ ^[0-9]+$ ]]; then
                     valid=1
                 else
-                    show_error "Please enter a valid number."
+                    show_error "Please enter a valid number." >&2
                 fi
                 ;;
             *)
