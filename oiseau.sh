@@ -744,7 +744,8 @@ ask_input() {
     while [ $valid -eq 0 ]; do
         # Display prompt (to stderr so it doesn't interfere with return value)
         if [ -n "$default" ] && [ "$mode" != "password" ]; then
-            echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${safe_prompt} [${default}]: " >&2
+            local safe_default="$(_escape_input "$default")"
+            echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${safe_prompt} [${safe_default}]: " >&2
         else
             echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${safe_prompt}: " >&2
         fi
@@ -977,7 +978,7 @@ ask_list() {
 
         # Handle escape sequences (arrow keys)
         if [ "$key" = $'\x1b' ]; then
-            read -r -s -n2 -t 0.001 key  # Read the rest of the escape sequence
+            read -r -s -n2 -t 0.1 key  # Read the rest of the escape sequence (100ms timeout)
         fi
 
         case "$key" in
