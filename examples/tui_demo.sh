@@ -155,6 +155,11 @@ render_tasks() {
     fi
 }
 
+# Render just the footer (for selective updates)
+render_footer() {
+    echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+}
+
 # Main render function - redraws entire screen
 render_screen() {
     clear_screen
@@ -177,7 +182,10 @@ render_screen() {
     # Footer with instructions
     echo ""
     echo -e "${COLOR_DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+
+    # Save cursor position before footer for selective updates
+    save_cursor
+    render_footer
 }
 
 # ==============================================================================
@@ -229,33 +237,38 @@ run_tui() {
     local last_view="$CURRENT_VIEW"
     local need_full_redraw=true
 
+    # Initial render
+    render_screen
+    last_view="$CURRENT_VIEW"
+
     while $running; do
-        # Full redraw only when needed
+        # Read input (non-blocking with 1s timeout)
+        local key=$(read_key)
+
+        # Increment counter (simulates state changes)
+        COUNTER=$((COUNTER + 1))
+
+        # Process input if key was pressed
+        if [ -n "$key" ]; then
+            if ! process_input "$key"; then
+                running=false
+                continue
+            else
+                need_full_redraw=true
+            fi
+        fi
+
+        # Determine if we need full redraw
         if [ "$need_full_redraw" = true ] || [ "$CURRENT_VIEW" != "$last_view" ]; then
             render_screen
             need_full_redraw=false
             last_view="$CURRENT_VIEW"
         else
             # Selective update: just update the footer counter
-            move_cursor $(tput lines) 1
+            restore_cursor
             echo -en "\033[K"  # Clear from cursor to end of line
-            echo -e "${COLOR_MUTED}Auto-refresh: ${COLOR_SUCCESS}ON${RESET}  |  Update interval: 1s  |  Frame: #${COUNTER}${RESET}"
+            render_footer
         fi
-
-        # Read input (non-blocking with 1s timeout)
-        local key=$(read_key)
-
-        # Process input if key was pressed
-        if [ -n "$key" ]; then
-            if ! process_input "$key"; then
-                running=false
-            else
-                need_full_redraw=true
-            fi
-        fi
-
-        # Increment counter (simulates state changes)
-        COUNTER=$((COUNTER + 1))
     done
 }
 

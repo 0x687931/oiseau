@@ -13,6 +13,8 @@ tui::clear() { echo -en "\033[2J\033[H"; }
 tui::hide_cursor() { echo -en "\033[?25l"; }
 tui::show_cursor() { echo -en "\033[?25h"; }
 tui::move() { echo -en "\033[${1};${2}H"; }
+tui::save_cursor() { echo -en "\033[s"; }
+tui::restore_cursor() { echo -en "\033[u"; }
 
 # ==============================================================================
 # MODEL - Application State (Pure Data)
@@ -191,6 +193,21 @@ view::footer() {
     echo ""
     echo -e "${COLOR_DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
+    # Save cursor position before status line for selective updates
+    tui::save_cursor
+
+    case ${MODEL[view]} in
+        tasks)
+            echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+            ;;
+        *)
+            echo -e "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
+            ;;
+    esac
+}
+
+# Render just the status line (for selective updates)
+view::footer_status_only() {
     case ${MODEL[view]} in
         tasks)
             echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
@@ -338,9 +355,26 @@ app::run() {
     local last_view="${MODEL[view]}"
     local need_full_redraw=true
 
+    # Initial render
+    view::render
+    last_view="${MODEL[view]}"
+
     while $running; do
+        # Handle input
+        local key=$(app::read_key)
+
         # Update model (business logic)
         controller::update
+
+        # Process key input
+        if [ -n "$key" ]; then
+            if ! controller::handle_key "$key"; then
+                running=false
+                continue
+            else
+                need_full_redraw=true
+            fi
+        fi
 
         # Full redraw only when view changes or on user input
         if [ "$need_full_redraw" = true ] || [ "${MODEL[view]}" != "$last_view" ]; then
@@ -348,29 +382,10 @@ app::run() {
             need_full_redraw=false
             last_view="${MODEL[view]}"
         else
-            # Selective update: just update the footer frame counter
-            local footer_line=$(( $(tput lines) ))
-            tui::move $footer_line 1
+            # Selective update: just update the footer status line
+            tui::restore_cursor
             echo -en "\033[K"  # Clear from cursor to end of line
-            case ${MODEL[view]} in
-                tasks)
-                    echo -e "${COLOR_MUTED}↑↓/Tab=Select  Space=Toggle  1-3=Views  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
-                    ;;
-                *)
-                    echo -e "${COLOR_MUTED}Tab=Next View  1=Home  2=Tasks  3=About  R=Refresh  Q=Quit  |  Frame #${MODEL[counter]}${RESET}"
-                    ;;
-            esac
-        fi
-
-        # Handle input
-        local key=$(app::read_key)
-
-        if [ -n "$key" ]; then
-            if ! controller::handle_key "$key"; then
-                running=false
-            else
-                need_full_redraw=true
-            fi
+            view::footer_status_only
         fi
     done
 }
