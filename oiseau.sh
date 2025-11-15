@@ -347,7 +347,9 @@ show_section_header() {
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
 
     # Title line
-    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}"
+    local title_display_width=$(_display_width "$title")
+    local title_padding=$((inner_width - title_display_width - 2))
+    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
 
     # Step counter and subtitle if provided
     if [ -n "$step_num" ] && [ -n "$total_steps" ]; then
@@ -355,7 +357,9 @@ show_section_header() {
         if [ -n "$subtitle" ]; then
             step_text="${step_text} › ${subtitle}"
         fi
-        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}"
+        local step_display_width=$(_display_width "$step_text")
+        local step_padding=$((inner_width - step_display_width - 2))
+        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}$(_repeat_char " " "$step_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     fi
 
     echo -e "${COLOR_BORDER}${BOX_RBL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RBR}${RESET}"
@@ -533,11 +537,18 @@ show_summary() {
     local inner_width=$((width - 2))
 
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
-    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_SUCCESS}${ICON_SUCCESS}  ${BOLD}${title}${RESET}"
+
+    local title_content="  ${ICON_SUCCESS}  ${title}"
+    local title_display_width=$(_display_width "$title_content")
+    local title_padding=$((inner_width - title_display_width))
+    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+
     echo -e "${COLOR_BORDER}${BOX_VR}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_VL}${RESET}"
 
     for item in "${items[@]}"; do
-        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  $item"
+        local item_display_width=$(_display_width "$item")
+        local item_padding=$((inner_width - item_display_width - 2))
+        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  $item$(_repeat_char " " "$item_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     done
 
     echo -e "${COLOR_BORDER}${BOX_RBL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RBR}${RESET}"
