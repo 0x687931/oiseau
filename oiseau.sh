@@ -567,8 +567,9 @@ show_progress_bar() {
             should_animate=1
         fi
     else
-        # Auto-detect: animate if TTY and not plain mode
-        if [ "$OISEAU_IS_TTY" = "1" ] && [ "$OISEAU_MODE" != "plain" ]; then
+        # Auto-detect: animate if stdout is a TTY and not plain mode
+        # Check at call time (not source time) to handle redirected output
+        if [ -t 1 ] && [ "$OISEAU_MODE" != "plain" ]; then
             should_animate=1
         fi
     fi
