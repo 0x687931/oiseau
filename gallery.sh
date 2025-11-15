@@ -243,10 +243,60 @@ echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  Delete all files? [y/N]: _"
 pause_between_sections
 
 # ==============================================================================
-# 9. COMPLEX EXAMPLE
+# 9. SPINNER WIDGET
 # ==============================================================================
 
-print_section "9. Real-World Example: Git Workflow"
+print_section "9. Spinner Widget (Loading Indicators)"
+
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "  ${COLOR_CODE}start_spinner \"Loading data...\"${RESET}"
+echo -e "  ${COLOR_CODE}# ... do work ...${RESET}"
+echo -e "  ${COLOR_CODE}stop_spinner${RESET}"
+echo ""
+
+echo -e "${COLOR_MUTED}Renders as:${RESET}"
+
+# Demo all spinner styles
+echo -e "${COLOR_MUTED}Style: dots (default)${RESET}"
+export OISEAU_SPINNER_STYLE="dots"
+start_spinner "Loading with dots spinner..."
+sleep 2
+stop_spinner
+show_success "Done!"
+
+echo ""
+echo -e "${COLOR_MUTED}Style: circle${RESET}"
+export OISEAU_SPINNER_STYLE="circle"
+start_spinner "Loading with circle spinner..."
+sleep 2
+stop_spinner
+show_success "Done!"
+
+echo ""
+echo -e "${COLOR_MUTED}Style: pulse${RESET}"
+export OISEAU_SPINNER_STYLE="pulse"
+start_spinner "Loading with pulse spinner..."
+sleep 2
+stop_spinner
+show_success "Done!"
+
+unset OISEAU_SPINNER_STYLE
+
+echo ""
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "5 spinner styles: dots, line, circle, pulse, arc"
+print_item "Configurable FPS (frames per second)"
+print_item "Auto-adapts to terminal (UTF-8, ASCII, Plain)"
+print_item "Simple start/stop helpers"
+print_item "Automatic cleanup on exit"
+
+pause_between_sections
+
+# ==============================================================================
+# 10. COMPLEX EXAMPLE
+# ==============================================================================
+
+print_section "10. Real-World Example: Git Workflow"
 
 show_section_header "Git Worktree Workflow" 3 5 "Creating Pull Request"
 
@@ -275,10 +325,10 @@ show_summary "Branch Summary" \
 pause_between_sections
 
 # ==============================================================================
-# 10. DEGRADATION MODES
+# 11. DEGRADATION MODES
 # ==============================================================================
 
-print_section "10. Terminal Capability Detection"
+print_section "11. Terminal Capability Detection"
 
 echo -e "${COLOR_MUTED}Current Terminal Mode:${RESET}"
 print_kv "OISEAU_MODE" "$OISEAU_MODE"
@@ -298,10 +348,10 @@ show_info "Set UI_DISABLE=1 or NO_COLOR=1 to force plain mode"
 pause_between_sections
 
 # ==============================================================================
-# 11. CJK & WIDE CHARACTER SUPPORT
+# 12. CJK & WIDE CHARACTER SUPPORT
 # ==============================================================================
 
-print_section "11. CJK & Wide Character Support"
+print_section "12. CJK & Wide Character Support"
 
 echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
 echo ""
@@ -352,7 +402,7 @@ print_next_steps \
 
 echo ""
 show_summary "Oiseau Features" \
-    "✓ 30+ widgets and components" \
+    "✓ 30+ widgets including new spinner!" \
     "✓ Zero dependencies (pure bash)" \
     "✓ 256-color ANSI palette" \
     "✓ Smart terminal detection" \

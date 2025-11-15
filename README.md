@@ -185,6 +185,28 @@ Types: `error`, `warning`, `info`, `success`
 | `show_checklist <array_name>` | Checklist with status icons |
 | `show_summary "title" "item1" "item2" ...` | Summary box with items |
 
+### Spinner (Loading Indicators)
+
+| Function | Description |
+|----------|-------------|
+| `show_spinner "message"` | Animated loading spinner (runs until killed) |
+| `start_spinner "message"` | Start spinner in background, tracks PID |
+| `stop_spinner` | Stop background spinner started with start_spinner |
+
+**Styles:** dots (default), line, circle, pulse, arc
+
+**Environment Variables:**
+- `OISEAU_SPINNER_STYLE` - Spinner animation style
+- `OISEAU_SPINNER_FPS` - Frames per second (default: 10)
+
+**Example:**
+```bash
+start_spinner "Processing files..."
+# ... do work ...
+stop_spinner
+show_success "Done!"
+```
+
 ### Interactive Prompts
 
 | Function | Returns | Description |

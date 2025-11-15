@@ -683,6 +683,154 @@ print_box() {
 }
 
 # ==============================================================================
+# SPINNER WIDGET
+# ==============================================================================
+
+#===============================================================================
+# FUNCTION: show_spinner
+# DESCRIPTION: Display an animated loading spinner
+# PARAMETERS:
+#   $1 - message (string, required): Message to display next to spinner
+# ENVIRONMENT VARIABLES:
+#   OISEAU_SPINNER_STYLE - Spinner animation style (dots|line|circle|pulse|arc)
+#   OISEAU_SPINNER_FPS   - Animation frame rate (default: 10)
+# RETURNS: Runs until killed (Ctrl+C or kill PID)
+# MODES:
+#   Rich:  Animated UTF-8 spinner (⠋⠙⠹⠸...)
+#   Color: Animated ASCII spinner (|/-\)
+#   Plain: Static message only
+# EXAMPLE:
+#   show_spinner "Loading data..." &
+#   SPINNER_PID=$!
+#   # ... do work ...
+#   kill $SPINNER_PID
+#   wait $SPINNER_PID 2>/dev/null
+#===============================================================================
+show_spinner() {
+    local message="${1:-Loading...}"
+
+    # Sanitize input
+    local safe_message="$(_escape_input "$message")"
+
+    # Non-TTY: just print message once and return
+    if [ "$OISEAU_IS_TTY" != "1" ]; then
+        echo "$safe_message"
+        return 0
+    fi
+
+    # Plain mode: static message
+    if [ "$OISEAU_MODE" = "plain" ]; then
+        echo "$safe_message"
+        return 0
+    fi
+
+    # Validate and get spinner style
+    local style="${OISEAU_SPINNER_STYLE:-dots}"
+    case "$style" in
+        dots|line|circle|pulse|arc) ;;
+        *)
+            style="dots"
+            ;;
+    esac
+
+    # Get frames based on mode and style
+    local frames
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        case "$style" in
+            dots)   frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") ;;
+            line)   frames=("⎯" "⎼" "⎽" "⎼") ;;
+            circle) frames=("◐" "◓" "◑" "◒") ;;
+            pulse)  frames=("●" "○" "●" "○") ;;
+            arc)    frames=("◜" "◝" "◞" "◟") ;;
+        esac
+    else
+        # Color mode (ASCII)
+        case "$style" in
+            dots)   frames=("|" "/" "-" "\\") ;;
+            line)   frames=("-" "=" "≡" "=") ;;
+            circle) frames=("|" "/" "-" "\\") ;;
+            pulse)  frames=("*" "o" "*" "o") ;;
+            arc)    frames=("." "o" "O" "o") ;;
+        esac
+    fi
+
+    # Animation settings
+    local fps="${OISEAU_SPINNER_FPS:-10}"
+    local delay=$(awk "BEGIN {print 1/$fps}")
+    local frame_idx=0
+    local num_frames=${#frames[@]}
+
+    # Hide cursor
+    echo -en "\033[?25l"
+
+    # Cleanup on exit
+    trap 'echo -en "\r\033[K\033[?25h"' EXIT INT TERM
+
+    # Animation loop
+    while true; do
+        local frame="${frames[$frame_idx]}"
+        echo -en "\r${COLOR_INFO}${frame}${RESET}  ${safe_message}\033[K"
+
+        frame_idx=$(( (frame_idx + 1) % num_frames ))
+        sleep "$delay"
+    done
+}
+
+#===============================================================================
+# FUNCTION: start_spinner
+# DESCRIPTION: Start spinner in background and track PID
+# PARAMETERS:
+#   $1 - message (string, optional): Message to display (default: "Loading...")
+# ENVIRONMENT VARIABLES:
+#   Sets OISEAU_SPINNER_PID - PID of background spinner process
+# RETURNS: 0 on success
+# EXAMPLE:
+#   start_spinner "Processing files..."
+#   # ... do work ...
+#   stop_spinner
+#===============================================================================
+start_spinner() {
+    local message="${1:-Loading...}"
+
+    # Start spinner in background
+    show_spinner "$message" &
+    export OISEAU_SPINNER_PID=$!
+
+    # Give it a moment to start
+    sleep 0.1
+}
+
+#===============================================================================
+# FUNCTION: stop_spinner
+# DESCRIPTION: Stop background spinner started with start_spinner
+# PARAMETERS: None
+# ENVIRONMENT VARIABLES:
+#   Reads OISEAU_SPINNER_PID - PID of spinner to stop
+#   Unsets OISEAU_SPINNER_PID after stopping
+# RETURNS: 0 on success
+# EXAMPLE:
+#   start_spinner "Loading..."
+#   sleep 2
+#   stop_spinner
+#   show_success "Done!"
+#===============================================================================
+stop_spinner() {
+    if [ -n "$OISEAU_SPINNER_PID" ]; then
+        # Kill spinner process
+        kill "$OISEAU_SPINNER_PID" 2>/dev/null
+
+        # Wait for it to finish
+        wait "$OISEAU_SPINNER_PID" 2>/dev/null
+
+        # Clear line and show cursor
+        echo -en "\r\033[K\033[?25h"
+
+        # Unset PID
+        unset OISEAU_SPINNER_PID
+    fi
+}
+
+# ==============================================================================
 # BACKWARD COMPATIBILITY ALIASES
 # ==============================================================================
 
