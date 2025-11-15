@@ -727,10 +727,10 @@ ask_input() {
     local default="${2:-}"
     local mode="${3:-text}"
 
-    # Auto-detect password mode from prompt text
+    # Auto-detect password mode from prompt text (whole word matching)
     if [ "$mode" = "text" ]; then
         local prompt_lower=$(echo "$prompt" | tr '[:upper:]' '[:lower:]')
-        if [[ "$prompt_lower" =~ (password|passwd|pass|secret|token|key|api) ]]; then
+        if [[ "$prompt_lower" =~ (^|[^a-z])(password|passwd|pass|secret|token|key|api)([^a-z]|$) ]]; then
             mode="password"
         fi
     fi
