@@ -74,6 +74,26 @@ fi
 # Get terminal width (cached)
 export OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
 
+# Cache perl availability for performance (checked once at init)
+if command -v perl >/dev/null 2>&1; then
+    export OISEAU_HAS_PERL=1
+else
+    export OISEAU_HAS_PERL=0
+fi
+
+# Cache for display width calculations and repeated strings
+# Using bash 3.x compatible approach with eval for older systems
+# Note: Caching is disabled on bash < 4.0 (lacks associative arrays)
+if [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
+    # Bash 4.0+ supports associative arrays for efficient caching
+    declare -A OISEAU_WIDTH_CACHE
+    declare -A OISEAU_REPEAT_CACHE
+    export OISEAU_HAS_CACHE=1
+else
+    # Bash 3.x fallback: disable caching (still works, just slower)
+    export OISEAU_HAS_CACHE=0
+fi
+
 # ==============================================================================
 # COLOR DEFINITIONS (ANSI 256-Color Palette)
 # ==============================================================================
@@ -148,10 +168,11 @@ fi
 # ==============================================================================
 
 # Escape user input to prevent code injection
+# Optimized: reduced pipeline depth for better performance
 _escape_input() {
     local input="$1"
-    # Remove ANSI escape sequences and control characters
-    echo "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037' | tr -d '\177'
+    # Remove ANSI escape sequences and control characters (combined tr calls)
+    echo "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037\177'
 }
 
 # Calculate visible length (ignoring ANSI codes)
@@ -169,19 +190,29 @@ _display_width() {
     # Remove ANSI codes first
     local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
 
-    # Try perl for accurate display width calculation if the module is available
-    if command -v perl >/dev/null 2>&1; then
+    local width
+
+    # Check cache first (huge performance boost for repeated strings)
+    # Only available on bash 4.0+
+    if [ "$OISEAU_HAS_CACHE" = "1" ] && [ -n "${OISEAU_WIDTH_CACHE[$clean]:-}" ]; then
+        echo "${OISEAU_WIDTH_CACHE[$clean]}"
+        return
+    fi
+
+    # Try perl for accurate display width calculation if available (cached check)
+    if [ "$OISEAU_HAS_PERL" = "1" ]; then
         local perl_result
-        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
-        if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
-            echo "$perl_result"
+        if perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null) && [ -n "$perl_result" ]; then
+            width="$perl_result"
+            [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+            echo "$width"
             return
         fi
     fi
 
     # Fallback: Perl-based wcwidth estimation without external modules
     # This handles CJK, emojis, and other wide characters more accurately
-    if command -v perl >/dev/null 2>&1; then
+    if [ "$OISEAU_HAS_PERL" = "1" ]; then
         local perl_width
         perl_width=$(echo -n "$clean" | perl -C -ne '
             use utf8;
@@ -240,9 +271,10 @@ _display_width() {
                 }
             }
             print $width;
-        ' 2>/dev/null)
-        if [ $? -eq 0 ] && [ -n "$perl_width" ]; then
-            echo "$perl_width"
+        ' 2>/dev/null) && [ -n "$perl_width" ]; then
+            width="$perl_width"
+            [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+            echo "$width"
             return
         fi
     fi
@@ -271,7 +303,9 @@ _display_width() {
         estimated_wide=0
     fi
 
-    echo $((char_count + estimated_wide))
+    width=$((char_count + estimated_wide))
+    [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+    echo "$width"
 }
 
 # Pad a string to a specific display width
@@ -291,10 +325,33 @@ _pad_to_width() {
 }
 
 # Repeat a character N times
+# Optimized: uses printf string replacement instead of external tr command, with caching
 _repeat_char() {
     local char="$1"
     local count="$2"
-    printf "%${count}s" | tr ' ' "$char"
+
+    # Use printf's built-in string repetition (much faster than tr)
+    if [ "$count" -le 0 ]; then
+        return
+    fi
+
+    # Check cache first (common patterns like box borders are reused constantly)
+    # Only available on bash 4.0+
+    local cache_key="${char}_${count}"
+    if [ "$OISEAU_HAS_CACHE" = "1" ] && [ -n "${OISEAU_REPEAT_CACHE[$cache_key]:-}" ]; then
+        echo "${OISEAU_REPEAT_CACHE[$cache_key]}"
+        return
+    fi
+
+    # Build repeated string using parameter expansion (pure bash, no external commands)
+    local spaces result
+    spaces=$(printf "%${count}s" "")
+    result="${spaces// /$char}"
+
+    # Cache the result for reuse (boxes draw many identical lines)
+    [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_REPEAT_CACHE[$cache_key]="$result"
+
+    echo "$result"
 }
 
 # Truncate text to a specific display width with ellipsis
