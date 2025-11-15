@@ -817,6 +817,214 @@ ask_input() {
     echo "$safe_response"
 }
 
+#===============================================================================
+# FUNCTION: ask_list
+# DESCRIPTION: Interactive list selection with arrow key navigation
+# PARAMETERS:
+#   $1 - prompt (string, required): Prompt message
+#   $2 - array_name (string, required): Name of array variable containing options
+#   $3 - mode (string, optional): Selection mode (single|multi, default: single)
+# RETURNS: Selected item(s), newline-separated for multi-select
+# MODES:
+#   single - Select one item with Enter (default)
+#   multi  - Toggle items with Space, confirm with Enter
+# BEHAVIOR:
+#   - Auto-detects TTY: interactive in TTY, falls back to numbered list in non-TTY
+#   - Arrow keys (↑↓) or j/k to navigate
+#   - Enter to select (single mode) or confirm (multi mode)
+#   - Space to toggle (multi mode only)
+#   - q or Esc to cancel
+#   - Respects UTF-8/ASCII/Plain modes for visual indicators
+# EXAMPLE:
+#   options=("Option 1" "Option 2" "Option 3")
+#   selected=$(ask_list "Choose:" options)
+#   files=("file1.txt" "file2.txt" "file3.txt")
+#   selected=$(ask_list "Select files:" files "multi")
+#===============================================================================
+ask_list() {
+    local prompt="$1"
+    local array_name="$2"
+    local mode="${3:-single}"
+
+    # Validate inputs first (before eval)
+    if [ -z "$prompt" ] || [ -z "$array_name" ]; then
+        echo "ERROR: ask_list requires prompt and array_name arguments" >&2
+        return 1
+    fi
+
+    # Sanitize prompt
+    local safe_prompt="$(_escape_input "$prompt")"
+
+    # Load array items using eval for bash 3.x compatibility
+    eval "local items=(\"\${${array_name}[@]}\")"
+
+    if [ ${#items[@]} -eq 0 ]; then
+        echo "ERROR: ask_list requires non-empty array" >&2
+        return 1
+    fi
+
+    # Non-TTY fallback: simple numbered list
+    if [ "$OISEAU_IS_TTY" != "1" ]; then
+        echo "$safe_prompt" >&2
+        local i=1
+        for item in "${items[@]}"; do
+            echo "  $i) $item" >&2
+            i=$((i + 1))
+        done
+        echo -n "Enter number: " >&2
+        read -r choice
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#items[@]} ]; then
+            echo "${items[$((choice - 1))]}"
+            return 0
+        else
+            echo "ERROR: Invalid selection" >&2
+            return 1
+        fi
+    fi
+
+    # Interactive mode (TTY)
+    local selected_index=0
+    local -a selected_items=()  # For multi-select
+
+    # Initialize selected_items array (all false for multi-select)
+    if [ "$mode" = "multi" ]; then
+        for ((i=0; i<${#items[@]}; i++)); do
+            selected_items[$i]=0
+        done
+    fi
+
+    # Mode-aware visual indicators
+    local cursor_char=">"
+    local checked_char="✓"
+    local unchecked_char=" "
+    local checkbox_left="["
+    local checkbox_right="]"
+
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        cursor_char="›"
+        checked_char="✓"
+        unchecked_char=" "
+    elif [ "$OISEAU_MODE" = "color" ] || [ "$OISEAU_MODE" = "plain" ]; then
+        cursor_char=">"
+        checked_char="X"
+        unchecked_char=" "
+    fi
+
+    # Helper function to render the list
+    render_list() {
+        # Clear screen area (move cursor up and clear lines)
+        if [ "$1" != "first" ]; then
+            # Move cursor up by number of items + header + footer
+            local lines_to_clear=$((${#items[@]} + 3))
+            for ((i=0; i<lines_to_clear; i++)); do
+                echo -ne "\033[1A\033[2K" >&2  # Move up and clear line
+            done
+        fi
+
+        # Print prompt
+        echo -e "${COLOR_INFO}${safe_prompt}${RESET}" >&2
+
+        # Print items
+        for ((i=0; i<${#items[@]}; i++)); do
+            local item="${items[$i]}"
+            local prefix="  "
+
+            if [ "$i" -eq "$selected_index" ]; then
+                prefix="${COLOR_INFO}${cursor_char}${RESET} "
+            fi
+
+            if [ "$mode" = "multi" ]; then
+                local checkbox
+                if [ "${selected_items[$i]}" -eq 1 ]; then
+                    checkbox="${COLOR_SUCCESS}${checkbox_left}${checked_char}${checkbox_right}${RESET}"
+                else
+                    checkbox="${COLOR_MUTED}${checkbox_left}${unchecked_char}${checkbox_right}${RESET}"
+                fi
+                echo -e "${prefix}${checkbox} ${item}" >&2
+            else
+                echo -e "${prefix}${item}" >&2
+            fi
+        done
+
+        # Print help text
+        if [ "$mode" = "multi" ]; then
+            echo -e "${COLOR_DIM}[↑↓:Navigate | Space:Toggle | Enter:Confirm | q:Cancel]${RESET}" >&2
+        else
+            echo -e "${COLOR_DIM}[↑↓:Navigate | Enter:Select | q:Cancel]${RESET}" >&2
+        fi
+    }
+
+    # Initial render
+    render_list "first"
+
+    # Read arrow keys and handle selection
+    while true; do
+        # Read single character
+        IFS= read -r -s -n1 key
+
+        # Handle escape sequences (arrow keys)
+        if [ "$key" = $'\x1b' ]; then
+            read -r -s -n2 -t 0.001 key  # Read the rest of the escape sequence
+        fi
+
+        case "$key" in
+            '[A'|'k')  # Up arrow or k
+                selected_index=$(( (selected_index - 1 + ${#items[@]}) % ${#items[@]} ))
+                render_list
+                ;;
+            '[B'|'j')  # Down arrow or j
+                selected_index=$(( (selected_index + 1) % ${#items[@]} ))
+                render_list
+                ;;
+            ' ')  # Space (toggle in multi mode)
+                if [ "$mode" = "multi" ]; then
+                    if [ "${selected_items[$selected_index]}" -eq 1 ]; then
+                        selected_items[$selected_index]=0
+                    else
+                        selected_items[$selected_index]=1
+                    fi
+                    render_list
+                fi
+                ;;
+            '')  # Enter
+                if [ "$mode" = "multi" ]; then
+                    # Return all selected items
+                    local results=()
+                    for ((i=0; i<${#items[@]}; i++)); do
+                        if [ "${selected_items[$i]}" -eq 1 ]; then
+                            results+=("${items[$i]}")
+                        fi
+                    done
+
+                    if [ ${#results[@]} -eq 0 ]; then
+                        echo "" >&2
+                        echo "ERROR: No items selected" >&2
+                        return 1
+                    fi
+
+                    # Clear the list display
+                    echo "" >&2
+
+                    # Return selected items (one per line)
+                    printf '%s\n' "${results[@]}"
+                    return 0
+                else
+                    # Return single selected item
+                    echo "" >&2
+                    echo "${items[$selected_index]}"
+                    return 0
+                fi
+                ;;
+            'q'|'Q'|$'\x1b')  # q or Esc to cancel
+                echo "" >&2
+                echo "ERROR: Selection cancelled" >&2
+                return 1
+                ;;
+        esac
+    done
+}
+
 # ==============================================================================
 # FORMATTING FUNCTIONS
 # ==============================================================================

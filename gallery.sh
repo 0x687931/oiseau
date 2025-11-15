@@ -301,10 +301,65 @@ print_item "No ANSI injection or command substitution possible"
 pause_between_sections
 
 # ==============================================================================
-# 9. SPINNER WIDGET
+# 9. INTERACTIVE LIST SELECTION
 # ==============================================================================
 
-print_section "9. Spinner Widget (Loading Indicators)"
+print_section "9. Interactive List Selection"
+
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "Single-select and multi-select modes"
+print_item "Arrow keys (↑↓) or vim keys (j/k) to navigate"
+print_item "Space to toggle (multi-select), Enter to confirm"
+print_item "Auto-detects TTY, falls back to numbered list"
+print_item "Mode-aware: › (UTF-8) vs > (ASCII)"
+echo ""
+
+echo -e "${COLOR_MUTED}Single-select example:${RESET}"
+echo -e "  ${COLOR_CODE}options=(\"Deploy to staging\" \"Deploy to production\" \"Rollback\")${RESET}"
+echo -e "  ${COLOR_CODE}choice=\$(ask_list \"Select action:\" options)${RESET}"
+echo ""
+
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    options=("Deploy to staging" "Deploy to production" "Rollback" "Cancel")
+    choice=$(ask_list "Select action:" options)
+    show_success "You selected: $choice"
+else
+    echo "  (Interactive in real usage - try it yourself!)"
+fi
+echo ""
+
+echo -e "${COLOR_MUTED}Multi-select example:${RESET}"
+echo -e "  ${COLOR_CODE}files=(\"app.log\" \"error.log\" \"access.log\" \"debug.log\")${RESET}"
+echo -e "  ${COLOR_CODE}selected=\$(ask_list \"Select files to delete:\" files \"multi\")${RESET}"
+echo ""
+
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    files=("app.log" "error.log" "access.log" "debug.log")
+    echo "Try multi-select (Space to toggle, Enter to confirm):"
+    selected=$(ask_list "Select files to delete:" files "multi")
+    echo ""
+    echo -e "${COLOR_SUCCESS}Selected files:${RESET}"
+    echo "$selected" | while IFS= read -r file; do
+        echo "  - $file"
+    done
+else
+    echo "  (Interactive - Space to toggle, Enter to confirm)"
+fi
+echo ""
+
+echo -e "${COLOR_MUTED}Navigation:${RESET}"
+print_item "↑↓ or j/k: Navigate through list"
+print_item "Enter: Select item (single) or confirm (multi)"
+print_item "Space: Toggle selection (multi-select only)"
+print_item "q or Esc: Cancel selection"
+
+pause_between_sections
+
+# ==============================================================================
+# 10. SPINNER WIDGET
+# ==============================================================================
+
+print_section "10. Spinner Widget (Loading Indicators)"
 
 echo -e "${COLOR_MUTED}Code:${RESET}"
 echo -e "  ${COLOR_CODE}start_spinner \"Loading data...\"${RESET}"
@@ -356,7 +411,7 @@ pause_between_sections
 # 10. COMPLEX EXAMPLE
 # ==============================================================================
 
-print_section "10. Real-World Example: Git Workflow"
+print_section "11. Real-World Example: Git Workflow"
 
 show_section_header "Git Worktree Workflow" 3 5 "Creating Pull Request"
 
@@ -388,7 +443,7 @@ pause_between_sections
 # 11. DEGRADATION MODES
 # ==============================================================================
 
-print_section "11. Terminal Capability Detection"
+print_section "12. Terminal Capability Detection"
 
 echo -e "${COLOR_MUTED}Current Terminal Mode:${RESET}"
 print_kv "OISEAU_MODE" "$OISEAU_MODE"
@@ -411,7 +466,7 @@ pause_between_sections
 # 12. CJK & WIDE CHARACTER SUPPORT
 # ==============================================================================
 
-print_section "12. CJK & Wide Character Support"
+print_section "13. CJK & Wide Character Support"
 
 echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
 echo ""

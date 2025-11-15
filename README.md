@@ -233,6 +233,7 @@ show_success "Done!"
 | `prompt_confirm "msg" [default]` | 0=yes, 1=no | Yes/no confirmation |
 | `ask_yes_no "msg"` | 0=yes, 1=no | Alias for prompt_confirm |
 | `ask_input "msg" [default] [mode]` | string | Enhanced text input with validation |
+| `ask_list "prompt" array_name [mode]` | string(s) | Interactive list selection with arrow keys |
 
 #### Enhanced Text Input
 
@@ -272,6 +273,51 @@ age=$(ask_input "Your age" "" "number")
 - Prompts sanitized before display
 - No ANSI injection or command substitution possible
 - Password mode never echoes sensitive data
+
+#### Interactive List Selection
+
+The `ask_list` function provides interactive list selection with arrow key navigation:
+
+**Modes:**
+- `single` (default) - Select one item with Enter
+- `multi` - Toggle multiple items with Space, confirm with Enter
+
+**Navigation:**
+- Arrow keys (↑↓) or vim keys (j/k) to navigate
+- Enter to select (single mode) or confirm (multi mode)
+- Space to toggle selection (multi mode only)
+- q or Esc to cancel
+
+**Auto-detection:**
+Automatically falls back to numbered list in non-TTY environments (pipes, redirects)
+
+**Mode-aware:**
+- UTF-8 mode: › cursor, ✓ checkbox
+- ASCII mode: > cursor, X checkbox
+
+**Examples:**
+
+```bash
+# Single-select
+options=("Deploy to staging" "Deploy to production" "Rollback")
+choice=$(ask_list "Select action:" options)
+echo "You selected: $choice"
+
+# Multi-select
+files=("app.log" "error.log" "access.log" "debug.log")
+selected=$(ask_list "Select files to delete:" files "multi")
+
+# Process multi-select results (newline-separated)
+echo "$selected" | while IFS= read -r file; do
+    echo "Deleting: $file"
+done
+```
+
+**Features:**
+- Bash 3.x compatible (works on macOS default bash)
+- Input sanitization built-in
+- Real-time screen updates with smooth navigation
+- Graceful non-TTY fallback
 
 ### Formatting Helpers
 
