@@ -373,6 +373,42 @@ show_subheader() {
     echo -e "${COLOR_MUTED}${title}${RESET}"
 }
 
+# Header box - decorative box with title and optional subtitle
+# Usage: show_header_box "title" ["subtitle"]
+show_header_box() {
+    local title="$(_escape_input "$1")"
+    local subtitle="$(_escape_input "$2")"
+
+    local width=$(_clamp_width 60)
+    local inner_width=$((width - 2))
+
+    echo ""
+    echo -e "${COLOR_HEADER}${BOLD}"
+
+    # Top border
+    echo -e "  ${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}"
+
+    # Empty line
+    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+
+    # Title line (centered with padding)
+    echo -e "  ${BOX_DV}$(_pad_to_width "   $title" "$inner_width")${BOX_DV}"
+
+    # Empty line
+    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+
+    # Subtitle line if provided
+    if [ -n "$subtitle" ]; then
+        echo -e "  ${BOX_DV}$(_pad_to_width "   $subtitle" "$inner_width")${BOX_DV}"
+        echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+    fi
+
+    # Bottom border
+    echo -e "  ${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}"
+
+    echo -e "${RESET}"
+}
+
 # ==============================================================================
 # BOX COMPONENTS
 # ==============================================================================
