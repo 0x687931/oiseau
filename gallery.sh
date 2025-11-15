@@ -321,6 +321,43 @@ show_info "Set UI_DISABLE=1 or NO_COLOR=1 to force plain mode"
 pause_between_sections
 
 # ==============================================================================
+# 11. CJK & WIDE CHARACTER SUPPORT
+# ==============================================================================
+
+show_widget_section "11. CJK & Wide Character Support"
+
+echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
+echo ""
+
+echo -e "${COLOR_MUTED}Chinese (中文):${RESET}"
+show_box success "成功" "数据库连接成功 - Database connection successful"
+
+echo ""
+echo -e "${COLOR_MUTED}Japanese (日本語):${RESET}"
+show_box info "情報" "こんにちは - Hello in Japanese (hiragana/katakana/kanji)"
+
+echo ""
+echo -e "${COLOR_MUTED}Korean (한국어):${RESET}"
+show_box warning "경고" "안녕하세요 - Hello in Korean"
+
+echo ""
+echo -e "${COLOR_MUTED}Mixed content:${RESET}"
+show_box info "Mixed 混合 🌏" "Hello 你好 こんにちは 안녕 🚀 World"
+
+echo ""
+echo -e "${COLOR_MUTED}Character width analysis:${RESET}"
+print_kv "ASCII 'Hello'" "$(_display_width 'Hello') columns"
+print_kv "Chinese '你好'" "$(_display_width '你好') columns"
+print_kv "Japanese 'こんにちは'" "$(_display_width 'こんにちは') columns"
+print_kv "Korean '안녕하세요'" "$(_display_width '안녕하세요') columns"
+print_kv "Full-width 'ＡＢＣ'" "$(_display_width 'ＡＢＣ') columns"
+
+echo ""
+show_success "All wide characters are correctly measured at 2 columns each!"
+
+pause_between_sections
+
+# ==============================================================================
 # FINALE
 # ==============================================================================
 
