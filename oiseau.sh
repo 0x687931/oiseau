@@ -191,11 +191,24 @@ _display_width() {
             my $width = 0;
             for my $char (split //, $_) {
                 my $code = ord($char);
+                # Special case: Common icon characters that modern terminals render as width 1
+                # These are technically in wide ranges but render narrow in most terminals
+                if (
+                    $code == 0x2713 ||  # ✓ Check mark
+                    $code == 0x2717 ||  # ✗ Ballot X
+                    $code == 0x26A0 ||  # ⚠ Warning sign
+                    $code == 0x2139 ||  # ℹ Information source
+                    $code == 0x25CB ||  # ○ White circle
+                    $code == 0x25CF ||  # ● Black circle
+                    $code == 0x2298     # ⊘ Circled division slash
+                ) {
+                    $width += 1;
+                }
                 # East Asian Width ranges (CJK, full-width, etc.)
                 # Based on Unicode East Asian Width property
                 # Note: Ambiguous-width characters (hiragana, katakana) are treated as wide
                 # for better compatibility with CJK-aware terminal emulators
-                if (
+                elsif (
                     # Hiragana
                     ($code >= 0x3040 && $code <= 0x309F) ||
                     # Katakana
@@ -244,7 +257,16 @@ _display_width() {
     local byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
     local estimated_wide=$(( (byte_count - char_count) / 2 ))
 
-    # Ensure we don't over-estimate
+    # Adjust for common icon characters that are narrow in modern terminals
+    # These have 3-byte UTF-8 encoding but render as width 1
+    local icon_count=0
+    for icon in "✓" "✗" "⚠" "ℹ" "○" "●" "⊘"; do
+        local count=$(echo -n "$clean" | grep -o "$icon" 2>/dev/null | wc -l | tr -d ' ')
+        icon_count=$((icon_count + count))
+    done
+    estimated_wide=$((estimated_wide - icon_count))
+
+    # Ensure we don't over-estimate or under-estimate
     if [ "$estimated_wide" -lt 0 ]; then
         estimated_wide=0
     fi
