@@ -12,14 +12,6 @@ source "$SCRIPT_DIR/oiseau.sh"
 # GALLERY FUNCTIONS
 # ==============================================================================
 
-show_widget_section() {
-    local section_name="$1"
-    echo ""
-    echo -e "${COLOR_ACCENT}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${COLOR_ACCENT}${BOLD}  ${section_name}${RESET}"
-    echo -e "${COLOR_ACCENT}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo ""
-}
 
 pause_between_sections() {
     if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
@@ -48,7 +40,7 @@ pause_between_sections
 # 1. SIMPLE MESSAGES
 # ==============================================================================
 
-show_widget_section "1. Simple Status Messages"
+print_section "1. Simple Status Messages"
 
 echo -e "${COLOR_MUTED}Code:${RESET}"
 echo -e "  ${COLOR_CODE}show_success \"Operation completed successfully\"${RESET}"
@@ -68,7 +60,7 @@ pause_between_sections
 # 2. HEADERS
 # ==============================================================================
 
-show_widget_section "2. Headers & Titles"
+print_section "2. Headers & Titles"
 
 echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_header \"Project Setup\"${RESET}"
 show_header "Project Setup"
@@ -86,7 +78,7 @@ pause_between_sections
 # 3. BOXES
 # ==============================================================================
 
-show_widget_section "3. Styled Boxes"
+print_section "3. Styled Boxes"
 
 echo -e "${COLOR_MUTED}Error Box:${RESET}"
 show_box error "Connection Failed" "Unable to connect to database at localhost:5432. Please check if the service is running."
@@ -112,7 +104,7 @@ pause_between_sections
 # 4. PROGRESS BAR
 # ==============================================================================
 
-show_widget_section "4. Progress Bar"
+print_section "4. Progress Bar"
 
 echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_progress_bar <current> <total> \"Label\"${RESET}"
 echo ""
@@ -128,7 +120,7 @@ pause_between_sections
 # 5. CHECKLIST
 # ==============================================================================
 
-show_widget_section "5. Checklist with Status Indicators"
+print_section "5. Checklist with Status Indicators"
 
 echo -e "${COLOR_MUTED}Code:${RESET}"
 echo -e "${COLOR_CODE}  checklist=(${RESET}"
@@ -167,7 +159,7 @@ pause_between_sections
 # 6. SUMMARY BOX
 # ==============================================================================
 
-show_widget_section "6. Summary Box"
+print_section "6. Summary Box"
 
 echo -e "${COLOR_MUTED}Code:${RESET}"
 echo -e "${COLOR_CODE}  show_summary \"Deployment Summary\" \\${RESET}"
@@ -189,7 +181,7 @@ pause_between_sections
 # 7. FORMATTING HELPERS
 # ==============================================================================
 
-show_widget_section "7. Formatting Helpers"
+print_section "7. Formatting Helpers"
 
 echo -e "${COLOR_MUTED}Key-Value Pairs:${RESET}"
 print_kv "Project" "my-awesome-app"
@@ -229,7 +221,7 @@ pause_between_sections
 # 8. INTERACTIVE PROMPTS (SIMULATED)
 # ==============================================================================
 
-show_widget_section "8. Interactive Prompts"
+print_section "8. Interactive Prompts"
 
 echo -e "${COLOR_MUTED}These prompts are interactive in real usage:${RESET}"
 echo ""
@@ -254,7 +246,7 @@ pause_between_sections
 # 9. COMPLEX EXAMPLE
 # ==============================================================================
 
-show_widget_section "9. Real-World Example: Git Workflow"
+print_section "9. Real-World Example: Git Workflow"
 
 show_section_header "Git Worktree Workflow" 3 5 "Creating Pull Request"
 
@@ -286,7 +278,7 @@ pause_between_sections
 # 10. DEGRADATION MODES
 # ==============================================================================
 
-show_widget_section "10. Terminal Capability Detection"
+print_section "10. Terminal Capability Detection"
 
 echo -e "${COLOR_MUTED}Current Terminal Mode:${RESET}"
 print_kv "OISEAU_MODE" "$OISEAU_MODE"
@@ -309,7 +301,7 @@ pause_between_sections
 # 11. CJK & WIDE CHARACTER SUPPORT
 # ==============================================================================
 
-show_widget_section "11. CJK & Wide Character Support"
+print_section "11. CJK & Wide Character Support"
 
 echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
 echo ""
@@ -346,7 +338,7 @@ pause_between_sections
 # FINALE
 # ==============================================================================
 
-show_widget_section "Gallery Complete!"
+print_section "Gallery Complete!"
 
 echo -e "${COLOR_SUCCESS}${BOLD}"
 echo "  You've seen all the widgets Oiseau has to offer!"
