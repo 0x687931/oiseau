@@ -153,6 +153,8 @@ Output:
 
 ## 📚 Widget Reference
 
+Oiseau includes **25+ widgets** organized into the following categories:
+
 ### Status Messages
 
 | Function | Description |
@@ -168,23 +170,24 @@ Output:
 |----------|-------------|
 | `show_header "title"` | Simple bold header |
 | `show_subheader "title"` | Muted subheader |
+| `show_header_box "title" [subtitle]` | Decorative boxed header with optional subtitle |
 | `show_section_header "title" [step] [total] [subtitle]` | Boxed header with optional step counter |
 
-### Boxes
+### Boxes & Containers
 
 | Function | Usage |
 |----------|-------|
 | `show_box <type> <title> <msg> [cmd...]` | Styled box with title, message, and optional commands |
+| `show_summary "title" "item1" "item2" ...` | Summary box with multiple items |
 
-Types: `error`, `warning`, `info`, `success`
+**Box Types:** `error`, `warning`, `info`, `success`
 
-### Progress & Lists
+### Progress Indicators
 
 | Function | Description |
 |----------|-------------|
 | `show_progress_bar <current> <total> [label]` | Animated progress bar with percentage |
-| `show_checklist <array_name>` | Checklist with status icons |
-| `show_summary "title" "item1" "item2" ...` | Summary box with items |
+| `show_checklist <array_name>` | Checklist with status icons (done/active/pending/skip) |
 
 **Progress Bar Features:**
 - **Auto-animation:** Updates in place when in TTY
@@ -202,6 +205,17 @@ for i in {1..100}; do
   show_progress_bar $i 100 "Downloading"
   sleep 0.05
 done
+```
+
+**Checklist Statuses:**
+```bash
+tasks=(
+    "done|Task completed|Additional info"
+    "active|Task in progress|Working..."
+    "pending|Task waiting|Not started"
+    "skip|Task skipped|Not needed"
+)
+show_checklist tasks
 ```
 
 ### Spinner (Loading Indicators)
@@ -323,12 +337,26 @@ done
 
 | Function | Description |
 |----------|-------------|
-| `print_kv "key" "value" [width]` | Key-value pair |
-| `print_command "cmd"` | Code-styled command |
+| `print_kv "key" "value" [width]` | Key-value pair with aligned columns |
+| `print_command "cmd"` | Code-styled command display |
+| `print_command_inline "text"` | Inline code-styled text |
 | `print_item "text"` | Bulleted list item |
-| `print_section "title"` | Section title |
-| `print_step <num> "text"` | Numbered step |
+| `print_section "title"` | Section title (colored header) |
+| `print_step <num> "text"` | Numbered step with text |
 | `print_next_steps "step1" "step2" ...` | Numbered next steps list |
+
+### Backward Compatibility Aliases
+
+The following `print_*` aliases are provided for backward compatibility:
+
+| Alias | Maps To |
+|-------|---------|
+| `print_info()` | `show_info()` |
+| `print_success()` | `show_success()` |
+| `print_error()` | `show_error()` |
+| `print_warning()` | `show_warning()` |
+| `print_header()` | `show_header()` |
+| `print_box()` | `show_summary()` |
 
 ---
 
