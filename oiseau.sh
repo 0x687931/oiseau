@@ -391,15 +391,19 @@ show_header_box() {
     # Empty line
     echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
 
-    # Title line (centered with padding)
-    echo -e "  ${BOX_DV}$(_pad_to_width "   $title" "$inner_width")${BOX_DV}"
+    # Title (word-wrapped if needed)
+    echo "$title" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
+        echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+    done
 
     # Empty line
     echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
 
-    # Subtitle line if provided
+    # Subtitle (word-wrapped if needed)
     if [ -n "$subtitle" ]; then
-        echo -e "  ${BOX_DV}$(_pad_to_width "   $subtitle" "$inner_width")${BOX_DV}"
+        echo "$subtitle" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
+            echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+        done
         echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
     fi
 
