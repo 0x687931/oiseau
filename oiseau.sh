@@ -376,9 +376,9 @@ get_default_branch() {
         fi
     done
 
-    # Ultimate fallback
+    # Ultimate fallback - return success so scripts with set -e don't abort
     printf 'main\n'
-    return 1
+    return 0
 }
 
 # ==============================================================================
