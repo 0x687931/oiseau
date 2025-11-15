@@ -20,15 +20,6 @@ else
     exit 1
 fi
 
-# Get current repository owner and name
-REPO_INFO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
-if [ -z "$REPO_INFO" ]; then
-    print_error "Failed to get repository information"
-    exit 1
-fi
-REPO_OWNER=$(echo "$REPO_INFO" | cut -d'/' -f1)
-REPO_NAME=$(echo "$REPO_INFO" | cut -d'/' -f2)
-
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     print_error "Not in a git repository"
@@ -49,12 +40,24 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
+# Get current repository owner and name (now safe after gh checks)
+REPO_INFO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
+if [ -z "$REPO_INFO" ]; then
+    print_error "Failed to get repository information"
+    exit 1
+fi
+REPO_OWNER=$(echo "$REPO_INFO" | cut -d'/' -f1)
+REPO_NAME=$(echo "$REPO_INFO" | cut -d'/' -f2)
+
+# Detect default branch
+DEFAULT_BRANCH=$(get_default_branch)
+
 # Get current branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# Check if we're on main
-if [ "$CURRENT_BRANCH" = "main" ]; then
-    print_error "Already on main branch"
+# Check if we're on default branch
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+    print_error "Already on $DEFAULT_BRANCH branch"
     print_info "This script should be run from a worktree/feature branch"
     exit 1
 fi

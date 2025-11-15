@@ -24,6 +24,29 @@ print_success() { echo -e "${GREEN}✓${NC} $1"; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
+# Get default branch for current git repository
+get_default_branch() {
+    local default_branch
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||')
+
+    if [ -n "$default_branch" ]; then
+        echo "$default_branch"
+        return 0
+    fi
+
+    # Fallback: check which common default branch exists
+    for branch in main master trunk; do
+        if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+            echo "$branch"
+            return 0
+        fi
+    done
+
+    # Ultimate fallback
+    echo "main"
+    return 1
+}
+
 stat_mtime() {
     local file="$1"
     if [ ! -e "$file" ]; then
@@ -113,7 +136,12 @@ if [ -z "$1" ]; then
 fi
 
 FEATURE_NAME="$1"
-BASE_BRANCH="${2:-main}"
+# Use detected default branch if not explicitly provided
+if [ -z "$2" ]; then
+    BASE_BRANCH=$(get_default_branch)
+else
+    BASE_BRANCH="$2"
+fi
 
 # Clean feature name (replace spaces/underscores with hyphens, lowercase)
 FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | tr ' ' '-')
