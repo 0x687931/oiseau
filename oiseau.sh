@@ -725,33 +725,35 @@ show_box() {
     printf '%b%s%b%b\n' "${color}" "${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}" "${RESET}" ""
 
     # Title line (with proper right border)
-    # Security: Use printf %s for user content to prevent backslash injection
+    # Security: User content in title_content is already escaped via _escape_input at function start
+    # Use %b for the padded content because it contains ANSI escape codes (RESET and color)
     local title_content="  ${icon}  ${title}"
-    printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "$title_content" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "$title_content" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
 
     # Separator
     printf '%b%s%b%b\n' "${color}" "${BOX_DVR}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DVL}" "${RESET}" ""
 
     # Empty line
-    printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
 
     # Message (word-wrapped if needed)
-    # Security: Use printf %s for user content to prevent backslash injection
+    # Security: User content in line is already escaped via _escape_input at function start
+    # Use %b for the padded content because it contains ANSI escape codes (RESET and color)
     echo "$message" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
-        printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  $line" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  $line" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
     done
 
     # Commands section if provided
     if [ "${#commands[@]}" -gt 0 ]; then
-        printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
-        printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  To resolve:" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  To resolve:" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
         for cmd in "${commands[@]}"; do
-            printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "    ${cmd}" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+            printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "    ${cmd}" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
         done
     fi
 
     # Bottom empty line and border
-    printf '%b%b%s%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
     printf '%b%s%b%b\n' "${color}" "${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}" "${RESET}" ""
 }
 
