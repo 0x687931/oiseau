@@ -8,6 +8,8 @@ source ./oiseau.sh
 
 **Requirements:** Bash 3.2+, standard POSIX utilities (`tput`, `tr`, `wc`, `grep`, `awk`, `sed`, `cat`, `sleep`), optional `perl`
 
+**Shell:** Bash only (not zsh compatible). macOS users: `brew install bash` or run scripts with `#!/bin/bash` shebang.
+
 **Degradation:** UTF-8+256color → ASCII+256color → ASCII monochrome
 
 ---
