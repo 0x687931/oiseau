@@ -94,11 +94,11 @@ Output:
 ┃  ✗  Connection Failed                                    ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃                                                          ┃
-┃  Unable to reach database at localhost:5432             ┃
+┃  Unable to reach database at localhost:5432              ┃
 ┃                                                          ┃
 ┃  To resolve:                                             ┃
-┃    systemctl start postgresql                           ┃
-┃    pg_isready -h localhost                              ┃
+┃    systemctl start postgresql                            ┃
+┃    pg_isready -h localhost                               ┃
 ┃                                                          ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
