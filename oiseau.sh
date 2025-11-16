@@ -284,7 +284,7 @@ _safe_echo_n() {
 _escape_input() {
     local input="$1"
     # Remove ANSI escape sequences and control characters (combined tr calls)
-    echo "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037\177'
+    printf '%s' "$input" | sed $'s/\033[^m]*m//g' | tr -d '\000-\037\177'
 }
 
 # Calculate visible length (ignoring ANSI codes)
@@ -308,10 +308,18 @@ _display_width() {
 
     local width
 
+    # Determine whether cache operations are safe for this string
+    local can_cache=0
+    local cache_key=""
+    if [ "$OISEAU_HAS_CACHE" = "1" ]; then
+        cache_key=$(printf '%q' "$clean")
+        can_cache=1
+    fi
+
     # Check cache first (huge performance boost for repeated strings)
     # Only available on bash 4.0+
-    if [ "$OISEAU_HAS_CACHE" = "1" ] && [ -n "${OISEAU_WIDTH_CACHE[$clean]:-}" ]; then
-        echo "${OISEAU_WIDTH_CACHE[$clean]}"
+    if [ "$can_cache" = "1" ] && [ -n "${OISEAU_WIDTH_CACHE["$cache_key"]+_}" ]; then
+        echo "${OISEAU_WIDTH_CACHE["$cache_key"]}"
         return
     fi
 
@@ -320,7 +328,7 @@ _display_width() {
         local perl_result
         if perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null) && [ -n "$perl_result" ]; then
             width="$perl_result"
-            [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+            [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
             echo "$width"
             return
         fi
@@ -389,7 +397,7 @@ _display_width() {
             print $width;
         ' 2>/dev/null) && [ -n "$perl_width" ]; then
             width="$perl_width"
-            [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+            [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
             echo "$width"
             return
         fi
@@ -424,7 +432,7 @@ _display_width() {
     fi
 
     width=$((char_count + estimated_wide))
-    [ "$OISEAU_HAS_CACHE" = "1" ] && OISEAU_WIDTH_CACHE[$clean]="$width"
+    [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
     echo "$width"
 }
 
@@ -568,12 +576,29 @@ _truncate_to_width() {
 # Clamp width to terminal size
 _clamp_width() {
     local requested="$1"
-    local max=$((OISEAU_WIDTH - 4))
-    if [ "$requested" -gt "$max" ]; then
+    local width="${OISEAU_WIDTH:-80}"
+
+    if ! [[ "$width" =~ ^[0-9]+$ ]] || [ "$width" -le 4 ]; then
+        width=80
+    fi
+
+    local max=$((width - 4))
+
+    if [ "$requested" -le 0 ]; then
+        echo 1
+    elif [ "$requested" -gt "$max" ]; then
         echo "$max"
     else
         echo "$requested"
     fi
+}
+
+# Centralized helper for status lines to keep formatting consistent
+_print_status_line() {
+    local color="$1"
+    local icon="$2"
+    local message="$(_escape_input "$3")"
+    printf '  %b%b%b  %s\n' "$color" "$icon" "$RESET" "$message"
 }
 
 # ==============================================================================
@@ -583,29 +608,25 @@ _clamp_width() {
 # Show success message with green checkmark
 # Security: Use printf instead of echo -e to prevent backslash injection
 show_success() {
-    local msg="$(_escape_input "$1")"
-    printf '  %b%b%b  %s\n' "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "$msg"
+    _print_status_line "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "$1"
 }
 
 # Show error message with red X
 # Security: Use printf instead of echo -e to prevent backslash injection
 show_error() {
-    local msg="$(_escape_input "$1")"
-    printf '  %b%b%b  %s\n' "${COLOR_ERROR}" "${ICON_ERROR}" "${RESET}" "$msg"
+    _print_status_line "${COLOR_ERROR}" "${ICON_ERROR}" "$1"
 }
 
 # Show warning message with orange warning icon
 # Security: Use printf instead of echo -e to prevent backslash injection
 show_warning() {
-    local msg="$(_escape_input "$1")"
-    printf '  %b%b%b  %s\n' "${COLOR_WARNING}" "${ICON_WARNING}" "${RESET}" "$msg"
+    _print_status_line "${COLOR_WARNING}" "${ICON_WARNING}" "$1"
 }
 
 # Show info message with blue info icon
 # Security: Use printf instead of echo -e to prevent backslash injection
 show_info() {
-    local msg="$(_escape_input "$1")"
-    printf '  %b%b%b  %s\n' "${COLOR_INFO}" "${ICON_INFO}" "${RESET}" "$msg"
+    _print_status_line "${COLOR_INFO}" "${ICON_INFO}" "$1"
 }
 
 # ==============================================================================
@@ -890,6 +911,12 @@ show_checklist() {
     # Use eval for bash 3.x/4.x compatibility (nameref requires bash 4.3+)
     eval "local items=(\"\${${array_name}[@]}\")"
 
+    local sanitized_items=()
+    local idx
+    for idx in "${!items[@]}"; do
+        sanitized_items[idx]="$(_escape_input "${items[idx]}")"
+    done
+
     for item in "${items[@]}"; do
         # Use local IFS to avoid corrupting global field separator
         local IFS='|'
@@ -922,23 +949,31 @@ show_summary() {
     local title="$1"; shift
     local items=("$@")
 
+    local safe_title="$(_escape_input "$title")"
     local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     # Security: Use printf %s for user content to prevent backslash injection
     printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_RTL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RTR}" "${RESET}"
 
-    local title_content="  ${ICON_SUCCESS}  ${title}"
+    local title_content="  ${ICON_SUCCESS}  ${safe_title}"
     local title_display_width=$(_display_width "$title_content")
     local title_padding=$((inner_width - title_display_width))
-    printf '%b%s%b  %b%s%b  %b%s%b%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "${BOLD}" "${title}" "${RESET}" "$(_repeat_char " " "$title_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
+    if [ "$title_padding" -lt 0 ]; then
+        title_padding=0
+    fi
+    printf '%b%s%b  %b%s%b  %b%s%b%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "${BOLD}" "${safe_title}" "${RESET}" "$(_repeat_char " " "$title_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
 
     printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_VR}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_VL}" "${RESET}"
 
     for item in "${items[@]}"; do
-        local item_display_width=$(_display_width "$item")
+        local safe_item="$(_escape_input "$item")"
+        local item_display_width=$(_display_width "$safe_item")
         local item_padding=$((inner_width - item_display_width - 2))
-        printf '%b%s%b  %s%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "$item" "$(_repeat_char " " "$item_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
+        if [ "$item_padding" -lt 0 ]; then
+            item_padding=0
+        fi
+        printf '%b%s%b  %s%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "$safe_item" "$(_repeat_char " " "$item_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
     done
 
     printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_RBL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RBR}" "${RESET}"
@@ -1066,12 +1101,11 @@ ask_choice() {
     if [ "$OISEAU_IS_TTY" != "1" ]; then
         echo "$safe_prompt" >&2
         local i=1
-        for item in "${items[@]}"; do
-            local safe_item="$(_escape_input "$item")"
+        for item in "${sanitized_items[@]}"; do
             if [ -n "$default" ] && [ "$i" -eq "$default" ]; then
-                echo "  ${COLOR_INFO}${i})${RESET} ${COLOR_SUCCESS}${safe_item}${RESET} (default)" >&2
+                echo "  ${COLOR_INFO}${i})${RESET} ${COLOR_SUCCESS}${item}${RESET} (default)" >&2
             else
-                echo "  $i) $safe_item" >&2
+                echo "  $i) $item" >&2
             fi
             i=$((i + 1))
         done
@@ -1091,8 +1125,7 @@ ask_choice() {
 
         # Validate choice
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#items[@]} ]; then
-            local safe_result="$(_escape_input "${items[$((choice - 1))]}")"
-            echo "$safe_result"
+            echo "${sanitized_items[$((choice - 1))]}"
             return 0
         else
             echo "ERROR: Invalid selection. Must be between 1 and ${#items[@]}" >&2
@@ -1130,22 +1163,21 @@ ask_choice() {
 
         # Print numbered items
         for ((i=0; i<${#items[@]}; i++)); do
-            local item="${items[$i]}"
-            local safe_item="$(_escape_input "$item")"
+            local item="${sanitized_items[$i]}"
             local prefix="  "
             local num_display="$((i + 1))"
 
             if [ "$i" -eq "$selected_index" ]; then
                 # Highlight selected item
                 # Security: Use printf to prevent backslash injection in menu items
-                printf '%s%b%s%b %b%b%s. %s%b\n' "${prefix}" "${COLOR_INFO}" "${cursor_char}" "${RESET}" "${COLOR_SUCCESS}" "${BOLD}" "${num_display}" "$safe_item" "${RESET}" >&2
+                printf '%s%b%s%b %b%b%s. %s%b\n' "${prefix}" "${COLOR_INFO}" "${cursor_char}" "${RESET}" "${COLOR_SUCCESS}" "${BOLD}" "${num_display}" "$item" "${RESET}" >&2
             else
                 # Normal item
                 # Security: Use printf to prevent backslash injection in menu items
                 if [ -n "$default" ] && [ "$i" -eq "$((default - 1))" ]; then
-                    printf '%s  %b%s. %s (default)%b\n' "${prefix}" "${COLOR_MUTED}" "${num_display}" "$safe_item" "${RESET}" >&2
+                    printf '%s  %b%s. %s (default)%b\n' "${prefix}" "${COLOR_MUTED}" "${num_display}" "$item" "${RESET}" >&2
                 else
-                    printf '%s  %s. %s\n' "${prefix}" "${num_display}" "$safe_item" >&2
+                    printf '%s  %s. %s\n' "${prefix}" "${num_display}" "$item" >&2
                 fi
             fi
         done
@@ -1179,8 +1211,7 @@ ask_choice() {
                 ;;
             '')  # Enter - confirm selection
                 echo "" >&2
-                local safe_result="$(_escape_input "${items[$selected_index]}")"
-                echo "$safe_result"
+                echo "${sanitized_items[$selected_index]}"
                 return 0
                 ;;
             'q'|'Q'|$'\x1b')  # q or Esc - cancel
