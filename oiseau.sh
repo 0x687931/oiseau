@@ -855,10 +855,10 @@ show_progress_bar() {
     local full_display="${safe_label}: ${bar_display} (${current}/${total})"
 
     # Output
-    # Security: Use printf %s for user content to prevent backslash injection
+    # Security: Use printf %b to interpret ANSI codes while keeping user content safe
     if [ "$should_animate" = "1" ]; then
         # In-place update (carriage return, clear to end of line)
-        printf '\r%s\033[K' "${full_display}"
+        printf '\r%b\033[K' "${full_display}"
 
         # Print newline when complete
         if [ "$current" -ge "$total" ]; then
@@ -866,7 +866,7 @@ show_progress_bar() {
         fi
     else
         # Static mode: print new line each time
-        printf '%s\n' "${full_display}"
+        printf '%b\n' "${full_display}"
     fi
 }
 
