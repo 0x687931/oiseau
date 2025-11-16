@@ -122,29 +122,77 @@ fi
 # ==============================================================================
 
 if [ "$OISEAU_HAS_COLOR" = "1" ]; then
-    # Status Colors
-    export COLOR_SUCCESS='\033[38;5;40m'   # Bright green
-    export COLOR_ERROR='\033[38;5;196m'    # Bright red
-    export COLOR_WARNING='\033[38;5;214m'  # Orange
-    export COLOR_INFO='\033[38;5;39m'      # Bright blue
-    export COLOR_ACCENT='\033[38;5;99m'    # Purple
+    # Apply accessibility color palette if requested
+    # Note: All palettes use mid-range ANSI colors (not too dark, not too light)
+    # to ensure visibility on both light and dark terminal backgrounds
+    case "${OISEAU_PALETTE:-default}" in
+        colorblind)
+            # Colorblind-friendly palette (deuteranopia/protanopia safe)
+            # Uses blue/orange instead of red/green
+            # Works on both light and dark backgrounds
+            export COLOR_SUCCESS='\033[38;5;33m'   # Blue (replaces green, mid-range)
+            export COLOR_ERROR='\033[38;5;208m'    # Orange (replaces red, mid-range)
+            export COLOR_WARNING='\033[38;5;220m'  # Gold yellow (visible on both)
+            export COLOR_INFO='\033[38;5;45m'      # Cyan (mid-range)
+            export COLOR_ACCENT='\033[38;5;141m'   # Purple
 
-    # UI Element Colors
-    export COLOR_HEADER='\033[38;5;117m'   # Light blue
-    export COLOR_BORDER='\033[38;5;240m'   # Gray
-    export COLOR_MUTED='\033[38;5;246m'    # Light gray
-    export COLOR_DIM='\033[38;5;238m'      # Dark gray
+            export COLOR_HEADER='\033[38;5;75m'    # Sky blue
+            export COLOR_BORDER='\033[38;5;244m'   # Medium gray (universal)
+            export COLOR_MUTED='\033[38;5;244m'    # Medium gray
+            export COLOR_DIM='\033[38;5;240m'      # Dark gray
 
-    # Priority Colors
-    export COLOR_P0='\033[38;5;196m'       # Red - Critical
-    export COLOR_P1='\033[38;5;214m'       # Orange - High
-    export COLOR_P2='\033[38;5;227m'       # Yellow - Medium
+            export COLOR_P0='\033[38;5;208m'       # Orange - Critical
+            export COLOR_P1='\033[38;5;220m'       # Gold - High
+            export COLOR_P2='\033[38;5;75m'        # Blue - Medium
 
-    # Special Colors
-    export COLOR_LINK='\033[38;5;75m'      # Sky blue
-    export COLOR_CODE='\033[38;5;186m'     # Beige
+            export COLOR_LINK='\033[38;5;45m'      # Cyan
+            export COLOR_CODE='\033[38;5;179m'     # Tan (works on both)
+            ;;
+        highcontrast)
+            # High contrast palette (maximum visibility on both backgrounds)
+            # Uses bold ANSI colors for emphasis
+            export COLOR_SUCCESS='\033[1;38;5;46m'   # Bold bright green
+            export COLOR_ERROR='\033[1;38;5;196m'    # Bold bright red
+            export COLOR_WARNING='\033[1;38;5;226m'  # Bold bright yellow
+            export COLOR_INFO='\033[1;38;5;51m'      # Bold bright cyan
+            export COLOR_ACCENT='\033[1;38;5;201m'   # Bold bright magenta
 
-    # Text Styles
+            export COLOR_HEADER='\033[1;38;5;15m'    # Bold white
+            export COLOR_BORDER='\033[38;5;250m'     # Light gray (works on dark bg)
+            export COLOR_MUTED='\033[38;5;248m'      # Medium-light gray
+            export COLOR_DIM='\033[38;5;242m'        # Medium gray
+
+            export COLOR_P0='\033[1;38;5;196m'       # Bold red - Critical
+            export COLOR_P1='\033[1;38;5;226m'       # Bold yellow - High
+            export COLOR_P2='\033[1;38;5;51m'        # Bold cyan - Medium
+
+            export COLOR_LINK='\033[1;38;5;51m'      # Bold cyan
+            export COLOR_CODE='\033[1;38;5;229m'     # Bold cream
+            ;;
+        *)
+            # Default palette (works on both light and dark backgrounds)
+            # Mid-range colors chosen for universal visibility
+            export COLOR_SUCCESS='\033[38;5;76m'   # Green (mid-range, not too bright/dark)
+            export COLOR_ERROR='\033[38;5;196m'    # Red (mid-range)
+            export COLOR_WARNING='\033[38;5;214m'  # Orange (mid-range)
+            export COLOR_INFO='\033[38;5;75m'      # Blue (mid-range)
+            export COLOR_ACCENT='\033[38;5;141m'   # Purple
+
+            export COLOR_HEADER='\033[38;5;117m'   # Light blue
+            export COLOR_BORDER='\033[38;5;244m'   # Medium gray (universal)
+            export COLOR_MUTED='\033[38;5;244m'    # Medium gray
+            export COLOR_DIM='\033[38;5;240m'      # Darker gray
+
+            export COLOR_P0='\033[38;5;196m'       # Red - Critical
+            export COLOR_P1='\033[38;5;214m'       # Orange - High
+            export COLOR_P2='\033[38;5;220m'       # Gold - Medium
+
+            export COLOR_LINK='\033[38;5;75m'      # Blue
+            export COLOR_CODE='\033[38;5;179m'     # Tan
+            ;;
+    esac
+
+    # Text Styles (same for all palettes)
     export BOLD='\033[1m'
     export DIM='\033[2m'
     export ITALIC='\033[3m'
