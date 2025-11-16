@@ -205,9 +205,7 @@ test_bash3_compat() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Table Widget (show_table) Validation Tests    │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Table Widget (show_table) Validation Tests"
 echo ""
 
 # Run all tests

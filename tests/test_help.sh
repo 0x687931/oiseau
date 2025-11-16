@@ -191,9 +191,7 @@ test_bash3_compat() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Help Menu (show_help) Validation Tests        │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Help Menu (show_help) Validation Tests"
 echo ""
 
 # Run all tests

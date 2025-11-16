@@ -175,9 +175,7 @@ test_visual_animation() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Enhanced Progress Bar Validation Tests        │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Enhanced Progress Bar Validation Tests"
 echo ""
 
 # Run all tests

@@ -209,9 +209,7 @@ test_pager_stdin() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Edge Cases & Code Review Issues Tests         │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Edge Cases & Code Review Issues Tests"
 echo ""
 
 # Run all tests

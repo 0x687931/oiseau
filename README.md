@@ -872,6 +872,79 @@ The framework provides structured analysis:
 
 ---
 
+## 🧪 Testing
+
+Oiseau includes a comprehensive test suite with 128 tests across 10 test suites.
+
+### Run All Tests
+
+```bash
+./run_tests.sh
+```
+
+This unified test runner uses oiseau widgets to display beautiful test results with progress bars, checklists, and summary boxes.
+
+**Output:**
+```
+  +==========================================================+
+  |                                                          |
+  |   Oiseau Test Suite Runner                               |
+  |                                                          |
+  +==========================================================+
+
+  [i]  Found 10 test suites
+
+Running tests...
+
+Testing: 100% (10/10)
+  [OK]  test_edge_cases
+  [OK]  test_help_menu
+  ...
+
+  +==========================================================+
+  |                                                          |
+  |   Test Results Summary                                   |
+  |                                                          |
+  +==========================================================+
+
+  Total Test Suites    10
+  Passed               10
+  Failed               0
+
++==========================================================+
+|  [OK]  All Tests Passed!                                 |
++==========================================================+
+
+  [+]  Code quality validated
+  [+]  All widgets tested
+  [+]  Security checks passed
+  [+]  Bash compatibility verified
+```
+
+### Run Individual Test Suite
+
+```bash
+./tests/test_progress.sh    # Test progress bar widget
+./tests/test_input.sh       # Test input validation
+./tests/test_spinner.sh     # Test spinner widget
+# ... etc
+```
+
+### Test Suites
+
+- `test_edge_cases.sh` - Edge cases and code review issues
+- `test_help.sh` - Help menu system validation
+- `test_help_menu.sh` - Help menu backward compatibility
+- `test_input.sh` - Enhanced input validation
+- `test_list.sh` - Interactive list selection
+- `test_mode_consistency.sh` - UTF-8/ASCII/Plain mode consistency
+- `test_progress.sh` - Progress bar validation
+- `test_resize.sh` - Window resize handler
+- `test_spinner.sh` - Spinner widget
+- `test_table.sh` - Table widget
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Here's how:
@@ -879,12 +952,16 @@ Contributions are welcome! Here's how:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-widget`)
 3. Make your changes
-4. Test in all three modes (rich, color, plain)
-5. Submit a pull request
+4. **Run the test suite** (`./run_tests.sh`)
+5. Test in all three modes (rich, color, plain)
+6. Submit a pull request
 
 ### Development
 
 ```bash
+# Run test suite
+./run_tests.sh
+
 # Run gallery to test changes
 ./gallery.sh
 

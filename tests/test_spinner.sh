@@ -207,9 +207,7 @@ test_non_tty() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Spinner Widget Validation Tests               │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Spinner Widget Validation Tests"
 echo ""
 
 # Run all tests
