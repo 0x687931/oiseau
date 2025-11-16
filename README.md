@@ -747,6 +747,7 @@ See `examples/` directory:
 
 - **`tui_demo.sh`** - Basic multi-view TUI with auto-refresh
 - **`tui_mvc.sh`** - MVC pattern with interactive task list
+- **`help_menu_demo.sh`** - Interactive menus with arrow key navigation (ask_list, ask_choice)
 - **`TUI_GUIDE.md`** - Comprehensive TUI development guide
 
 ---
