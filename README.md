@@ -141,17 +141,24 @@ show_box error "Connection Failed" \
 **Output:**
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ✗  Connection Failed                    ← title        ┃
+┃  ✗  Connection Failed                                    ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃                                                          ┃
-┃  Unable to reach database at localhost:5432  ← message  ┃
+┃  Unable to reach database at localhost:5432              ┃
 ┃                                                          ┃
 ┃  To resolve:                                             ┃
-┃    systemctl start postgresql            ← command 1    ┃
-┃    pg_isready -h localhost                ← command 2    ┃
+┃    systemctl start postgresql                            ┃
+┃    pg_isready -h localhost                               ┃
 ┃                                                          ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
+
+**What each part shows:**
+- Line 1: Title with error icon (✗)
+- Line 3: Divider separating title from content
+- Line 5: Main message explaining the problem
+- Line 7: "To resolve:" header for suggested fixes
+- Lines 8-9: Suggested commands to fix the issue
 
 **Use cases:**
 - `error` - Critical failures requiring immediate attention
@@ -200,10 +207,15 @@ show_checklist tasks
 
 **Output:**
 ```
-  ✓  Build Docker image  Completed in 45s        ← done
-  ●  Run tests  156 tests running...              ← active
-  ○  Deploy to staging  Waiting                   ← pending
+  ✓  Build Docker image  Completed in 45s
+  ●  Run tests  156 tests running...
+  ○  Deploy to staging  Waiting
 ```
+
+**Visual indicators:**
+- `✓` (green) = Task completed
+- `●` (animated) = Task in progress
+- `○` (hollow) = Task pending
 
 Use checklists to show progress through deployment pipelines, installation steps, or any multi-stage process.
 
@@ -230,10 +242,14 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 **Output:**
 ```
 ╭──────────────────────────────────────────────────────────╮
-│  Deploy Application                  ← main title        │
-│  Step 2 of 4 › Building Docker image ← progress + context│
+│  Deploy Application                                      │
+│  Step 2 of 4 › Building Docker image                     │
 ╰──────────────────────────────────────────────────────────╯
 ```
+
+**Parts explained:**
+- Line 1: Main title ("Deploy Application")
+- Line 2: Step counter (2 of 4) + subtitle ("Building Docker image")
 
 Use this to show users where they are in a multi-step process (installation, deployment, setup wizards).
 
