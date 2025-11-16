@@ -992,18 +992,20 @@ show_progress_bar() {
     # Security: Use printf %b to interpret ANSI codes while keeping user content safe
     if [ "$should_animate" = "1" ]; then
         if [ -n "$line_number" ]; then
-            # Multi-line mode: use cursor positioning
-            # Save cursor, move to line, print, restore cursor
-            tput sc 2>/dev/null || true  # Save cursor position
-            tput cup "$((line_number - 1))" 0 2>/dev/null || printf '\033[%d;0H' "$line_number"  # Move to line
-            printf '%b\033[K' "${full_display}"  # Print and clear to end of line
-            tput rc 2>/dev/null || true  # Restore cursor position
-
-            # Print newline when complete (move cursor past all progress bars)
-            if [ "$current" -ge "$total" ]; then
-                # Don't print newline in multi-line mode - let caller handle cleanup
-                :
+            # Multi-line mode: use relative cursor positioning
+            if [ "$line_number" -eq 1 ]; then
+                # First bar: print on current line and save cursor
+                printf '%b\033[K' "${full_display}"
+                tput sc 2>/dev/null || printf '\0337'  # Save cursor position (ANSI fallback: ESC 7)
+            else
+                # Other bars: restore cursor, move down, print
+                tput rc 2>/dev/null || printf '\0338'  # Restore cursor (ANSI fallback: ESC 8)
+                local offset=$((line_number - 1))
+                tput cud "$offset" 2>/dev/null || printf '\033[%dB' "$offset"  # Move down N lines
+                printf '\r%b\033[K' "${full_display}"  # Print on that line
             fi
+
+            # Don't print newline in multi-line mode - let caller handle cleanup
         else
             # Single-line mode: use carriage return (existing behavior)
             printf '\r%b\033[K' "${full_display}"

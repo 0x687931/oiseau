@@ -9,61 +9,54 @@ Set Height 400
 Set FontSize 14
 Set Theme "Dracula"
 
-# Show the demo description
-Type "# Demo: Progress bar in all 3 modes"
-Enter
-Sleep 800ms
-
-# Source the library (hidden)
-Hide
-Type "source ./oiseau.sh"
-Enter
-Show
-Sleep 200ms
-
-# Show the code (without exports)
-Type "for i in {0..100}; do"
+# Echo example code (display only - not executed)
+Type "echo '# Demo: Progress bar in all 3 modes'"
 Enter
 Sleep 300ms
 
-Type "  show_progress_bar $i 100 'Rich mode'"
+Type "echo 'source ./oiseau.sh'"
 Enter
 Sleep 300ms
 
-Type "  show_progress_bar $i 100 'Color mode'"
+Type "echo 'for i in {0..100}; do'"
 Enter
 Sleep 300ms
 
-Type "  show_progress_bar $i 100 'Plain mode'"
+Type "echo '  show_progress_bar \$i 100 Processing'"
 Enter
 Sleep 300ms
 
-Type "  sleep 0.05"
+Type "echo '  sleep 0.05'"
 Enter
 Sleep 300ms
 
-Type "done"
+Type "echo 'done'"
+Enter
+Sleep 300ms
+
+Type "echo ''"
 Enter
 Sleep 1s
 
-# Reserve lines for the three progress bars
-Type "echo ''"
-Enter
-Type "echo ''"
-Enter
-Type "echo ''"
-Enter
-Sleep 500ms
-
-# Now execute the actual loop with all 3 modes (hidden setup)
+# Now execute the actual demo code (hidden)
 Hide
+Type "source ./oiseau.sh"
+Enter
+Type "echo ''"
+Enter
+Type "echo ''"
+Enter
+Type "echo ''"
+Enter
+Type "echo ''"
+Enter
 Type "for i in {0..100}; do"
 Enter
-Type "  OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1 show_progress_bar $i 100 'Rich mode' 1"
+Type "  OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Rich mode' 1"
 Enter
-Type "  OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1 show_progress_bar $i 100 'Color mode' 2"
+Type "  OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Color mode' 2"
 Enter
-Type "  UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1 show_progress_bar $i 100 'Plain mode' 3"
+Type "  UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Plain mode' 3"
 Enter
 Type "  sleep 0.05"
 Enter
