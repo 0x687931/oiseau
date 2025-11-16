@@ -252,7 +252,7 @@ test_bash3_compat() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Interactive List (ask_list) Validation Tests │"
+echo "│  Interactive List (ask_list) Validation Tests  │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 

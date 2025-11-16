@@ -176,7 +176,7 @@ test_visual_animation() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Enhanced Progress Bar Validation Tests       │"
+echo "│  Enhanced Progress Bar Validation Tests        │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 

@@ -206,7 +206,7 @@ test_bash3_compat() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Table Widget (show_table) Validation Tests  │"
+echo "│  Table Widget (show_table) Validation Tests    │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 

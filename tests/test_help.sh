@@ -192,7 +192,7 @@ test_bash3_compat() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Help Menu (show_help) Validation Tests      │"
+echo "│  Help Menu (show_help) Validation Tests        │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 

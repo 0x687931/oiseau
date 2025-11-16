@@ -280,7 +280,7 @@ test_security() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Enhanced ask_input Validation Tests          │"
+echo "│  Enhanced ask_input Validation Tests           │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 
