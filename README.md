@@ -12,9 +12,20 @@ source ./oiseau.sh
 
 **REQUIREMENTS**
 
-- Bash 3.2+ (macOS default, all modern Linux)
-- Standard POSIX utilities: `tput`, `tr`, `printf`, `wc`, `grep`, `awk`, `sed`
-- Optional: `perl` (for unicode width calculations, degrades gracefully)
+Bash 3.2+ (macOS default, all modern Linux)
+
+POSIX utilities (universally available):
+- `tput` - terminal capability queries
+- `tr` - character translation for box drawing
+- `wc` - text width calculations
+- `grep` - pattern matching
+- `awk` - text processing
+- `sed` - text manipulation
+- `cat` - file concatenation
+- `sleep` - spinner animations
+
+Optional:
+- `perl` - unicode width calculations (degrades gracefully if missing)
 
 ---
 
