@@ -2,16 +2,52 @@
 
 **A modern, zero-dependency terminal UI library for Bash**
 
-Oiseau (French for "bird") brings beautiful, modern UI components to your bash scripts with zero dependencies. Features 256-color ANSI palette, 30+ reusable widgets, smart terminal detection, and automatic degradation for maximum compatibility.
+Transform your bash scripts from plain text to beautiful, professional command-line interfaces.
+
+## What is Oiseau?
+
+Oiseau (French for "bird") brings modern terminal UIs to bash scripts with zero dependencies. Instead of plain `echo` statements, you get:
+
+- **Status messages** with colored icons (✓ ✗ ⚠ ℹ)
+- **Styled boxes** that highlight important information
+- **Progress bars** that show task completion
+- **Interactive prompts** with validation and password masking
+- **Checklists** to track multi-step workflows
+
+**One script, works everywhere** - automatically adapts from rich Unicode terminals to plain text CI/CD logs.
+
+### See It in Action
 
 ```bash
-source oiseau/oiseau.sh
+source ./oiseau.sh
 
-show_success "Operation completed!"
-show_error "Something went wrong"
+# Colored status messages with icons
+show_success "Operation completed!"      # Displays: ✓ Operation completed! (green)
+show_error "Something went wrong"        # Displays: ✗ Something went wrong (red)
+
+# Styled information boxes with action commands
 show_box warning "Uncommitted Changes" "You have 3 uncommitted files" \
     "git add ." \
     "git commit -m 'message'"
+```
+
+**What you get:**
+
+```
+  ✓  Operation completed!
+  ✗  Something went wrong
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ⚠  Uncommitted Changes                                  ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                          ┃
+┃  You have 3 uncommitted files                            ┃
+┃                                                          ┃
+┃  To resolve:                                             ┃
+┃    git add .                                             ┃
+┃    git commit -m 'message'                               ┃
+┃                                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 ---
@@ -81,6 +117,20 @@ Output:
 
 ### Styled Boxes
 
+Display important information in bordered boxes with icons, titles, messages, and optional action commands.
+
+**Syntax:**
+```bash
+show_box <type> <title> <message> [command1] [command2] ...
+```
+
+**Parameters:**
+- `type` - Visual style: `error` (red ✗), `warning` (orange ⚠), `info` (blue ℹ), `success` (green ✓)
+- `title` - Bold header text at the top
+- `message` - Main content (automatically wrapped)
+- `command...` - Optional commands shown under "To resolve:"
+
+**Example:**
 ```bash
 show_box error "Connection Failed" \
     "Unable to reach database at localhost:5432" \
@@ -88,20 +138,26 @@ show_box error "Connection Failed" \
     "pg_isready -h localhost"
 ```
 
-Output:
+**Output:**
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ✗  Connection Failed                                    ┃
+┃  ✗  Connection Failed                    ← title        ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃                                                          ┃
-┃  Unable to reach database at localhost:5432              ┃
+┃  Unable to reach database at localhost:5432  ← message  ┃
 ┃                                                          ┃
 ┃  To resolve:                                             ┃
-┃    systemctl start postgresql                            ┃
-┃    pg_isready -h localhost                               ┃
+┃    systemctl start postgresql            ← command 1    ┃
+┃    pg_isready -h localhost                ← command 2    ┃
 ┃                                                          ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
+
+**Use cases:**
+- `error` - Critical failures requiring immediate attention
+- `warning` - Important notices that may need action
+- `info` - Helpful tips or informational messages
+- `success` - Confirmations of successful operations
 
 ### Progress Bar
 
@@ -119,6 +175,20 @@ Installation: ████████████░░░░░░░░ 60% (
 
 ### Checklists
 
+Track multi-step workflows with visual status indicators.
+
+**Item format:**
+```bash
+"<status>|<task_name>|<details>"
+```
+
+**Status values:**
+- `done` - Completed (✓ green checkmark)
+- `active` - Currently running (● animated dot)
+- `pending` - Not started (○ hollow circle)
+- `skip` - Skipped/ignored (⊘ crossed circle)
+
+**Example:**
 ```bash
 tasks=(
     "done|Build Docker image|Completed in 45s"
@@ -128,26 +198,44 @@ tasks=(
 show_checklist tasks
 ```
 
-Output:
+**Output:**
 ```
-  ✓  Build Docker image  Completed in 45s
-  ●  Run tests  156 tests running...
-  ○  Deploy to staging  Waiting
+  ✓  Build Docker image  Completed in 45s        ← done
+  ●  Run tests  156 tests running...              ← active
+  ○  Deploy to staging  Waiting                   ← pending
 ```
+
+Use checklists to show progress through deployment pipelines, installation steps, or any multi-stage process.
 
 ### Section Headers
 
+Display titled sections with optional step counters - perfect for multi-step workflows.
+
+**Syntax:**
+```bash
+show_section_header "title" [current_step] [total_steps] [subtitle]
+```
+
+**Parameters:**
+- `title` - Main header text
+- `current_step` - Optional: Which step you're on (e.g., 2)
+- `total_steps` - Optional: Total number of steps (e.g., 4)
+- `subtitle` - Optional: Additional context
+
+**Example:**
 ```bash
 show_section_header "Deploy Application" 2 4 "Building Docker image"
 ```
 
-Output:
+**Output:**
 ```
 ╭──────────────────────────────────────────────────────────╮
-│  Deploy Application                                      │
-│  Step 2 of 4 › Building Docker image                     │
+│  Deploy Application                  ← main title        │
+│  Step 2 of 4 › Building Docker image ← progress + context│
 ╰──────────────────────────────────────────────────────────╯
 ```
+
+Use this to show users where they are in a multi-step process (installation, deployment, setup wizards).
 
 ---
 
