@@ -61,9 +61,9 @@ Color palettes for accessibility. Set `export OISEAU_PALETTE=colorblind|highcont
 | **colorblind** | Deuteranopia/protanopia safe | Blue/orange/yellow (no red/green) | Light & dark |
 | **highcontrast** | Maximum visibility | Bold bright colors | Light & dark |
 
-**All palettes work on both light and dark terminal backgrounds** (macOS Terminal profiles, iTerm2 themes, etc.)
+**All palettes optimized for dark terminal backgrounds** (recommended). Work on light backgrounds but with reduced contrast.
 
-Colors chosen for visibility following Apple HIG principles (4.5:1 minimum contrast). Actual contrast ratios vary by terminal theme.
+Colors follow Apple HIG principles. WCAG contrast ratios on dark backgrounds: DEFAULT (4.5-11:1), COLORBLIND (5.5-15:1), HIGHCONTRAST (5-20:1).
 
 ```bash
 export OISEAU_PALETTE=colorblind
