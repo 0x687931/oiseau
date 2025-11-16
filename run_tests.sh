@@ -86,7 +86,7 @@ echo ""
 # Check if test directory exists
 if [ ! -d "$TEST_DIR" ]; then
     show_box error "Test Directory Not Found" "Cannot find test directory: $TEST_DIR"
-    exit 1
+    return 1
 fi
 
 # Find all test files (Bash 3.x compatible)
@@ -97,7 +97,7 @@ done < <(find "$TEST_DIR" -name "test_*.sh" -type f | sort)
 
 if [ ${#test_files[@]} -eq 0 ]; then
     show_box warning "No Tests Found" "No test files found in $TEST_DIR"
-    exit 1
+    return 1
 fi
 
 # Show test summary
@@ -163,7 +163,7 @@ if [ "$TESTS_FAILED" -eq 0 ]; then
     )
     show_checklist checklist_items
     echo ""
-    exit 0
+    return 0
 else
     show_box error "Some Tests Failed" "$(printf '%d test suite(s) failed:\n\n' "$TESTS_FAILED")$(printf '  • %s\n' "${FAILED_TESTS[@]}")"
     echo ""
