@@ -232,9 +232,7 @@ test_no_hardcoded_utf8() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────────────────╮"
-echo "│  UTF-8 / ASCII / Plain Mode Consistency Validation         │"
-echo "╰────────────────────────────────────────────────────────────╯"
+show_header_box "UTF-8 / ASCII / Plain Mode Consistency Validation"
 echo ""
 echo "Validating that all widgets respect OISEAU_MODE and degrade"
 echo "gracefully across: rich (UTF-8) → color (ASCII) → plain"

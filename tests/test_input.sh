@@ -279,9 +279,7 @@ test_security() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Enhanced ask_input Validation Tests           │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Enhanced ask_input Validation Tests"
 echo ""
 
 # Run all tests

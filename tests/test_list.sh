@@ -251,9 +251,7 @@ test_bash3_compat() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Interactive List (ask_list) Validation Tests  │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Interactive List (ask_list) Validation Tests"
 echo ""
 
 # Run all tests

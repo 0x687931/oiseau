@@ -236,9 +236,7 @@ test_auto_initialize() {
 
 # Banner
 echo ""
-echo "╭────────────────────────────────────────────────╮"
-echo "│  Resize Handler Validation Tests               │"
-echo "╰────────────────────────────────────────────────╯"
+show_header_box "Resize Handler Validation Tests"
 echo ""
 
 # Run all tests
