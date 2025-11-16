@@ -1,42 +1,71 @@
-# VHS Tape: Progress Bar Widget - All Three Modes
-# Demonstrates show_progress_bar in rich, color, and plain modes
+# VHS Tape: Progress Bar Widget - All Three Modes Side-by-Side
+# Shows rich, color, and plain modes rendering simultaneously
 
 Output demos/progress_bar.gif
 
 # Terminal settings
 Set Width 800
-Set Height 400
+Set Height 500
 Set FontSize 14
 Set Theme "Dracula"
 
-# ==============================================================================
-# RICH MODE (UTF-8 + 256 colors)
-# ==============================================================================
-
-Type "# Rich mode: UTF-8 + colors"
-Enter
-Sleep 500ms
-
-Type "export OISEAU_MODE=rich"
-Enter
-Sleep 200ms
-
-Type "export OISEAU_PROGRESS_ANIMATE=1"
-Enter
-Sleep 200ms
-
-Type "source ./oiseau.sh"
+# Show the demo script
+Type "# Demo: Progress bar in all 3 modes simultaneously"
 Enter
 Sleep 800ms
 
+Type "source ./oiseau.sh"
+Enter
+Sleep 500ms
+
+Type ""
+Enter
 Type "for i in {0..100}; do"
 Enter
 Sleep 300ms
 
-Type "  show_progress_bar $i 100 'Processing files'"
+Type "  # Rich mode (UTF-8 + colors)"
+Enter
+Sleep 200ms
+
+Type "  OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1 \\"
+Enter
+Sleep 200ms
+
+Type "    show_progress_bar $i 100 'Rich mode'"
 Enter
 Sleep 300ms
 
+Type ""
+Enter
+Type "  # Color mode (ASCII + colors)"
+Enter
+Sleep 200ms
+
+Type "  OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1 \\"
+Enter
+Sleep 200ms
+
+Type "    show_progress_bar $i 100 'Color mode'"
+Enter
+Sleep 300ms
+
+Type ""
+Enter
+Type "  # Plain mode (ASCII only)"
+Enter
+Sleep 200ms
+
+Type "  UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1 \\"
+Enter
+Sleep 200ms
+
+Type "    show_progress_bar $i 100 'Plain mode'"
+Enter
+Sleep 300ms
+
+Type ""
+Enter
 Type "  sleep 0.05"
 Enter
 Sleep 300ms
@@ -44,96 +73,8 @@ Sleep 300ms
 Type "done"
 Enter
 
-# Wait for completion
+# Wait for animation to complete
 Sleep 6s
 
-# Pause before mode switch
-Sleep 2s
-
-# Clear for next demo (hidden)
-Hide
-Type "clear"
-Enter
-Show
-Sleep 1s
-
-# ==============================================================================
-# COLOR MODE (ASCII + 256 colors)
-# ==============================================================================
-
-Type "# Color mode: ASCII + colors"
-Enter
-Sleep 500ms
-
-Type "export OISEAU_MODE=color"
-Enter
-Sleep 200ms
-
-Type "source ./oiseau.sh"
-Enter
-Sleep 800ms
-
-Type "for i in {0..100}; do"
-Enter
-Sleep 300ms
-
-Type "  show_progress_bar $i 100 'Building project'"
-Enter
-Sleep 300ms
-
-Type "  sleep 0.05"
-Enter
-Sleep 300ms
-
-Type "done"
-Enter
-
-# Wait for completion
-Sleep 6s
-
-# Pause before mode switch
-Sleep 2s
-
-# Clear for next demo (hidden)
-Hide
-Type "clear"
-Enter
-Show
-Sleep 1s
-
-# ==============================================================================
-# PLAIN MODE (ASCII only, no colors)
-# ==============================================================================
-
-Type "# Plain mode: ASCII only"
-Enter
-Sleep 500ms
-
-Type "export UI_DISABLE=1"
-Enter
-Sleep 200ms
-
-Type "source ./oiseau.sh"
-Enter
-Sleep 800ms
-
-Type "for i in {0..100}; do"
-Enter
-Sleep 300ms
-
-Type "  show_progress_bar $i 100 'Downloading data'"
-Enter
-Sleep 300ms
-
-Type "  sleep 0.05"
-Enter
-Sleep 300ms
-
-Type "done"
-Enter
-
-# Wait for completion
-Sleep 6s
-
-# Final pause to view result
+# Final pause to view all three completed bars
 Sleep 3s
