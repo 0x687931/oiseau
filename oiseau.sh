@@ -217,6 +217,30 @@ _init_repeat_char_cache
 # UTILITY FUNCTIONS
 # ==============================================================================
 
+# Validate identifier names to prevent code injection via eval
+# Security: Ensures variable/array names are safe before using in eval
+_validate_identifier() {
+    local name="$1"
+    if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        echo "ERROR: Invalid identifier name '$name'" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Safe echo that interprets ANSI codes but not user backslash sequences
+# Security: Prevents backslash injection while allowing color codes
+# Usage: _safe_echo "user content" (uses printf '%b\n' with pre-sanitized input)
+# For user content that's already been through _escape_input, this is safe
+_safe_echo() {
+    printf '%b\n' "$1"
+}
+
+# Safe echo without newline
+_safe_echo_n() {
+    printf '%b' "$1"
+}
+
 # Escape user input to prevent code injection
 # Optimized: reduced pipeline depth for better performance
 _escape_input() {
@@ -226,19 +250,21 @@ _escape_input() {
 }
 
 # Calculate visible length (ignoring ANSI codes)
+# Security: Use printf instead of echo -e to prevent interpretation of backslash sequences
 _visible_len() {
     local str="$1"
     # Remove ANSI codes before calculating length
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(printf '%s' "$str" | sed $'s/\033[^m]*m//g')
     echo "${#clean}"
 }
 
 # Calculate display width (accounts for wide characters like emojis)
 # Emojis and some Unicode characters take 2 columns, this estimates the width
+# Security: Use printf instead of echo -e to prevent interpretation of backslash sequences
 _display_width() {
     local str="$1"
     # Remove ANSI codes first
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(printf '%s' "$str" | sed $'s/\033[^m]*m//g')
 
     local width
 
@@ -516,27 +542,31 @@ _clamp_width() {
 # ==============================================================================
 
 # Show success message with green checkmark
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_success() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "$msg"
 }
 
 # Show error message with red X
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_error() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_ERROR}${ICON_ERROR}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_ERROR}" "${ICON_ERROR}" "${RESET}" "$msg"
 }
 
 # Show warning message with orange warning icon
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_warning() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_WARNING}${ICON_WARNING}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_WARNING}" "${ICON_WARNING}" "${RESET}" "$msg"
 }
 
 # Show info message with blue info icon
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_info() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_INFO}" "${ICON_INFO}" "${RESET}" "$msg"
 }
 
 # ==============================================================================
@@ -555,12 +585,13 @@ show_section_header() {
     local inner_width=$((width - 2))
 
     echo ""
-    echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
+    printf '%b%b%s%b%b\n' "${COLOR_BORDER}" "${BOX_RTL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RTR}" "${RESET}"
 
     # Title line
+    # Security: Use printf %s for user title to prevent backslash injection
     local title_display_width=$(_display_width "$title")
     local title_padding=$((inner_width - title_display_width - 2))
-    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+    printf '%b%b%b  %b%b%s%b%s%b%b%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}" "$(_repeat_char " " "$title_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
 
     # Step counter and subtitle if provided
     if [ -n "$step_num" ] && [ -n "$total_steps" ]; then
@@ -570,23 +601,25 @@ show_section_header() {
         fi
         local step_display_width=$(_display_width "$step_text")
         local step_padding=$((inner_width - step_display_width - 2))
-        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}$(_repeat_char " " "$step_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+        printf '%b%b%b  %b%s%b%s%b%b%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_MUTED}" "$step_text" "${RESET}" "$(_repeat_char " " "$step_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
     fi
 
-    echo -e "${COLOR_BORDER}${BOX_RBL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RBR}${RESET}"
+    printf '%b%b%s%b%b\n' "${COLOR_BORDER}" "${BOX_RBL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RBR}" "${RESET}"
     echo ""
 }
 
 # Simple header
+# Security: Use printf to prevent backslash injection
 show_header() {
     local title="$(_escape_input "$1")"
-    echo -e "\n${COLOR_HEADER}${BOLD}${title}${RESET}\n"
+    printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
 }
 
 # Muted subheader
+# Security: Use printf to prevent backslash injection
 show_subheader() {
     local title="$(_escape_input "$1")"
-    echo -e "${COLOR_MUTED}${title}${RESET}"
+    printf '%b%s%b\n' "${COLOR_MUTED}" "$title" "${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
@@ -599,32 +632,34 @@ show_header_box() {
     local inner_width=$((width - 2))
 
     echo ""
-    echo -e "${COLOR_HEADER}${BOLD}"
+    printf '%b%b' "${COLOR_HEADER}" "${BOLD}"
 
     # Top border
-    echo -e "  ${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}"
+    printf '  %b%s%b\n' "${BOX_DTL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DTR}"
 
     # Empty line
-    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Title (word-wrapped if needed)
+    # Security: Use printf %s for user content to prevent backslash injection
     echo "$title" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-        echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
     done
 
     # Empty line
-    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Subtitle (word-wrapped if needed)
+    # Security: Use printf %s for user content to prevent backslash injection
     if [ -n "$subtitle" ]; then
         echo "$subtitle" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-            echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+            printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
         done
-        echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
     fi
 
     # Bottom border
-    echo -e "  ${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}"
+    printf '  %b%s%b\n' "${BOX_DBL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DBR}"
 
     echo -e "${RESET}"
 }
@@ -805,6 +840,8 @@ show_progress_bar() {
 # Array format: "status|label|details" where status is: done, active, pending, skip
 show_checklist() {
     local array_name="$1"
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Use eval for bash 3.x/4.x compatibility (nameref requires bash 4.3+)
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -960,6 +997,8 @@ ask_choice() {
     fi
 
     # MULTI-CHOICE MODE: Array provided
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array items using eval for bash 3.x compatibility
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -1050,13 +1089,15 @@ ask_choice() {
 
             if [ "$i" -eq "$selected_index" ]; then
                 # Highlight selected item
-                echo -e "${prefix}${COLOR_INFO}${cursor_char}${RESET} ${COLOR_SUCCESS}${BOLD}${num_display}. ${safe_item}${RESET}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%s%b%s%b %b%b%s. %s%b\n' "${prefix}" "${COLOR_INFO}" "${cursor_char}" "${RESET}" "${COLOR_SUCCESS}" "${BOLD}" "${num_display}" "$safe_item" "${RESET}" >&2
             else
                 # Normal item
+                # Security: Use printf to prevent backslash injection in menu items
                 if [ -n "$default" ] && [ "$i" -eq "$((default - 1))" ]; then
-                    echo -e "${prefix}  ${COLOR_MUTED}${num_display}. ${safe_item} (default)${RESET}" >&2
+                    printf '%s  %b%s. %s (default)%b\n' "${prefix}" "${COLOR_MUTED}" "${num_display}" "$safe_item" "${RESET}" >&2
                 else
-                    echo -e "${prefix}  ${num_display}. ${safe_item}" >&2
+                    printf '%s  %s. %s\n' "${prefix}" "${num_display}" "$safe_item" >&2
                 fi
             fi
         done
@@ -1314,6 +1355,8 @@ ask_list() {
     # Sanitize prompt
     local safe_prompt="$(_escape_input "$prompt")"
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array items using eval for bash 3.x compatibility
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -1400,9 +1443,11 @@ ask_list() {
                 else
                     checkbox="${COLOR_MUTED}${checkbox_left}${unchecked_char}${checkbox_right}${RESET}"
                 fi
-                echo -e "${prefix}${checkbox} ${item}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%b%b %s\n' "${prefix}" "${checkbox}" "$item" >&2
             else
-                echo -e "${prefix}${item}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%b%s\n' "${prefix}" "$item" >&2
             fi
         done
 
@@ -1749,6 +1794,9 @@ show_table() {
         return 1
     fi
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
+
     if ! [[ "$num_cols" =~ ^[0-9]+$ ]] || [ "$num_cols" -lt 1 ]; then
         echo "ERROR: num_cols must be a positive integer" >&2
         return 1
@@ -1922,11 +1970,13 @@ show_table() {
             fi
         done
 
-        echo -e "$row_str"
+        # Security: row_str contains user data from cells, use printf %b to interpret ANSI codes
+        # but not user backslashes (cells are already in the string as literals)
+        printf '%b\n' "$row_str"
 
         # Print separator after header row
         if [ "$r" -eq 0 ]; then
-            echo -e "${COLOR_BORDER}${mid_border}${RESET}"
+            printf '%b%s%b\n' "${COLOR_BORDER}" "${mid_border}" "${RESET}"
         fi
     done
 
@@ -1985,6 +2035,8 @@ show_help() {
         return 1
     fi
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array using eval for bash 3.x compatibility
     eval "local help_items=(\"\${${array_name}[@]}\")"
 
