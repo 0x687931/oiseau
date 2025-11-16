@@ -909,6 +909,7 @@ show_progress_bar() {
     local current="$1"
     local total="$2"
     local label="${3:-Progress}"
+    local line_number="${4:-}"  # Optional 4th parameter for multi-line progress
 
     # Validate inputs
     if [ -z "$current" ] || [ -z "$total" ]; then
@@ -926,6 +927,18 @@ show_progress_bar() {
     if [ "$total" -eq 0 ]; then
         echo "ERROR: show_progress_bar total cannot be zero" >&2
         return 1
+    fi
+
+    # Validate line_number if provided (security: prevent injection)
+    if [ -n "$line_number" ]; then
+        if ! [[ "$line_number" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: show_progress_bar line_number must be a positive integer" >&2
+            return 1
+        fi
+        if [ "$line_number" -lt 1 ]; then
+            echo "ERROR: show_progress_bar line_number must be >= 1" >&2
+            return 1
+        fi
     fi
 
     # Sanitize label
@@ -978,12 +991,27 @@ show_progress_bar() {
     # Output
     # Security: Use printf %b to interpret ANSI codes while keeping user content safe
     if [ "$should_animate" = "1" ]; then
-        # In-place update (carriage return, clear to end of line)
-        printf '\r%b\033[K' "${full_display}"
+        if [ -n "$line_number" ]; then
+            # Multi-line mode: use cursor positioning
+            # Save cursor, move to line, print, restore cursor
+            tput sc 2>/dev/null || true  # Save cursor position
+            tput cup "$((line_number - 1))" 0 2>/dev/null || printf '\033[%d;0H' "$line_number"  # Move to line
+            printf '%b\033[K' "${full_display}"  # Print and clear to end of line
+            tput rc 2>/dev/null || true  # Restore cursor position
 
-        # Print newline when complete
-        if [ "$current" -ge "$total" ]; then
-            echo ""
+            # Print newline when complete (move cursor past all progress bars)
+            if [ "$current" -ge "$total" ]; then
+                # Don't print newline in multi-line mode - let caller handle cleanup
+                :
+            fi
+        else
+            # Single-line mode: use carriage return (existing behavior)
+            printf '\r%b\033[K' "${full_display}"
+
+            # Print newline when complete
+            if [ "$current" -ge "$total" ]; then
+                echo ""
+            fi
         fi
     else
         # Static mode: print new line each time
