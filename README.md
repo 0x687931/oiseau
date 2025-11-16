@@ -1,6 +1,7 @@
-# OISEAU v1.0.0
+# Oiseau
 
-Bash terminal UI library. 32 widgets. Pure bash, no external packages.
+**Terminal UI library for Bash**
+32 widgets • Pure bash • Zero dependencies
 
 ```bash
 source ./oiseau.sh
@@ -8,13 +9,13 @@ source ./oiseau.sh
 
 **Requirements:** Bash 3.2+, standard POSIX utilities (`tput`, `tr`, `wc`, `grep`, `awk`, `sed`, `cat`, `sleep`), optional `perl`
 
-**Shell:** Bash only (not zsh compatible). macOS users: `brew install bash` or run scripts with `#!/bin/bash` shebang.
+**Shell:** Bash only (not zsh compatible). macOS users: use `#!/bin/bash` shebang in scripts.
 
-**Degradation:** UTF-8+256color → ASCII+256color → ASCII monochrome
+**Graceful degradation:** UTF-8+256color → ASCII+256color → ASCII monochrome
 
 ---
 
-## TERMINAL MODES
+## Terminal Modes
 
 Automatic detection. Override with `export OISEAU_MODE=rich|color|plain` before sourcing.
 
@@ -53,9 +54,9 @@ show_box info "Status" "Deployment in progress"
 
 ---
 
-## ACCESSIBILITY
+## Accessibility
 
-Color palettes for accessibility. Set `export OISEAU_PALETTE=colorblind|highcontrast` before sourcing.
+Color palettes for visual accessibility. Set `export OISEAU_PALETTE=colorblind|highcontrast` before sourcing.
 
 | Palette | Purpose | Colors | Backgrounds |
 |---------|---------|--------|-------------|
@@ -74,7 +75,7 @@ source ./oiseau.sh
 
 ---
 
-## CUSTOMIZATION
+## Customization
 
 | Variable | Values | Default | Purpose |
 |----------|--------|---------|---------|
@@ -91,7 +92,7 @@ source ./oiseau.sh
 
 ---
 
-## WIDGET CATALOG
+## Widget Catalog
 
 **Status & Messages**
 [`show_success`](#show_success) • [`show_error`](#show_error) • [`show_warning`](#show_warning) • [`show_info`](#show_info)
@@ -633,7 +634,7 @@ Large text output, manpage-style help, log viewing.
 
 ---
 
-## SECURITY
+## Security
 
 All widget functions use `_escape_input()` internally to:
 - Remove ANSI escape sequences
@@ -649,7 +650,7 @@ show_success "$user_input"  # Safe
 
 ---
 
-## TESTING
+## Testing
 
 ```bash
 ./run_tests.sh
@@ -718,7 +719,7 @@ Individual test suites:
 
 ---
 
-## TROUBLESHOOTING
+## Troubleshooting
 
 ### Colors not showing
 
@@ -750,7 +751,7 @@ tput cols  # Check terminal width
 
 ---
 
-## GALLERY
+## Gallery
 
 Interactive demo of all widgets:
 
@@ -763,7 +764,7 @@ OISEAU_GALLERY_AUTO=1 ./gallery.sh
 
 ---
 
-## TUI MODE (NON-SCROLLING UIS)
+## TUI Mode
 
 Oiseau supports non-scrolling terminal UIs (like `htop`, `vim`):
 
@@ -776,13 +777,13 @@ See `examples/TUI_GUIDE.md` for full documentation.
 
 ---
 
-## LICENSE
+## License
 
 MIT License - see LICENSE file
 
 ---
 
-## SUPPORT
+## Support
 
 - **Issues:** https://github.com/0x687931/oiseau/issues
 - **Discussions:** https://github.com/0x687931/oiseau/discussions
