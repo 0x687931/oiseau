@@ -700,7 +700,7 @@ show_header_box() {
     # Bottom border
     printf '%b%s%b\n' "${BOX_DBL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DBR}"
 
-    echo -e "${RESET}"
+    printf '%b\n' "${RESET}"
 }
 
 # ==============================================================================
@@ -865,9 +865,10 @@ show_progress_bar() {
     local full_display="${safe_label}: ${bar_display} (${current}/${total})"
 
     # Output
+    # Security: Use printf %b to interpret ANSI codes while keeping user content safe
     if [ "$should_animate" = "1" ]; then
         # In-place update (carriage return, clear to end of line)
-        echo -en "\r${full_display}\033[K"
+        printf '\r%b\033[K' "${full_display}"
 
         # Print newline when complete
         if [ "$current" -ge "$total" ]; then
@@ -875,7 +876,7 @@ show_progress_bar() {
         fi
     else
         # Static mode: print new line each time
-        echo -e "${full_display}"
+        printf '%b\n' "${full_display}"
     fi
 }
 
@@ -902,10 +903,11 @@ show_checklist() {
             *)       icon="$ICON_PENDING"; color="$COLOR_MUTED" ;;
         esac
 
+        # Security: Use printf %s for user content to prevent backslash injection
         if [ -n "$details" ]; then
-            echo -e "  ${color}${icon}${RESET}  ${BOLD}${label}${RESET}  ${COLOR_MUTED}${details}${RESET}"
+            printf '  %b%s%b  %b%s%b  %b%s%b\n' "${color}" "${icon}" "${RESET}" "${BOLD}" "${label}" "${RESET}" "${COLOR_MUTED}" "${details}" "${RESET}"
         else
-            echo -e "  ${color}${icon}${RESET}  ${label}"
+            printf '  %b%s%b  %s\n' "${color}" "${icon}" "${RESET}" "${label}"
         fi
     done
 }
@@ -923,22 +925,23 @@ show_summary() {
     local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
-    echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
+    # Security: Use printf %s for user content to prevent backslash injection
+    printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_RTL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RTR}" "${RESET}"
 
     local title_content="  ${ICON_SUCCESS}  ${title}"
     local title_display_width=$(_display_width "$title_content")
     local title_padding=$((inner_width - title_display_width))
-    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+    printf '%b%s%b  %b%s%b  %b%s%b%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "${BOLD}" "${title}" "${RESET}" "$(_repeat_char " " "$title_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
 
-    echo -e "${COLOR_BORDER}${BOX_VR}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_VL}${RESET}"
+    printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_VR}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_VL}" "${RESET}"
 
     for item in "${items[@]}"; do
         local item_display_width=$(_display_width "$item")
         local item_padding=$((inner_width - item_display_width - 2))
-        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  $item$(_repeat_char " " "$item_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+        printf '%b%s%b  %s%s%b%s%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "$item" "$(_repeat_char " " "$item_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
     done
 
-    echo -e "${COLOR_BORDER}${BOX_RBL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RBR}${RESET}"
+    printf '%b%s%s%s%b\n' "${COLOR_BORDER}" "${BOX_RBL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RBR}" "${RESET}"
 }
 
 # ==============================================================================
@@ -1122,7 +1125,8 @@ ask_choice() {
         fi
 
         # Print prompt
-        echo -e "${COLOR_INFO}${safe_prompt}${RESET}" >&2
+        # Security: Use printf %s for user content to prevent backslash injection
+        printf '%b%s%b\n' "${COLOR_INFO}" "${safe_prompt}" "${RESET}" >&2
 
         # Print numbered items
         for ((i=0; i<${#items[@]}; i++)); do
@@ -1147,7 +1151,8 @@ ask_choice() {
         done
 
         # Print help text
-        echo -e "${COLOR_DIM}[↑↓/jk:Navigate | Enter:Select | q:Cancel]${RESET}" >&2
+        # Security: Use printf for consistency (no user content here)
+        printf '%b[↑↓/jk:Navigate | Enter:Select | q:Cancel]%b\n' "${COLOR_DIM}" "${RESET}" >&2
     }
 
     # Initial render
@@ -1469,7 +1474,8 @@ ask_list() {
         fi
 
         # Print prompt
-        echo -e "${COLOR_INFO}${safe_prompt}${RESET}" >&2
+        # Security: Use printf %s for user content to prevent backslash injection
+        printf '%b%s%b\n' "${COLOR_INFO}" "${safe_prompt}" "${RESET}" >&2
 
         # Print items
         for ((i=0; i<${#items[@]}; i++)); do
@@ -1496,10 +1502,11 @@ ask_list() {
         done
 
         # Print help text
+        # Security: Use printf for consistency (no user content here)
         if [ "$mode" = "multi" ]; then
-            echo -e "${COLOR_DIM}[↑↓:Navigate | Space:Toggle | Enter:Confirm | q:Cancel]${RESET}" >&2
+            printf '%b[↑↓:Navigate | Space:Toggle | Enter:Confirm | q:Cancel]%b\n' "${COLOR_DIM}" "${RESET}" >&2
         else
-            echo -e "${COLOR_DIM}[↑↓:Navigate | Enter:Select | q:Cancel]${RESET}" >&2
+            printf '%b[↑↓:Navigate | Enter:Select | q:Cancel]%b\n' "${COLOR_DIM}" "${RESET}" >&2
         fi
     }
 
@@ -1587,39 +1594,44 @@ print_kv() {
 }
 
 # Print command in code style
+# Security: Use printf %s for user content to prevent backslash injection
 print_command() {
     local cmd="$1"
-    echo -e "  ${COLOR_CODE}${cmd}${RESET}"
+    printf '  %b%s%b\n' "${COLOR_CODE}" "${cmd}" "${RESET}"
 }
 
 # Print inline command
+# Security: Use printf %s for user content to prevent backslash injection
 print_command_inline() {
     local cmd="$1"
-    echo -e "${COLOR_CODE}${cmd}${RESET}"
+    printf '%b%s%b' "${COLOR_CODE}" "${cmd}" "${RESET}"
 }
 
 # Print bulleted item
+# Security: Use printf %s for user content to prevent backslash injection
 print_item() {
     local item="$1"
-    echo -e "  • $item"
+    printf '  • %s\n' "$item"
 }
 
 # Print section title
+# Security: Use printf %s for user content to prevent backslash injection
 print_section() {
     local title="$1"
-    echo -e "\n${COLOR_HEADER}${title}${RESET}"
+    printf '\n%b%s%b\n' "${COLOR_HEADER}" "${title}" "${RESET}"
 }
 
 # Print numbered step
+# Security: Use printf %s for user content to prevent backslash injection
 print_step() {
     local num="$1"
     local text="$2"
-    echo -e "  ${COLOR_INFO}${num}.${RESET} ${text}"
+    printf '  %b%s.%b %s\n' "${COLOR_INFO}" "${num}" "${RESET}" "${text}"
 }
 
 # Print "next steps" list
 print_next_steps() {
-    echo -e "\n${COLOR_HEADER}${BOLD}Next steps:${RESET}\n"
+    printf '\n%b%bNext steps:%b\n\n' "${COLOR_HEADER}" "${BOLD}" "${RESET}"
     local i=1
     for step in "$@"; do
         print_step "$i" "$step"
@@ -1720,20 +1732,21 @@ show_spinner() {
     local num_frames=${#frames[@]}
 
     # Hide cursor
-    echo -en "\033[?25l"
+    printf '\033[?25l'
 
     # Cleanup on exit - clear line and show cursor, then exit
     cleanup_spinner() {
-        echo -en "\r\033[K\033[?25h"
+        printf '\r\033[K\033[?25h'
         trap - EXIT INT TERM  # Remove trap to prevent recursion
         exit 0
     }
     trap cleanup_spinner EXIT INT TERM
 
     # Animation loop
+    # Security: Use printf %s for user content to prevent backslash injection
     while true; do
         local frame="${frames[$frame_idx]}"
-        echo -en "\r${COLOR_INFO}${frame}${RESET}  ${safe_message}\033[K"
+        printf '\r%b%s%b  %s\033[K' "${COLOR_INFO}" "${frame}" "${RESET}" "${safe_message}"
 
         frame_idx=$(( (frame_idx + 1) % num_frames ))
         sleep "$delay" || exit 0  # Exit if sleep is interrupted
@@ -1787,7 +1800,7 @@ stop_spinner() {
         wait "$OISEAU_SPINNER_PID" 2>/dev/null
 
         # Clear line and show cursor
-        echo -en "\r\033[K\033[?25h"
+        printf '\r\033[K\033[?25h'
 
         # Unset PID
         unset OISEAU_SPINNER_PID
@@ -1979,12 +1992,13 @@ show_table() {
     done
 
     # Print title if provided
+    # Security: Use printf %s for user content to prevent backslash injection
     if [ -n "$safe_title" ]; then
-        echo -e "\n${COLOR_HEADER}${BOLD}${safe_title}${RESET}"
+        printf '\n%b%b%s%b\n' "${COLOR_HEADER}" "${BOLD}" "${safe_title}" "${RESET}"
     fi
 
     # Print top border
-    echo -e "${COLOR_BORDER}${top_border}${RESET}"
+    printf '%b%s%b\n' "${COLOR_BORDER}" "${top_border}" "${RESET}"
 
     # Print rows
     for ((r=0; r<num_rows; r++)); do
@@ -2028,7 +2042,7 @@ show_table() {
     done
 
     # Print bottom border
-    echo -e "${COLOR_BORDER}${bot_border}${RESET}"
+    printf '%b%s%b\n' "${COLOR_BORDER}" "${bot_border}" "${RESET}"
     echo ""
 }
 
@@ -2113,7 +2127,8 @@ show_help() {
 
         if [ -z "$description" ]; then
             # Section header (empty description)
-            echo -e "${COLOR_HEADER}${BOLD}${safe_key}${RESET}"
+            # Security: Use printf %s for user content to prevent backslash injection
+            printf '%b%b%s%b\n' "${COLOR_HEADER}" "${BOLD}" "${safe_key}" "${RESET}"
         else
             # Regular key-value pair using existing widget
             print_kv "$safe_key" "$safe_description" "$key_width"
@@ -2445,9 +2460,10 @@ show_pager() {
     fi
 
     # If content fits on screen, just display it
+    # Security: Use printf %s for user content to prevent backslash injection
     if [ "$total_lines" -le "$viewport_height" ]; then
-        echo -e "${COLOR_HEADER}${BOLD}${safe_title}${RESET}"
-        echo -e "${COLOR_BORDER}$(_repeat_char "${BOX_H}" 60)${RESET}"
+        printf '%b%b%s%b\n' "${COLOR_HEADER}" "${BOLD}" "${safe_title}" "${RESET}"
+        printf '%b%s%b\n' "${COLOR_BORDER}" "$(_repeat_char "${BOX_H}" 60)" "${RESET}"
         for line in "${content_lines[@]}"; do
             echo "$line"
         done
@@ -2486,8 +2502,9 @@ show_pager() {
         fi
 
         # Header
-        echo -e "${COLOR_HEADER}${BOLD}${safe_title}${RESET} ${COLOR_MUTED}[${visible_start}-${visible_end}/${total_lines}] ${percent}%${RESET}"
-        echo -e "${COLOR_BORDER}$(_repeat_char "${BOX_H}" 60)${RESET}"
+        # Security: Use printf %s for user content to prevent backslash injection
+        printf '%b%b%s%b %b[%d-%d/%d] %d%%%b\n' "${COLOR_HEADER}" "${BOLD}" "${safe_title}" "${RESET}" "${COLOR_MUTED}" "$visible_start" "$visible_end" "$total_lines" "$percent" "${RESET}"
+        printf '%b%s%b\n' "${COLOR_BORDER}" "$(_repeat_char "${BOX_H}" 60)" "${RESET}"
 
         # Content viewport
         local end_idx=$((current_line + viewport_height))
@@ -2501,25 +2518,26 @@ show_pager() {
 
         # Footer with navigation hints
         echo ""
+        # Security: Use printf for consistency (no user content here)
         if [ "$current_line" -eq 0 ]; then
             # At top
-            echo -e "${COLOR_DIM}[${nav_down}/j:Down | ${nav_pgdn}/f:Page Down | End/G:Bottom | q:Quit]${RESET}"
+            printf '%b[%s/j:Down | %s/f:Page Down | End/G:Bottom | q:Quit]%b\n' "${COLOR_DIM}" "${nav_down}" "${nav_pgdn}" "${RESET}"
         elif [ "$current_line" -ge "$max_scroll" ]; then
             # At bottom
-            echo -e "${COLOR_DIM}[${nav_up}/k:Up | ${nav_pgup}/b:Page Up | Home/g:Top | q:Quit]${RESET}"
+            printf '%b[%s/k:Up | %s/b:Page Up | Home/g:Top | q:Quit]%b\n' "${COLOR_DIM}" "${nav_up}" "${nav_pgup}" "${RESET}"
         else
             # Middle
-            echo -e "${COLOR_DIM}[${nav_up}${nav_down}/jk:Scroll | ${nav_pgup}${nav_pgdn}/bf:Page | Home/End:Jump | q:Quit]${RESET}"
+            printf '%b[%s%s/jk:Scroll | %s%s/bf:Page | Home/End:Jump | q:Quit]%b\n' "${COLOR_DIM}" "${nav_up}" "${nav_down}" "${nav_pgup}" "${nav_pgdn}" "${RESET}"
         fi
     }
 
     # Hide cursor for cleaner display
-    echo -en "\033[?25l"
+    printf '\033[?25l'
 
     # Cleanup function
     cleanup_pager() {
         # Show cursor
-        echo -en "\033[?25h"
+        printf '\033[?25h'
         # Clear screen
         clear
         trap - EXIT INT TERM
