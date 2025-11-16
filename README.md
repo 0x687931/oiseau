@@ -130,9 +130,9 @@ show_checklist tasks
 
 Output:
 ```
-  ✓  Build Docker image     Completed in 45s
-  ●  Run tests              156 tests running...
-  ○  Deploy to staging      Waiting
+  ✓  Build Docker image  Completed in 45s
+  ●  Run tests  156 tests running...
+  ○  Deploy to staging  Waiting
 ```
 
 ### Section Headers
@@ -143,10 +143,10 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 
 Output:
 ```
-╭────────────────────────────────────────────────────────────╮
-│  Deploy Application                                        │
-│  Step 2 of 4 › Building Docker image                       │
-╰────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────╮
+│  Deploy Application                                      │
+│  Step 2 of 4 › Building Docker image                     │
+╰──────────────────────────────────────────────────────────╯
 ```
 
 ---
