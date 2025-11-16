@@ -1421,11 +1421,30 @@ show_help_paged() {
     local items_per_page="${3:-15}"
     local key_width="${4:-20}"
 
+    # Input validation
+    if [ -z "$title" ] || [ -z "$array_name" ]; then
+        echo "ERROR: show_help_paged requires title and array_name arguments" >&2
+        return 1
+    fi
+
+    # Validate items_per_page is a positive integer
+    if ! [[ "$items_per_page" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: items_per_page must be a positive integer, got: '$items_per_page'" >&2
+        return 1
+    fi
+    if [ "$items_per_page" -eq 0 ]; then
+        echo "ERROR: items_per_page must be greater than 0" >&2
+        return 1
+    fi
+
+    # Sanitize title
     local safe_title
     safe_title="$(_escape_input "$title")"
 
+    # Get array items (bash 3.x/4.x compatibility using eval)
     eval "local help_items=(\"\${${array_name}[@]}\")"
 
+    # Validate array is not empty
     if [ ${#help_items[@]} -eq 0 ]; then
         echo "ERROR: Help array '$array_name' is empty" >&2
         return 1
