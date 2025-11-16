@@ -21,17 +21,14 @@ Oiseau (pronounced "wah-ZOH!") brings modern terminal UIs to bash scripts with z
 ```bash
 source ./oiseau.sh
 
-# Colored status messages with icons
-show_success "Operation completed!"      # Displays: ✓ Operation completed! (green)
-show_error "Something went wrong"        # Displays: ✗ Something went wrong (red)
-
-# Styled information boxes with action commands
+show_success "Operation completed!"
+show_error "Something went wrong"
 show_box warning "Uncommitted Changes" "You have 3 uncommitted files" \
     "git add ." \
     "git commit -m 'message'"
 ```
 
-**What you get:**
+**Output:**
 
 ```
   ✓  Operation completed!
