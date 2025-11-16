@@ -992,18 +992,24 @@ show_progress_bar() {
     # Security: Use printf %b to interpret ANSI codes while keeping user content safe
     if [ "$should_animate" = "1" ]; then
         if [ -n "$line_number" ]; then
-            # Multi-line mode: use cursor positioning
-            # Save cursor, move to line, print, restore cursor
-            tput sc 2>/dev/null || true  # Save cursor position
-            tput cup "$((line_number - 1))" 0 2>/dev/null || printf '\033[%d;0H' "$line_number"  # Move to line
-            printf '%b\033[K' "${full_display}"  # Print and clear to end of line
-            tput rc 2>/dev/null || true  # Restore cursor position
-
-            # Print newline when complete (move cursor past all progress bars)
-            if [ "$current" -ge "$total" ]; then
-                # Don't print newline in multi-line mode - let caller handle cleanup
-                :
+            # Multi-line mode: use relative cursor positioning
+            # Track the maximum line number seen to support any number of progress bars
+            if [ -z "${OISEAU_PROGRESS_MAX_LINE+x}" ] || [ "$line_number" -gt "$OISEAU_PROGRESS_MAX_LINE" ]; then
+                export OISEAU_PROGRESS_MAX_LINE="$line_number"
             fi
+
+            # Calculate relative offset from bottom (assumes cursor is after all progress bars)
+            # If max=3 and line=1: up_offset=3, if line=2: up_offset=2, if line=3: up_offset=1
+            local up_offset=$((OISEAU_PROGRESS_MAX_LINE - line_number + 1))
+
+            # Move up to the target line
+            tput cuu "$up_offset" 2>/dev/null || printf '\033[%dA' "$up_offset"
+
+            # Print on that line (carriage return to start of line, then print and clear to end)
+            printf '\r%b\033[K' "${full_display}"
+
+            # Move back down to bottom position
+            tput cud "$up_offset" 2>/dev/null || printf '\033[%dB' "$up_offset"
         else
             # Single-line mode: use carriage return (existing behavior)
             printf '\r%b\033[K' "${full_display}"
