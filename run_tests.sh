@@ -4,15 +4,69 @@
 #===============================================================================
 # Unified test runner for all Oiseau test suites
 # Uses oiseau widgets for beautiful output
+#
+# Usage:
+#   ./run_tests.sh              # Run in default mode (auto-detect)
+#   ./run_tests.sh --rich       # Force UTF-8 mode
+#   ./run_tests.sh --color      # Force ASCII mode
+#   ./run_tests.sh --plain      # Force plain mode
+#   ./run_tests.sh --all        # Run in all three modes
 #===============================================================================
 
 set -eo pipefail
 
+# Parse command line arguments
+TEST_MODE="${1:-auto}"
+RUN_ALL_MODES=0
+
+case "$TEST_MODE" in
+    --rich|--utf8)
+        export OISEAU_MODE="rich"
+        ;;
+    --color|--ascii|--ansi)
+        export OISEAU_MODE="color"
+        ;;
+    --plain)
+        export OISEAU_MODE="plain"
+        ;;
+    --all)
+        RUN_ALL_MODES=1
+        ;;
+    --help|-h)
+        echo "Usage: $0 [MODE]"
+        echo ""
+        echo "Modes:"
+        echo "  --rich, --utf8    Force UTF-8 mode (full Unicode)"
+        echo "  --color, --ascii  Force ASCII mode (no Unicode)"
+        echo "  --plain           Force plain mode (no colors)"
+        echo "  --all             Run tests in all three modes"
+        echo "  (default)         Auto-detect mode"
+        exit 0
+        ;;
+    auto|"")
+        # Auto-detect (default behavior)
+        ;;
+    *)
+        echo "Error: Unknown mode '$TEST_MODE'"
+        echo "Run '$0 --help' for usage information"
+        exit 1
+        ;;
+esac
+
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source oiseau library
-source "$SCRIPT_DIR/oiseau.sh"
+# Function to run tests in a specific mode
+run_tests_in_mode() {
+    local mode="$1"
+
+    # Set mode if specified
+    if [ "$mode" != "auto" ]; then
+        export OISEAU_MODE="$mode"
+    fi
+
+    # Source oiseau library (fresh for each mode)
+    source "$SCRIPT_DIR/oiseau.sh"
 
 # Test configuration
 TEST_DIR="$SCRIPT_DIR/tests"
@@ -20,27 +74,6 @@ TESTS_RUN=0
 TESTS_PASSED=0
 TESTS_FAILED=0
 FAILED_TESTS=()
-
-#===============================================================================
-# Helper Functions
-#===============================================================================
-
-run_test_file() {
-    local test_file="$1"
-    local test_name="$(basename "$test_file" .sh)"
-
-    TESTS_RUN=$((TESTS_RUN + 1))
-
-    # Run test and capture output
-    if "$test_file" > /dev/null 2>&1; then
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        show_success "$test_name"
-    else
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-        FAILED_TESTS+=("$test_name")
-        show_error "$test_name"
-    fi
-}
 
 #===============================================================================
 # Main Execution
@@ -75,22 +108,34 @@ echo ""
 echo "Running tests..."
 echo ""
 
-# Run each test file
+# Run each test file with animated progress
 for i in "${!test_files[@]}"; do
     test_file="${test_files[$i]}"
+    test_name="$(basename "$test_file" .sh)"
     current=$((i + 1))
     total="${#test_files[@]}"
 
-    # Show progress
-    show_progress_bar "$current" "$total" "Testing"
-
-    # Run test
-    run_test_file "$test_file"
+    # Run test and capture result
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if "$test_file" > /dev/null 2>&1; then
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+        # Show progress bar + success on same line
+        show_progress_bar "$current" "$total" "Testing"
+        echo -n "  "
+        show_success "$test_name"
+    else
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        FAILED_TESTS+=("$test_name")
+        # Show progress bar + error on same line
+        show_progress_bar "$current" "$total" "Testing"
+        echo -n "  "
+        show_error "$test_name"
+    fi
 done
 
-# Final progress
+# Final progress line
 show_progress_bar "$total" "$total" "Complete"
-echo ""
+echo ""  # Extra blank line
 echo ""
 
 # Summary section
@@ -127,5 +172,48 @@ else
         echo "  ./tests/${failed}.sh"
     done
     echo ""
-    exit 1
+    return 1
+fi
+}
+
+#===============================================================================
+# Main Entry Point
+#===============================================================================
+
+# Run tests based on mode selection
+if [ "$RUN_ALL_MODES" -eq 1 ]; then
+    # Run in all three modes
+    OVERALL_EXIT=0
+
+    for mode in rich color plain; do
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        case "$mode" in
+            rich)  echo "Running tests in RICH mode (UTF-8 + Color)" ;;
+            color) echo "Running tests in COLOR mode (ASCII + Color)" ;;
+            plain) echo "Running tests in PLAIN mode (ASCII only)" ;;
+        esac
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+
+        if ! run_tests_in_mode "$mode"; then
+            OVERALL_EXIT=1
+        fi
+    done
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    if [ "$OVERALL_EXIT" -eq 0 ]; then
+        echo "✓ All tests passed in all three modes!"
+    else
+        echo "✗ Some tests failed in one or more modes"
+    fi
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    exit "$OVERALL_EXIT"
+else
+    # Run in single mode
+    run_tests_in_mode "$TEST_MODE"
+    exit $?
 fi
