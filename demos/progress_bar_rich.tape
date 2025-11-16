@@ -9,8 +9,8 @@ Set Height 300
 Set FontSize 14
 Set Theme "Dracula"
 
-# Ensure rich mode (UTF-8 + colors)
-Type "export OISEAU_MODE=rich"
+# Ensure rich mode (UTF-8 + colors) and force animation
+Type "export OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1"
 Enter
 Sleep 500ms
 

@@ -9,8 +9,8 @@ Set Height 300
 Set FontSize 14
 Set Theme "Dracula"
 
-# Force color mode (ASCII + colors, no UTF-8)
-Type "export OISEAU_MODE=color"
+# Force color mode (ASCII + colors, no UTF-8) and animation
+Type "export OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1"
 Enter
 Sleep 500ms
 

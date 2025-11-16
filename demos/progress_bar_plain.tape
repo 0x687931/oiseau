@@ -9,8 +9,8 @@ Set Height 300
 Set FontSize 14
 Set Theme "Dracula"
 
-# Force plain mode (no colors, no UTF-8)
-Type "export UI_DISABLE=1"
+# Force plain mode (no colors, no UTF-8) but enable animation for demo
+Type "export UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1"
 Enter
 Sleep 500ms
 
