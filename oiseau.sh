@@ -1131,6 +1131,13 @@ ask_choice() {
         return 1
     fi
 
+    # Sanitize all items for security
+    local sanitized_items=()
+    local idx
+    for idx in "${!items[@]}"; do
+        sanitized_items[idx]="$(_escape_input "${items[idx]}")"
+    done
+
     # Validate default is numeric if provided
     if [ -n "$default" ]; then
         if ! [[ "$default" =~ ^[0-9]+$ ]] || [ "$default" -lt 1 ] || [ "$default" -gt ${#items[@]} ]; then
