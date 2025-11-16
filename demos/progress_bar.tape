@@ -5,7 +5,7 @@ Output demos/progress_bar.gif
 
 # Terminal settings
 Set Width 800
-Set Height 600
+Set Height 400
 Set FontSize 14
 Set Theme "Dracula"
 
@@ -47,10 +47,13 @@ Enter
 # Wait for completion
 Sleep 6s
 
+# Pause before mode switch
+Sleep 2s
+
 # Clear for next demo
 Type "clear"
 Enter
-Sleep 500ms
+Sleep 1s
 
 # ==============================================================================
 # COLOR MODE (ASCII + 256 colors)
@@ -86,10 +89,13 @@ Enter
 # Wait for completion
 Sleep 6s
 
+# Pause before mode switch
+Sleep 2s
+
 # Clear for next demo
 Type "clear"
 Enter
-Sleep 500ms
+Sleep 1s
 
 # ==============================================================================
 # PLAIN MODE (ASCII only, no colors)
@@ -125,5 +131,5 @@ Enter
 # Wait for completion
 Sleep 6s
 
-# Final pause
-Sleep 1s
+# Final pause to view result
+Sleep 3s
