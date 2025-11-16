@@ -50,9 +50,11 @@ Sleep 6s
 # Pause before mode switch
 Sleep 2s
 
-# Clear for next demo
+# Clear for next demo (hidden)
+Hide
 Type "clear"
 Enter
+Show
 Sleep 1s
 
 # ==============================================================================
@@ -92,9 +94,11 @@ Sleep 6s
 # Pause before mode switch
 Sleep 2s
 
-# Clear for next demo
+# Clear for next demo (hidden)
+Hide
 Type "clear"
 Enter
+Show
 Sleep 1s
 
 # ==============================================================================
