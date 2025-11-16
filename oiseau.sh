@@ -572,12 +572,13 @@ show_section_header() {
     local inner_width=$((width - 2))
 
     echo ""
-    echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
+    printf '%b%b%s%b%b\n' "${COLOR_BORDER}" "${BOX_RTL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RTR}" "${RESET}"
 
     # Title line
+    # Security: Use printf %s for user title to prevent backslash injection
     local title_display_width=$(_display_width "$title")
     local title_padding=$((inner_width - title_display_width - 2))
-    echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+    printf '%b%b%b  %b%b%s%b%s%b%b%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}" "$(_repeat_char " " "$title_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
 
     # Step counter and subtitle if provided
     if [ -n "$step_num" ] && [ -n "$total_steps" ]; then
@@ -587,23 +588,25 @@ show_section_header() {
         fi
         local step_display_width=$(_display_width "$step_text")
         local step_padding=$((inner_width - step_display_width - 2))
-        echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}$(_repeat_char " " "$step_padding")${COLOR_BORDER}${BOX_V}${RESET}"
+        printf '%b%b%b  %b%s%b%s%b%b%b\n' "${COLOR_BORDER}" "${BOX_V}" "${RESET}" "${COLOR_MUTED}" "$step_text" "${RESET}" "$(_repeat_char " " "$step_padding")" "${COLOR_BORDER}" "${BOX_V}" "${RESET}"
     fi
 
-    echo -e "${COLOR_BORDER}${BOX_RBL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RBR}${RESET}"
+    printf '%b%b%s%b%b\n' "${COLOR_BORDER}" "${BOX_RBL}" "$(_repeat_char "${BOX_H}" "$inner_width")" "${BOX_RBR}" "${RESET}"
     echo ""
 }
 
 # Simple header
+# Security: Use printf to prevent backslash injection
 show_header() {
     local title="$(_escape_input "$1")"
-    echo -e "\n${COLOR_HEADER}${BOLD}${title}${RESET}\n"
+    printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
 }
 
 # Muted subheader
+# Security: Use printf to prevent backslash injection
 show_subheader() {
     local title="$(_escape_input "$1")"
-    echo -e "${COLOR_MUTED}${title}${RESET}"
+    printf '%b%s%b\n' "${COLOR_MUTED}" "$title" "${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
@@ -616,32 +619,34 @@ show_header_box() {
     local inner_width=$((width - 2))
 
     echo ""
-    echo -e "${COLOR_HEADER}${BOLD}"
+    printf '%b%b' "${COLOR_HEADER}" "${BOLD}"
 
     # Top border
-    echo -e "  ${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}"
+    printf '  %b%s%b\n' "${BOX_DTL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DTR}"
 
     # Empty line
-    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Title (word-wrapped if needed)
+    # Security: Use printf %s for user content to prevent backslash injection
     echo "$title" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-        echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
     done
 
     # Empty line
-    echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Subtitle (word-wrapped if needed)
+    # Security: Use printf %s for user content to prevent backslash injection
     if [ -n "$subtitle" ]; then
         echo "$subtitle" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-            echo -e "  ${BOX_DV}$(_pad_to_width "   $line" "$inner_width")${BOX_DV}"
+            printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
         done
-        echo -e "  ${BOX_DV}$(_pad_to_width "" "$inner_width")${BOX_DV}"
+        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
     fi
 
     # Bottom border
-    echo -e "  ${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}"
+    printf '  %b%s%b\n' "${BOX_DBL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DBR}"
 
     echo -e "${RESET}"
 }
@@ -1071,13 +1076,15 @@ ask_choice() {
 
             if [ "$i" -eq "$selected_index" ]; then
                 # Highlight selected item
-                echo -e "${prefix}${COLOR_INFO}${cursor_char}${RESET} ${COLOR_SUCCESS}${BOLD}${num_display}. ${safe_item}${RESET}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%s%b%s%b %b%b%s. %s%b\n' "${prefix}" "${COLOR_INFO}" "${cursor_char}" "${RESET}" "${COLOR_SUCCESS}" "${BOLD}" "${num_display}" "$safe_item" "${RESET}" >&2
             else
                 # Normal item
+                # Security: Use printf to prevent backslash injection in menu items
                 if [ -n "$default" ] && [ "$i" -eq "$((default - 1))" ]; then
-                    echo -e "${prefix}  ${COLOR_MUTED}${num_display}. ${safe_item} (default)${RESET}" >&2
+                    printf '%s  %b%s. %s (default)%b\n' "${prefix}" "${COLOR_MUTED}" "${num_display}" "$safe_item" "${RESET}" >&2
                 else
-                    echo -e "${prefix}  ${num_display}. ${safe_item}" >&2
+                    printf '%s  %s. %s\n' "${prefix}" "${num_display}" "$safe_item" >&2
                 fi
             fi
         done
@@ -1423,9 +1430,11 @@ ask_list() {
                 else
                     checkbox="${COLOR_MUTED}${checkbox_left}${unchecked_char}${checkbox_right}${RESET}"
                 fi
-                echo -e "${prefix}${checkbox} ${item}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%b%b %s\n' "${prefix}" "${checkbox}" "$item" >&2
             else
-                echo -e "${prefix}${item}" >&2
+                # Security: Use printf to prevent backslash injection in menu items
+                printf '%b%s\n' "${prefix}" "$item" >&2
             fi
         done
 
@@ -1948,11 +1957,13 @@ show_table() {
             fi
         done
 
-        echo -e "$row_str"
+        # Security: row_str contains user data from cells, use printf %b to interpret ANSI codes
+        # but not user backslashes (cells are already in the string as literals)
+        printf '%b\n' "$row_str"
 
         # Print separator after header row
         if [ "$r" -eq 0 ]; then
-            echo -e "${COLOR_BORDER}${mid_border}${RESET}"
+            printf '%b%s%b\n' "${COLOR_BORDER}" "${mid_border}" "${RESET}"
         fi
     done
 
