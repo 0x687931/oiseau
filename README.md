@@ -552,25 +552,79 @@ show_box success "All Clear" "Systems operational"
 
 ## 🎨 Terminal Modes
 
-Oiseau automatically detects your terminal capabilities and adapts:
+Oiseau automatically detects your terminal capabilities and adapts. Here's what the same code looks like in each mode:
 
-### Rich Mode (UTF-8 + Color)
-- **Requires:** Color support + UTF-8
-- **Features:** Full 256-color palette, Unicode box drawing (┏━┓ ╭─╮), Unicode icons (✓ ✗ ⚠ ℹ)
-- **Example:** Modern terminals (iTerm2, Alacritty, VS Code terminal, Claude Code)
-- **Force enable:** `export OISEAU_MODE=rich`
+### Visual Comparison
 
-### Color Mode (ASCII + Color)
-- **Requires:** Color support only
-- **Features:** 256-color palette, ASCII box drawing (+--+), ASCII icons ([OK] [X] [!] [i])
-- **Example:** Older terminals without UTF-8
-- **Force enable:** `export OISEAU_MODE=color`
+**Same code, three different environments:**
 
-### Plain Mode (ASCII + No Color)
-- **Triggers:** Pipes, redirects, `NO_COLOR=1`, `UI_DISABLE=1`, or no TTY
-- **Features:** No colors, ASCII-only characters
-- **Example:** `script.sh | tee log.txt` or CI/CD environments
-- **Force enable:** `export OISEAU_MODE=plain` or `export NO_COLOR=1` or `export UI_DISABLE=1`
+```bash
+show_success "Build completed"
+show_box info "Status" "Deployment in progress"
+```
+
+#### Rich Mode (UTF-8 + Color)
+**When:** Modern terminals (iTerm2, Alacritty, VS Code, Claude Code)
+
+```
+  ✓  Build completed
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ℹ  Status                                               ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                          ┃
+┃  Deployment in progress                                  ┃
+┃                                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+- Unicode box drawing (┏━┓ ╭─╮)
+- Unicode icons (✓ ✗ ⚠ ℹ)
+- Full 256-color palette
+- **Force:** `export OISEAU_MODE=rich`
+
+#### Color Mode (ASCII + Color)
+**When:** Older terminals with color but no UTF-8
+
+```
+  [OK]  Build completed
++==========================================================+
+|  [i]  Status                                             |
++==========================================================+
+|                                                          |
+|  Deployment in progress                                  |
+|                                                          |
++==========================================================+
+```
+- ASCII box drawing (+==+)
+- ASCII icons ([OK] [X] [!] [i])
+- Full 256-color palette
+- **Force:** `export OISEAU_MODE=color`
+
+#### Plain Mode (ASCII + No Color)
+**When:** Pipes, redirects, CI/CD, `NO_COLOR=1`
+
+```
+  [OK]  Build completed
++==========================================================+
+|  [i]  Status                                             |
++==========================================================+
+|                                                          |
+|  Deployment in progress                                  |
+|                                                          |
++==========================================================+
+```
+- ASCII box drawing (+==+)
+- ASCII icons ([OK] [X] [!] [i])
+- No colors (clean for logs)
+- **Triggers:** `./script.sh | tee log.txt`, `NO_COLOR=1`, `UI_DISABLE=1`
+- **Force:** `export OISEAU_MODE=plain`
+
+### Why This Matters
+
+**One script, works everywhere:**
+- Your terminal: Beautiful Unicode boxes and colors
+- CI/CD logs: Clean ASCII output that's easy to read
+- Piped to files: Plain text that's grep-friendly
+- Older systems: ASCII with colors for compatibility
 
 ### Manual Mode Control
 
