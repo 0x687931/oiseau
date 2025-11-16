@@ -6,7 +6,7 @@ Transform your bash scripts from plain text to beautiful, professional command-l
 
 ## What is Oiseau?
 
-Oiseau (French for "bird") brings modern terminal UIs to bash scripts with zero dependencies. Instead of plain `echo` statements, you get:
+Oiseau (pronounced "wah-ZOH!") brings modern terminal UIs to bash scripts with zero dependencies. Instead of plain `echo` statements, you get:
 
 - **Status messages** with colored icons (✓ ✗ ⚠ ℹ)
 - **Styled boxes** that highlight important information
