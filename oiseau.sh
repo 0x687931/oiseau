@@ -206,13 +206,10 @@ _init_repeat_char_cache() {
     _RC_EMPTY_20=$(printf "%20s" | tr ' ' '░')
     _RC_EMPTY_30=$(printf "%30s" | tr ' ' '░')
 
-    # Dynamic cache (5 slots for runtime patterns)
-    # Uses simple FIFO eviction policy
-    _RC_DYN_KEY1=""; _RC_DYN_VAL1=""
-    _RC_DYN_KEY2=""; _RC_DYN_VAL2=""
-    _RC_DYN_KEY3=""; _RC_DYN_VAL3=""
-    _RC_DYN_KEY4=""; _RC_DYN_VAL4=""
-    _RC_DYN_KEY5=""; _RC_DYN_VAL5=""
+    # Dynamic cache using arrays (Bash 3.x compatible)
+    # 10 slots for runtime patterns with FIFO eviction
+    OISEAU_RC_KEYS=()
+    OISEAU_RC_VALS=()
 }
 
 # Initialize cache at script load time
@@ -514,28 +511,27 @@ _repeat_char() {
         "░_30") echo "$_RC_EMPTY_30"; return ;;
     esac
 
-    # Dynamic cache check
-    if [ "$key" = "$_RC_DYN_KEY1" ]; then
-        echo "$_RC_DYN_VAL1"; return
-    elif [ "$key" = "$_RC_DYN_KEY2" ]; then
-        echo "$_RC_DYN_VAL2"; return
-    elif [ "$key" = "$_RC_DYN_KEY3" ]; then
-        echo "$_RC_DYN_VAL3"; return
-    elif [ "$key" = "$_RC_DYN_KEY4" ]; then
-        echo "$_RC_DYN_VAL4"; return
-    elif [ "$key" = "$_RC_DYN_KEY5" ]; then
-        echo "$_RC_DYN_VAL5"; return
-    fi
+    # Dynamic cache check using parallel arrays (Bash 3.x compatible)
+    local i
+    for ((i=0; i<${#OISEAU_RC_KEYS[@]}; i++)); do
+        if [ "${OISEAU_RC_KEYS[$i]}" = "$key" ]; then
+            echo "${OISEAU_RC_VALS[$i]}"
+            return
+        fi
+    done
 
-    # Layer 3: Fallback - Generate and cache
+    # Layer 3: Fallback - Generate and cache with FIFO eviction
     local result=$(printf "%${count}s" | tr ' ' "$char")
 
-    # FIFO rotation
-    _RC_DYN_KEY5="$_RC_DYN_KEY4"; _RC_DYN_VAL5="$_RC_DYN_VAL4"
-    _RC_DYN_KEY4="$_RC_DYN_KEY3"; _RC_DYN_VAL4="$_RC_DYN_VAL3"
-    _RC_DYN_KEY3="$_RC_DYN_KEY2"; _RC_DYN_VAL3="$_RC_DYN_VAL2"
-    _RC_DYN_KEY2="$_RC_DYN_KEY1"; _RC_DYN_VAL2="$_RC_DYN_VAL1"
-    _RC_DYN_KEY1="$key";           _RC_DYN_VAL1="$result"
+    # Add to cache
+    OISEAU_RC_KEYS+=("$key")
+    OISEAU_RC_VALS+=("$result")
+
+    # FIFO eviction if cache exceeds 10 slots
+    if [ ${#OISEAU_RC_KEYS[@]} -gt 10 ]; then
+        OISEAU_RC_KEYS=("${OISEAU_RC_KEYS[@]:1}")
+        OISEAU_RC_VALS=("${OISEAU_RC_VALS[@]:1}")
+    fi
 
     echo "$result"
 }
