@@ -756,7 +756,7 @@ See `examples/` directory:
 
 ```bash
 #!/bin/bash
-source oiseau/oiseau.sh
+source ./oiseau.sh
 
 # Multi-step deployment script
 show_section_header "Application Deployment" 1 3 "Preparing environment"
