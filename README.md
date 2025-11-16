@@ -88,7 +88,7 @@ source ./oiseau.sh
 
 ### Requirements
 
-- Bash 4.0+ (most systems)
+- Bash 3.2+ (works on macOS and all modern Linux systems)
 - That's it! No other dependencies.
 
 ---
