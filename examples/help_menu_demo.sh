@@ -1,39 +1,35 @@
 #!/bin/bash
-# Phase 7 Demo: Help Menu Widget
-# Shows usage of show_help() and show_help_paged() functions
+# Interactive Menu Demo
+# Shows interactive menus with arrow key navigation
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/oiseau.sh"
 
 clear
 
-# Demo 1: Simple help menu
-show_header_box "Phase 7: Help Menu Widget" "Two new display functions for formatted help"
+show_header_box "Interactive Menu Demo" "Arrow key navigation and selection"
 
 echo ""
-echo -e "${COLOR_MUTED}Demo 1: Basic Help Menu with show_help()${RESET}"
+echo -e "${COLOR_MUTED}Demo 1: Single Select Menu${RESET}"
 echo ""
 
-# Define help items
-app_help=(
-    "NAVIGATION|"
-    "q|Quit the application"
-    "h|Show this help menu"
-    "j|Scroll down"
-    "k|Scroll up"
-    ""
-    "EDITING|"
-    "e|Edit selected item"
-    "d|Delete selected item"
-    "a|Add new item"
-    ""
-    "DISPLAY|"
-    "s|Sort by name"
-    "f|Filter results"
-    "c|Toggle color mode"
+# Demo 1: Single select
+menu_items=(
+    "View Project Status"
+    "Build Application"
+    "Run Tests"
+    "Deploy to Staging"
+    "View Logs"
+    "Exit"
 )
 
-show_help "Application Commands" app_help 15
+selected=$(ask_list "Choose an action:" menu_items)
+if [ $? -eq 0 ]; then
+    show_success "You selected: $selected"
+else
+    show_error "Selection cancelled"
+    exit 1
+fi
 
 echo ""
 echo -e "${COLOR_MUTED}Press Enter to continue to Demo 2...${RESET}"
@@ -41,28 +37,32 @@ read -r
 
 clear
 
-# Demo 2: Help menu with different key width
-show_header_box "Phase 7 Demo: Part 2" "Customizing key column width"
+# Demo 2: Multi-select
+show_header_box "Interactive Menu Demo - Part 2" "Multi-select with Space to toggle"
 
 echo ""
-echo -e "${COLOR_MUTED}Demo 2: Help Menu with Custom Key Width${RESET}"
+echo -e "${COLOR_MUTED}Demo 2: Multi-Select Menu${RESET}"
 echo ""
 
-keyboard_help=(
-    "SHORTCUTS|"
-    "Ctrl+S|Save file"
-    "Ctrl+Z|Undo"
-    "Ctrl+Y|Redo"
-    "Ctrl+A|Select all"
-    ""
-    "NAVIGATION|"
-    "Ctrl+Home|Go to beginning"
-    "Ctrl+End|Go to end"
-    "Page Up|Scroll up one page"
-    "Page Down|Scroll down one page"
+files=(
+    "src/main.sh"
+    "src/utils.sh"
+    "tests/test_main.sh"
+    "tests/test_utils.sh"
+    "README.md"
+    "LICENSE"
 )
 
-show_help "Keyboard Shortcuts" keyboard_help 25
+selected_files=($(ask_list "Select files to stage:" files "multi"))
+if [ $? -eq 0 ] && [ ${#selected_files[@]} -gt 0 ]; then
+    show_success "You selected ${#selected_files[@]} file(s):"
+    for file in "${selected_files[@]}"; do
+        echo "  • $file"
+    done
+else
+    show_error "No files selected"
+    exit 1
+fi
 
 echo ""
 echo -e "${COLOR_MUTED}Press Enter to continue to Demo 3...${RESET}"
@@ -70,56 +70,63 @@ read -r
 
 clear
 
-# Demo 3: Paged help menu
-show_header_box "Phase 7 Demo: Part 3" "Using show_help_paged() for longer content"
+# Demo 3: Choice menu
+show_header_box "Interactive Menu Demo - Part 3" "Quick choice menus"
 
 echo ""
-echo -e "${COLOR_MUTED}Demo 3: Paged Help Menu${RESET}"
-echo -e "${COLOR_MUTED}(Large help menu with pauses)${RESET}"
+echo -e "${COLOR_MUTED}Demo 3: Yes/No Choice${RESET}"
 echo ""
 
-large_help=(
-    "BASIC COMMANDS|"
-    "status|Show current status"
-    "init|Initialize new project"
-    "build|Build the project"
-    "test|Run tests"
-    "clean|Clean build artifacts"
-    ""
-    "GIT OPERATIONS|"
-    "git add|Stage files"
-    "git commit|Create commit"
-    "git push|Push to remote"
-    "git pull|Pull from remote"
-    "git branch|List branches"
-    ""
-    "FILE MANAGEMENT|"
-    "cp|Copy files"
-    "rm|Remove files"
-    "mv|Move files"
-    "mkdir|Create directory"
-    "ls|List contents"
-)
-
-OISEAU_HELP_NO_KEYPRESS=0 show_help_paged "Extended Commands" large_help 8 20
+if ask_choice "Do you want to continue?"; then
+    show_success "You chose: Yes"
+else
+    show_info "You chose: No"
+fi
 
 echo ""
-show_header_box "Demo Complete" "The show_help() functions are now part of Oiseau"
+echo -e "${COLOR_MUTED}Press Enter to continue to Demo 4...${RESET}"
+read -r
+
+clear
+
+show_header_box "Interactive Menu Demo - Part 4" "Multi-option choice"
+
+echo ""
+echo -e "${COLOR_MUTED}Demo 4: Multi-Option Choice${RESET}"
+echo ""
+
+options=("Save" "Discard" "Cancel")
+choice=$(ask_choice "You have unsaved changes. What would you like to do?" options)
+
+case "$choice" in
+    "Save")
+        show_success "Changes saved!"
+        ;;
+    "Discard")
+        show_warning "Changes discarded"
+        ;;
+    "Cancel")
+        show_info "Operation cancelled"
+        ;;
+esac
+
+echo ""
+echo ""
+show_header_box "Demo Complete" "Interactive menus with arrow keys and quick choices"
 
 echo ""
 echo -e "${COLOR_SUCCESS}${BOLD}Summary:${RESET}"
 echo ""
-echo -e "  ${COLOR_SUCCESS}✓${RESET} show_help() - Display help menu with optional sections"
-echo -e "  ${COLOR_SUCCESS}✓${RESET} show_help_paged() - Display help in pages with pauses"
-echo -e "  ${COLOR_SUCCESS}✓${RESET} Both reuse show_header_box() and print_kv()"
-echo -e "  ${COLOR_SUCCESS}✓${RESET} Full support for Rich, Color, and Plain modes"
-echo -e "  ${COLOR_SUCCESS}✓${RESET} Input sanitization via _escape_input()"
+echo -e "  ${COLOR_SUCCESS}✓${RESET} ask_list() - Interactive single/multi-select with arrow keys"
+echo -e "  ${COLOR_SUCCESS}✓${RESET} ask_choice() - Quick yes/no and multi-option menus"
+echo -e "  ${COLOR_SUCCESS}✓${RESET} Arrow keys (↑↓) or j/k for navigation"
+echo -e "  ${COLOR_SUCCESS}✓${RESET} Space to toggle checkboxes (multi-select)"
+echo -e "  ${COLOR_SUCCESS}✓${RESET} Enter to confirm, Q/Esc to cancel"
 echo ""
 
 echo -e "${COLOR_MUTED}Key features:${RESET}"
-echo -e "  • Section headers with pipe-separated format"
-echo -e "  • Automatic TTY detection for keypress prompt"
-echo -e "  • Customizable key column width"
-echo -e "  • Optional OISEAU_HELP_NO_KEYPRESS for scripting"
-echo -e "  • Graceful degradation across terminal modes"
+echo -e "  • Real-time visual feedback with cursor indicator"
+echo -e "  • Mode-aware rendering (rich/color/plain)"
+echo -e "  • Automatic TTY detection with numbered fallback"
+echo -e "  • Input validation and error handling"
 echo ""
