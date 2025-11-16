@@ -217,6 +217,17 @@ _init_repeat_char_cache
 # UTILITY FUNCTIONS
 # ==============================================================================
 
+# Validate identifier names to prevent code injection via eval
+# Security: Ensures variable/array names are safe before using in eval
+_validate_identifier() {
+    local name="$1"
+    if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        echo "ERROR: Invalid identifier name '$name'" >&2
+        return 1
+    fi
+    return 0
+}
+
 # Escape user input to prevent code injection
 # Optimized: reduced pipeline depth for better performance
 _escape_input() {
@@ -226,19 +237,21 @@ _escape_input() {
 }
 
 # Calculate visible length (ignoring ANSI codes)
+# Security: Use printf instead of echo -e to prevent interpretation of backslash sequences
 _visible_len() {
     local str="$1"
     # Remove ANSI codes before calculating length
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(printf '%s' "$str" | sed $'s/\033[^m]*m//g')
     echo "${#clean}"
 }
 
 # Calculate display width (accounts for wide characters like emojis)
 # Emojis and some Unicode characters take 2 columns, this estimates the width
+# Security: Use printf instead of echo -e to prevent interpretation of backslash sequences
 _display_width() {
     local str="$1"
     # Remove ANSI codes first
-    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(printf '%s' "$str" | sed $'s/\033[^m]*m//g')
 
     local width
 
@@ -516,27 +529,31 @@ _clamp_width() {
 # ==============================================================================
 
 # Show success message with green checkmark
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_success() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_SUCCESS}" "${ICON_SUCCESS}" "${RESET}" "$msg"
 }
 
 # Show error message with red X
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_error() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_ERROR}${ICON_ERROR}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_ERROR}" "${ICON_ERROR}" "${RESET}" "$msg"
 }
 
 # Show warning message with orange warning icon
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_warning() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_WARNING}${ICON_WARNING}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_WARNING}" "${ICON_WARNING}" "${RESET}" "$msg"
 }
 
 # Show info message with blue info icon
+# Security: Use printf instead of echo -e to prevent backslash injection
 show_info() {
     local msg="$(_escape_input "$1")"
-    echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  $msg"
+    printf '  %b%b%b  %s\n' "${COLOR_INFO}" "${ICON_INFO}" "${RESET}" "$msg"
 }
 
 # ==============================================================================
@@ -805,6 +822,8 @@ show_progress_bar() {
 # Array format: "status|label|details" where status is: done, active, pending, skip
 show_checklist() {
     local array_name="$1"
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Use eval for bash 3.x/4.x compatibility (nameref requires bash 4.3+)
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -960,6 +979,8 @@ ask_choice() {
     fi
 
     # MULTI-CHOICE MODE: Array provided
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array items using eval for bash 3.x compatibility
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -1314,6 +1335,8 @@ ask_list() {
     # Sanitize prompt
     local safe_prompt="$(_escape_input "$prompt")"
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array items using eval for bash 3.x compatibility
     eval "local items=(\"\${${array_name}[@]}\")"
 
@@ -1749,6 +1772,9 @@ show_table() {
         return 1
     fi
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
+
     if ! [[ "$num_cols" =~ ^[0-9]+$ ]] || [ "$num_cols" -lt 1 ]; then
         echo "ERROR: num_cols must be a positive integer" >&2
         return 1
@@ -1985,6 +2011,8 @@ show_help() {
         return 1
     fi
 
+    # Security: Validate array_name to prevent code injection via eval
+    _validate_identifier "$array_name" || return 1
     # Load array using eval for bash 3.x compatibility
     eval "local help_items=(\"\${${array_name}[@]}\")"
 
