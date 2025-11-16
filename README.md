@@ -35,7 +35,7 @@ show_box warning "Uncommitted Changes" "You have 3 uncommitted files" \
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/oiseau.git
+git clone https://github.com/0x687931/oiseau.git
 
 # Source in your script
 source oiseau/oiseau.sh
@@ -49,7 +49,7 @@ show_success "Oiseau is ready!"
 Download `oiseau.sh` and source it in your scripts:
 
 ```bash
-curl -o oiseau.sh https://raw.githubusercontent.com/yourusername/oiseau/main/oiseau.sh
+curl -o oiseau.sh https://raw.githubusercontent.com/0x687931/oiseau/main/oiseau.sh
 source ./oiseau.sh
 ```
 
