@@ -1,97 +1,37 @@
-# OISEAU v1.0.0
+# OISEAU - BASH TERMINAL UI LIBRARY v1.0.0
 
-Bash terminal UI library. 32 widgets. Pure bash, no external packages.
+**PURPOSE**
+
+32 widgets for building terminal UIs in Bash 3.2+. Pure bash, no external libraries or packages. Graceful degradation: UTF-8+256color → ASCII+256color → ASCII monochrome.
+
+**INSTALLATION**
 
 ```bash
 source ./oiseau.sh
 ```
 
-**Requirements:** Bash 3.2+, standard POSIX utilities (`tput`, `tr`, `wc`, `grep`, `awk`, `sed`, `cat`, `sleep`), optional `perl`
+**REQUIREMENTS**
 
-**Shell:** Bash only (not zsh compatible). macOS users: `brew install bash` or run scripts with `#!/bin/bash` shebang.
+Bash 3.2+ (macOS default, all modern Linux)
 
-**Degradation:** UTF-8+256color → ASCII+256color → ASCII monochrome
+POSIX utilities (universally available):
+- `tput` - terminal capability queries
+- `tr` - character translation for box drawing
+- `wc` - text width calculations
+- `grep` - pattern matching
+- `awk` - text processing
+- `sed` - text manipulation
+- `cat` - file concatenation
+- `sleep` - spinner animations
 
----
-
-## TERMINAL MODES
-
-Automatic detection. Override with `export OISEAU_MODE=rich|color|plain` before sourcing.
-
-| Mode | Boxes | Icons | Colors | When |
-|------|-------|-------|--------|------|
-| **rich** | Unicode (┏━┓) | Unicode (✓ ✗ ⚠ ℹ) | 256-color | Modern terminals (iTerm2, VS Code, Alacritty) |
-| **color** | ASCII (+==+) | ASCII ([OK] [X] [!] [i]) | 256-color | Older terminals with color |
-| **plain** | ASCII (+==+) | ASCII ([OK] [X] [!] [i]) | None | Pipes, CI/CD, `NO_COLOR=1` |
-
-**Example output (same code, three modes):**
-
-```bash
-show_success "Build completed"
-show_box info "Status" "Deployment in progress"
-```
-
-**Rich:**
-```
-  ✓  Build completed
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ℹ  Status                                               ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  Deployment in progress                                  ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-```
-
-**Color/Plain:**
-```
-  [OK]  Build completed
-+==========================================================+
-|  [i]  Status                                             |
-+==========================================================+
-|  Deployment in progress                                  |
-+==========================================================+
-```
-
----
-
-## ACCESSIBILITY
-
-Color palettes for accessibility. Set `export OISEAU_PALETTE=colorblind|highcontrast` before sourcing.
-
-| Palette | Purpose | Colors | Backgrounds |
-|---------|---------|--------|-------------|
-| **default** | Standard | Mid-range green/red/orange/blue | Light & dark |
-| **colorblind** | Deuteranopia/protanopia safe | Blue/orange/yellow (no red/green) | Light & dark |
-| **highcontrast** | Maximum visibility | Bold bright colors | Light & dark |
-
-**All palettes optimized for dark terminal backgrounds** (recommended). Work on light backgrounds but with reduced contrast.
-
-Colors follow Apple HIG principles. WCAG contrast ratios on dark backgrounds: DEFAULT (4.5-11:1), COLORBLIND (5.5-15:1), HIGHCONTRAST (5-20:1).
-
-```bash
-export OISEAU_PALETTE=colorblind
-source ./oiseau.sh
-```
-
----
-
-## CUSTOMIZATION
-
-| Variable | Values | Default | Purpose |
-|----------|--------|---------|---------|
-| `OISEAU_MODE` | `rich`, `color`, `plain` | Auto | Force mode |
-| `OISEAU_PALETTE` | `default`, `colorblind`, `highcontrast` | `default` | Color palette |
-| `OISEAU_BORDER_STYLE` | `rounded`, `double`, `ascii` | Auto | Force border style |
-| `OISEAU_BOX_WIDTH` | 20-200 | 60 | Box width |
-| `COLOR_ERROR` | ANSI 256 | 196 | Error color |
-| `COLOR_SUCCESS` | ANSI 256 | 40 | Success color |
-| `COLOR_WARNING` | ANSI 256 | 214 | Warning color |
-| `COLOR_INFO` | ANSI 256 | 39 | Info color |
-| `COLOR_HEADER` | ANSI 256 | 117 | Header color |
-| `COLOR_MUTED` | ANSI 256 | 246 | Muted color |
+Optional:
+- `perl` - unicode width calculations (degrades gracefully if missing)
 
 ---
 
 ## WIDGET CATALOG
+
+Jump to any widget:
 
 **Status & Messages**
 [`show_success`](#show_success) • [`show_error`](#show_error) • [`show_warning`](#show_warning) • [`show_info`](#show_info)
@@ -120,17 +60,25 @@ source ./oiseau.sh
 
 Quick one-line success message with green checkmark.
 
+**Syntax:**
 ```bash
 show_success <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
 show_success "Build completed successfully"
 ```
+
+**Output:**
 ```
   ✓  Build completed successfully
 ```
 
-Build success, task completion, operation confirmed.
+**Use cases:** Build success, task completion, operation confirmed
 
 ---
 
@@ -138,17 +86,25 @@ Build success, task completion, operation confirmed.
 
 Quick one-line error message with red X.
 
+**Syntax:**
 ```bash
 show_error <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
 show_error "Failed to connect to server"
 ```
+
+**Output:**
 ```
   ✗  Failed to connect to server
 ```
 
-Connection failures, command errors, exceptions.
+**Use cases:** Connection failures, command errors, exceptions
 
 ---
 
@@ -156,17 +112,25 @@ Connection failures, command errors, exceptions.
 
 Quick one-line warning message with orange warning icon.
 
+**Syntax:**
 ```bash
 show_warning <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
 show_warning "This will delete all files"
 ```
+
+**Output:**
 ```
   ⚠  This will delete all files
 ```
 
-Destructive operations, deprecation notices, resource warnings.
+**Use cases:** Destructive operations, deprecation notices, resource warnings
 
 ---
 
@@ -174,17 +138,25 @@ Destructive operations, deprecation notices, resource warnings.
 
 Quick one-line informational message with blue info icon.
 
+**Syntax:**
 ```bash
 show_info <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
 show_info "Processing 142 items..."
 ```
+
+**Output:**
 ```
   ℹ  Processing 142 items...
 ```
 
-Process status, info messages, debug output.
+**Use cases:** Process status, info messages, debug output
 
 ---
 
@@ -192,15 +164,26 @@ Process status, info messages, debug output.
 
 Display important information in bordered boxes with icons, titles, messages, and optional action commands.
 
+**Syntax:**
 ```bash
 show_box <type> <title> <message> [command1] [command2] ...
+```
 
-# Example
+**Parameters:**
+- `type` - Visual style: `error` (red ✗), `warning` (orange ⚠), `info` (blue ℹ), `success` (green ✓)
+- `title` - Bold header text at the top
+- `message` - Main content (automatically wrapped)
+- `command...` - Optional commands shown under "To resolve:"
+
+**Example:**
+```bash
 show_box error "Connection Failed" \
     "Unable to reach database at localhost:5432" \
     "systemctl start postgresql" \
     "pg_isready -h localhost"
 ```
+
+**Output:**
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  ✗  Connection Failed                                    ┃
@@ -215,7 +198,11 @@ show_box error "Connection Failed" \
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
-Service failures with remediation (`error`), destructive operations (`warning`), multi-line status (`info`), deployment complete (`success`).
+**Use cases:**
+- `error` - Service failures, connection errors, exceptions with remediation
+- `warning` - Destructive operations, missing config, deprecations
+- `info` - Multi-line status, help text, informational blocks
+- `success` - Deployment complete, build success, operation confirmed
 
 ---
 
@@ -223,20 +210,30 @@ Service failures with remediation (`error`), destructive operations (`warning`),
 
 Visual progress indicator showing task completion percentage.
 
+**Syntax:**
 ```bash
 show_progress_bar <current> <total> [label]
+```
 
-# Example
+**Parameters:**
+- `current` - Current progress value (e.g., 6)
+- `total` - Total items to complete (e.g., 10)
+- `label` - Optional text shown before the progress bar
+
+**Example:**
+```bash
 for i in {1..10}; do
     show_progress_bar "$i" 10 "Installation"
     sleep 0.5
 done
 ```
+
+**Output:**
 ```
 Installation: ████████████░░░░░░░░ 60% (6/10)
 ```
 
-Downloads, uploads, builds, compilations, batch processing.
+**Use cases:** Downloads, uploads, builds, compilations, batch processing
 
 ---
 
@@ -244,10 +241,27 @@ Downloads, uploads, builds, compilations, batch processing.
 
 Track multi-step workflows with visual status indicators.
 
+**Syntax:**
 ```bash
 show_checklist <array_name>
+```
 
-# Example
+**Parameters:**
+- `array_name` - Name of array containing tasks (not `$array_name`)
+
+**Item format:** Each array item is a pipe-separated string:
+```
+"<status>|<task_name>|<details>"
+```
+
+**Status values:**
+- `done` - Completed (✓ green checkmark)
+- `active` - Currently running (● animated dot)
+- `pending` - Not started (○ hollow circle)
+- `skip` - Skipped/ignored (⊘ crossed circle)
+
+**Example:**
+```bash
 tasks=(
     "done|Build Docker image|Completed in 45s"
     "active|Run tests|156 tests running..."
@@ -255,13 +269,15 @@ tasks=(
 )
 show_checklist tasks
 ```
+
+**Output:**
 ```
   ✓  Build Docker image  Completed in 45s
   ●  Run tests  156 tests running...
   ○  Deploy to staging  Waiting
 ```
 
-CI/CD pipelines, multi-stage builds, deployment workflows, install scripts. Status values: `done`, `active`, `pending`, `skip`.
+**Use cases:** CI/CD pipelines, multi-stage builds, deployment workflows, install scripts
 
 ---
 
@@ -269,12 +285,23 @@ CI/CD pipelines, multi-stage builds, deployment workflows, install scripts. Stat
 
 Display titled sections with optional step counters.
 
+**Syntax:**
 ```bash
 show_section_header <title> [current_step] [total_steps] [subtitle]
+```
 
-# Example
+**Parameters:**
+- `title` - Main header text
+- `current_step` - Optional: Current step number (e.g., 2)
+- `total_steps` - Optional: Total number of steps (e.g., 4)
+- `subtitle` - Optional: Additional context text
+
+**Example:**
+```bash
 show_section_header "Deploy Application" 2 4 "Building Docker image"
 ```
+
+**Output:**
 ```
 ╭──────────────────────────────────────────────────────────╮
 │  Deploy Application                                      │
@@ -282,7 +309,7 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 ╰──────────────────────────────────────────────────────────╯
 ```
 
-Wizards, multi-step processes, guided setup, migration scripts.
+**Use cases:** Wizards, multi-step processes, guided setup, migration scripts
 
 ---
 
@@ -290,17 +317,25 @@ Wizards, multi-step processes, guided setup, migration scripts.
 
 Simple bold header for section titles.
 
+**Syntax:**
 ```bash
 show_header <title>
+```
 
-# Example
+**Parameters:**
+- `title` - Header text
+
+**Example:**
+```bash
 show_header "Installation"
 ```
+
+**Output:**
 ```
   Installation
 ```
 
-Section titles, script phase markers.
+**Use cases:** Section titles, script phase markers
 
 ---
 
@@ -308,17 +343,25 @@ Section titles, script phase markers.
 
 Muted subheader for subsections.
 
+**Syntax:**
 ```bash
 show_subheader <title>
+```
 
-# Example
+**Parameters:**
+- `title` - Subheader text
+
+**Example:**
+```bash
 show_subheader "Configuring environment..."
 ```
+
+**Output:**
 ```
   Configuring environment...
 ```
 
-Subsection headers, status text.
+**Use cases:** Subsection headers, status text
 
 ---
 
@@ -326,12 +369,21 @@ Subsection headers, status text.
 
 Decorative boxed header with optional subtitle.
 
+**Syntax:**
 ```bash
 show_header_box <title> [subtitle]
+```
 
-# Example
+**Parameters:**
+- `title` - Main header text
+- `subtitle` - Optional secondary text
+
+**Example:**
+```bash
 show_header_box "Deployment Pipeline"
 ```
+
+**Output:**
 ```
 ╭──────────────────────────────────────────────────────────╮
 │                                                          │
@@ -340,7 +392,7 @@ show_header_box "Deployment Pipeline"
 ╰──────────────────────────────────────────────────────────╯
 ```
 
-Script banners, tool headers, major sections.
+**Use cases:** Script banners, tool headers, major sections
 
 ---
 
@@ -348,15 +400,24 @@ Script banners, tool headers, major sections.
 
 Summary box with multiple key-value items.
 
+**Syntax:**
 ```bash
 show_summary <title> <item1> <item2> ...
+```
 
-# Example
+**Parameters:**
+- `title` - Box title
+- `item...` - List items to display
+
+**Example:**
+```bash
 show_summary "Deployment Complete" \
     "Environment: Production" \
     "Build: #432" \
     "Status: All systems operational"
 ```
+
+**Output:**
 ```
 ╭──────────────────────────────────────────────────────────╮
 │  [OK]  Deployment Complete                               │
@@ -367,7 +428,7 @@ show_summary "Deployment Complete" \
 ╰──────────────────────────────────────────────────────────╯
 ```
 
-Final status, build metadata, deployment summary.
+**Use cases:** Final status, build metadata, deployment summary
 
 ---
 
@@ -375,17 +436,23 @@ Final status, build metadata, deployment summary.
 
 Animated loading spinner (runs until killed).
 
+**Syntax:**
 ```bash
 show_spinner <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to show next to spinner
+
+**Example:**
+```bash
 show_spinner "Loading..." &
 SPINNER_PID=$!
 sleep 5
 kill $SPINNER_PID
 ```
 
-Network operations, unknown-duration tasks, blocking calls.
+**Use cases:** Network operations, unknown-duration tasks, blocking calls
 
 ---
 
@@ -393,16 +460,22 @@ Network operations, unknown-duration tasks, blocking calls.
 
 Start spinner in background (tracks PID automatically).
 
+**Syntax:**
 ```bash
 start_spinner <message>
+```
 
-# Example
+**Parameters:**
+- `message` - Text to show next to spinner
+
+**Example:**
+```bash
 start_spinner "Processing files..."
 # do work
 stop_spinner
 ```
 
-Managed spinner with auto PID tracking (cleaner than manual show_spinner).
+**Use cases:** Managed spinner with auto PID tracking (cleaner than manual show_spinner)
 
 ---
 
@@ -410,10 +483,13 @@ Managed spinner with auto PID tracking (cleaner than manual show_spinner).
 
 Stop background spinner started with `start_spinner`.
 
+**Syntax:**
 ```bash
 stop_spinner
+```
 
-# Example
+**Example:**
+```bash
 start_spinner "Downloading..."
 curl -O https://example.com/file.zip
 stop_spinner
@@ -426,16 +502,24 @@ show_success "Download complete"
 
 Enhanced text input with validation and password masking.
 
+**Syntax:**
 ```bash
 ask_input <prompt> [default] [mode]
+```
 
-# Example
+**Parameters:**
+- `prompt` - Question to ask
+- `default` - Default value if user presses Enter
+- `mode` - Validation mode: `text`, `password`, `email`, `number`
+
+**Example:**
+```bash
 name=$(ask_input "Your name" "John")
 email=$(ask_input "Email" "" "email")
 password=$(ask_input "Password" "" "password")
 ```
 
-Config input, credential collection, validated user input. Modes: `text`, `password`, `email`, `number`.
+**Use cases:** Config input, credential collection, validated user input
 
 ---
 
@@ -443,15 +527,23 @@ Config input, credential collection, validated user input. Modes: `text`, `passw
 
 Interactive list selection with arrow key navigation.
 
+**Syntax:**
 ```bash
 ask_list <prompt> <array_name> [mode]
+```
 
-# Example
+**Parameters:**
+- `prompt` - Question to ask
+- `array_name` - Name of array (not `$array`)
+- `mode` - `single` (default) or `multi`
+
+**Example:**
+```bash
 options=("Deploy" "Test" "Cancel")
 choice=$(ask_list "Select action:" options)
 ```
 
-Interactive menus, option selection, arrow-key navigation. Modes: `single`, `multi`.
+**Use cases:** Interactive menus, option selection, arrow-key navigation
 
 ---
 
@@ -459,16 +551,22 @@ Interactive menus, option selection, arrow-key navigation. Modes: `single`, `mul
 
 Ask yes/no question (alias for `prompt_confirm`).
 
+**Syntax:**
 ```bash
 ask_yes_no <question>
+```
 
-# Example
+**Parameters:**
+- `question` - Question to ask
+
+**Example:**
+```bash
 if ask_yes_no "Delete all files?"; then
     echo "Deleting..."
 fi
 ```
 
-Confirmation prompts, boolean decisions, destructive operation guards.
+**Use cases:** Confirmation prompts, boolean decisions, destructive operation guards
 
 ---
 
@@ -476,16 +574,23 @@ Confirmation prompts, boolean decisions, destructive operation guards.
 
 Yes/no confirmation prompt.
 
+**Syntax:**
 ```bash
 prompt_confirm <question> [default]
+```
 
-# Example
+**Parameters:**
+- `question` - Question to ask
+- `default` - Default answer: `y` or `n`
+
+**Example:**
+```bash
 if prompt_confirm "Continue?" "y"; then
     proceed
 fi
 ```
 
-Same as ask_yes_no, but with default value.
+**Use cases:** Same as ask_yes_no, but with default value
 
 ---
 
@@ -493,19 +598,29 @@ Same as ask_yes_no, but with default value.
 
 Key-value pair with aligned columns.
 
+**Syntax:**
 ```bash
 print_kv <key> <value> [width]
+```
 
-# Example
+**Parameters:**
+- `key` - Left-side label
+- `value` - Right-side value
+- `width` - Optional column width
+
+**Example:**
+```bash
 print_kv "Version" "2.0.1"
 print_kv "Status" "Running"
 ```
+
+**Output:**
 ```
   Version    2.0.1
   Status     Running
 ```
 
-Config display, system info, metadata output.
+**Use cases:** Config display, system info, metadata output
 
 ---
 
@@ -513,14 +628,20 @@ Config display, system info, metadata output.
 
 Code-styled command display (monospace box).
 
+**Syntax:**
 ```bash
 print_command <command>
+```
 
-# Example
+**Parameters:**
+- `command` - Command text to display
+
+**Example:**
+```bash
 print_command "npm install oiseau"
 ```
 
-Command examples, copy-paste snippets, install instructions.
+**Use cases:** Command examples, copy-paste snippets, install instructions
 
 ---
 
@@ -528,19 +649,27 @@ Command examples, copy-paste snippets, install instructions.
 
 Bulleted list item.
 
+**Syntax:**
 ```bash
 print_item <text>
+```
 
-# Example
+**Parameters:**
+- `text` - Item text
+
+**Example:**
+```bash
 print_item "First item"
 print_item "Second item"
 ```
+
+**Output:**
 ```
   • First item
   • Second item
 ```
 
-Bulleted lists, feature enumeration.
+**Use cases:** Bulleted lists, feature enumeration
 
 ---
 
@@ -548,19 +677,28 @@ Bulleted lists, feature enumeration.
 
 Numbered step with text.
 
+**Syntax:**
 ```bash
 print_step <number> <text>
+```
 
-# Example
+**Parameters:**
+- `number` - Step number
+- `text` - Step description
+
+**Example:**
+```bash
 print_step 1 "Clone repository"
 print_step 2 "Install dependencies"
 ```
+
+**Output:**
 ```
   1. Clone repository
   2. Install dependencies
 ```
 
-Numbered steps, installation procedures, tutorials.
+**Use cases:** Numbered steps, installation procedures, tutorials
 
 ---
 
@@ -568,14 +706,22 @@ Numbered steps, installation procedures, tutorials.
 
 Numbered list of next steps.
 
+**Syntax:**
 ```bash
 print_next_steps <step1> <step2> ...
+```
 
-# Example
+**Parameters:**
+- `step...` - List of steps
+
+**Example:**
+```bash
 print_next_steps \
     "Run tests: npm test" \
     "Deploy: npm run deploy"
 ```
+
+**Output:**
 ```
 Next steps:
 
@@ -583,7 +729,7 @@ Next steps:
   2. Deploy: npm run deploy
 ```
 
-Post-install actions, suggested next commands.
+**Use cases:** Post-install actions, suggested next commands
 
 ---
 
@@ -591,14 +737,20 @@ Post-install actions, suggested next commands.
 
 Section title with colored header.
 
+**Syntax:**
 ```bash
 print_section <title>
+```
 
-# Example
+**Parameters:**
+- `title` - Section title
+
+**Example:**
+```bash
 print_section "Configuration"
 ```
 
-Section dividers, output organization.
+**Use cases:** Section dividers, output organization
 
 ---
 
@@ -606,15 +758,21 @@ Section dividers, output organization.
 
 Display data in a formatted table.
 
+**Syntax:**
 ```bash
 show_table <array_name>
+```
 
-# Example
+**Parameters:**
+- `array_name` - Name of array containing rows (pipe-separated values)
+
+**Example:**
+```bash
 data=("Name|Age|City" "Alice|30|NYC" "Bob|25|LA")
 show_table data
 ```
 
-Tabular data, CSV-like output, formatted reports. Array items are pipe-separated values.
+**Use cases:** Tabular data, CSV-like output, formatted reports
 
 ---
 
@@ -622,14 +780,127 @@ Tabular data, CSV-like output, formatted reports. Array items are pipe-separated
 
 Display content in a pager (less/more).
 
+**Syntax:**
 ```bash
 show_pager <content>
+```
 
-# Example
+**Parameters:**
+- `content` - Text to display in pager
+
+**Example:**
+```bash
 show_pager "$(cat longfile.txt)"
 ```
 
-Large text output, manpage-style help, log viewing.
+**Use cases:** Large text output, manpage-style help, log viewing
+
+---
+
+## TERMINAL MODES
+
+Oiseau automatically detects terminal capabilities and adapts. Same code, three different outputs:
+
+```bash
+show_success "Build completed"
+show_box info "Status" "Deployment in progress"
+```
+
+### Rich Mode (UTF-8 + Color)
+
+**When:** Modern terminals (iTerm2, Alacritty, VS Code, Claude Code)
+
+```
+  ✓  Build completed
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ℹ  Status                                               ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                          ┃
+┃  Deployment in progress                                  ┃
+┃                                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+- Unicode box drawing (┏━┓ ╭─╮)
+- Unicode icons (✓ ✗ ⚠ ℹ)
+- Full 256-color palette
+- **Force:** `export OISEAU_MODE=rich`
+
+### Color Mode (ASCII + Color)
+
+**When:** Older terminals with color but no UTF-8
+
+```
+  [OK]  Build completed
++==========================================================+
+|  [i]  Status                                             |
++==========================================================+
+|                                                          |
+|  Deployment in progress                                  |
+|                                                          |
++==========================================================+
+```
+
+- ASCII box drawing (+==+)
+- ASCII icons ([OK] [X] [!] [i])
+- Full 256-color palette
+- **Force:** `export OISEAU_MODE=color`
+
+### Plain Mode (ASCII + No Color)
+
+**When:** Pipes, redirects, CI/CD, `NO_COLOR=1`
+
+```
+  [OK]  Build completed
++==========================================================+
+|  [i]  Status                                             |
++==========================================================+
+|                                                          |
+|  Deployment in progress                                  |
+|                                                          |
++==========================================================+
+```
+
+- ASCII box drawing (+==+)
+- ASCII icons ([OK] [X] [!] [i])
+- No colors (clean for logs)
+- **Triggers:** `./script.sh | tee log.txt`, `NO_COLOR=1`, `UI_DISABLE=1`
+- **Force:** `export OISEAU_MODE=plain`
+
+**Note:** `OISEAU_MODE` must be set **before** sourcing `oiseau.sh`.
+
+---
+
+## CUSTOMIZATION
+
+Three environment variables control Oiseau's appearance:
+
+| Variable | Values | Default | Purpose |
+|----------|--------|---------|---------|
+| `OISEAU_MODE` | `rich`, `color`, `plain` | Auto | Force terminal mode |
+| `OISEAU_BORDER_STYLE` | `rounded`, `double`, `ascii` | Auto | Force border style |
+| `OISEAU_BOX_WIDTH` | Number (20-200) | `60` | Override box width |
+
+Individual color overrides (ANSI 256-color codes):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `COLOR_ERROR` | `204` | Error message color |
+| `COLOR_SUCCESS` | `114` | Success message color |
+| `COLOR_WARNING` | `214` | Warning message color |
+| `COLOR_INFO` | `75` | Info message color |
+| `COLOR_HEADER` | `141` | Header text color |
+| `COLOR_MUTED` | `240` | Muted text color |
+
+**Example:**
+
+```bash
+export OISEAU_MODE=rich
+export OISEAU_BORDER_STYLE=double
+export OISEAU_BOX_WIDTH=80
+export COLOR_ERROR=196
+source ./oiseau.sh
+```
 
 ---
 
