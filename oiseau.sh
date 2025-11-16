@@ -1200,7 +1200,7 @@ ask_choice() {
     render_choice_menu() {
         # Clear previous display (except on first render)
         if [ "$1" != "first" ]; then
-            local lines_to_clear=$((${#items[@]} + 3))
+            local lines_to_clear=$((${#items[@]} + 2))
             for ((i=0; i<lines_to_clear; i++)); do
                 echo -ne "\033[1A\033[2K" >&2
             done
