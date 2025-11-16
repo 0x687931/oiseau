@@ -5,7 +5,8 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/oiseau.sh"
 
-clear
+# Force ASCII mode for GitHub web compatibility
+export OISEAU_MODE="ascii"
 
 # Header
 show_header_box "Oiseau" "Beautiful terminal UI library for Bash" "github.com/0x687931/oiseau"
