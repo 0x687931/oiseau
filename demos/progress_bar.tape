@@ -56,7 +56,7 @@ Type "  OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Ri
 Enter
 Type "  OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Color mode' 2"
 Enter
-Type "  UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Plain mode' 3"
+Type "  OISEAU_MODE=plain OISEAU_PROGRESS_ANIMATE=1 show_progress_bar \$i 100 'Plain mode' 3"
 Enter
 Type "  sleep 0.05"
 Enter

@@ -28,7 +28,7 @@ echo ''
 for i in {0..100}; do
   OISEAU_MODE=rich OISEAU_PROGRESS_ANIMATE=1 show_progress_bar "$i" 100 "Rich mode" 1
   OISEAU_MODE=color OISEAU_PROGRESS_ANIMATE=1 show_progress_bar "$i" 100 "Color mode" 2
-  UI_DISABLE=1 OISEAU_PROGRESS_ANIMATE=1 show_progress_bar "$i" 100 "Plain mode" 3
+  OISEAU_MODE=plain OISEAU_PROGRESS_ANIMATE=1 show_progress_bar "$i" 100 "Plain mode" 3
   sleep 0.05
 done
 

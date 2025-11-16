@@ -993,19 +993,13 @@ show_progress_bar() {
     if [ "$should_animate" = "1" ]; then
         if [ -n "$line_number" ]; then
             # Multi-line mode: use relative cursor positioning
-            if [ "$line_number" -eq 1 ]; then
-                # First bar: print on current line and save cursor
-                printf '%b\033[K' "${full_display}"
-                tput sc 2>/dev/null || printf '\0337'  # Save cursor position (ANSI fallback: ESC 7)
-            else
-                # Other bars: restore cursor, move down, print
-                tput rc 2>/dev/null || printf '\0338'  # Restore cursor (ANSI fallback: ESC 8)
-                local offset=$((line_number - 1))
-                tput cud "$offset" 2>/dev/null || printf '\033[%dB' "$offset"  # Move down N lines
-                printf '\r%b\033[K' "${full_display}"  # Print on that line
-            fi
+            # Move up to the line we want to write to
+            local up_offset=$((3 - line_number + 1))  # Assumes 3 total bars
+            tput cuu "$up_offset" 2>/dev/null || printf '\033[%dA' "$up_offset"  # Move up
+            printf '\r%b\033[K' "${full_display}"  # Print on that line
 
-            # Don't print newline in multi-line mode - let caller handle cleanup
+            # Move back down to bottom
+            tput cud "$up_offset" 2>/dev/null || printf '\033[%dB' "$up_offset"  # Move down
         else
             # Single-line mode: use carriage return (existing behavior)
             printf '\r%b\033[K' "${full_display}"
