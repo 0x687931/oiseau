@@ -237,7 +237,7 @@ test_auto_initialize() {
 # Banner
 echo ""
 echo "╭────────────────────────────────────────────────╮"
-echo "│  Resize Handler Validation Tests             │"
+echo "│  Resize Handler Validation Tests               │"
 echo "╰────────────────────────────────────────────────╯"
 echo ""
 
