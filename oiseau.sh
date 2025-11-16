@@ -666,31 +666,31 @@ show_header_box() {
     printf '%b%b' "${COLOR_HEADER}" "${BOLD}"
 
     # Top border
-    printf '  %b%s%b\n' "${BOX_DTL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DTR}"
+    printf '%b%s%b\n' "${BOX_DTL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DTR}"
 
     # Empty line
-    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
+    printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Title (word-wrapped if needed)
     # Security: Use printf %s for user content to prevent backslash injection
     echo "$title" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
+        printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
     done
 
     # Empty line
-    printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
+    printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Subtitle (word-wrapped if needed)
     # Security: Use printf %s for user content to prevent backslash injection
     if [ -n "$subtitle" ]; then
         echo "$subtitle" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-            printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
+            printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
         done
-        printf '  %b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
+        printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
     fi
 
     # Bottom border
-    printf '  %b%s%b\n' "${BOX_DBL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DBR}"
+    printf '%b%s%b\n' "${BOX_DBL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DBR}"
 
     echo -e "${RESET}"
 }
