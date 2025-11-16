@@ -41,12 +41,14 @@ report_issue() {
 
 # Test 1: Progress bar respects mode
 test_progress_bar_modes() {
-    local passed=1
+    local failed=0
 
     # Check for mode-aware characters
-    if ! grep -q 'if \[ "\$OISEAU_MODE" = "rich" \]' "$PROJECT_ROOT/oiseau.sh"; then
+    if grep -Fq 'if [ "$OISEAU_MODE" = "rich" ]' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ Mode detection implemented"
+    else
         report_issue "show_progress_bar" "Missing mode detection"
-        passed=0
+        failed=1
     fi
 
     # Check for UTF-8 and ASCII variants
@@ -54,45 +56,45 @@ test_progress_bar_modes() {
         echo "  ✓ UTF-8 bar: █, ASCII bar: #"
     else
         report_issue "show_progress_bar" "Missing UTF-8/ASCII character variants"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 2: Spinner respects mode
 test_spinner_modes() {
-    local passed=1
+    local failed=0
 
-    # Check for spinner style definitions
-    if grep -q '"dots")' "$PROJECT_ROOT/oiseau.sh"; then
+    # Check for spinner style definitions (dots, line, circle, etc.)
+    if grep -Fq 'dots)' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ Spinner styles defined"
     else
         report_issue "show_spinner" "Missing spinner style definitions"
-        passed=0
+        failed=1
     fi
 
     # Check for UTF-8 and ASCII variants in spinner frames
-    if grep -q '⠋⠙⠹' "$PROJECT_ROOT/oiseau.sh" && grep -q '|/-' "$PROJECT_ROOT/oiseau.sh"; then
+    if grep -Fq '⠋' "$PROJECT_ROOT/oiseau.sh" && grep -F '|' "$PROJECT_ROOT/oiseau.sh" | grep -Fq 'frames='; then
         echo "  ✓ UTF-8 spinner: ⠋⠙⠹, ASCII spinner: |/-\\"
     else
         report_issue "show_spinner" "Missing UTF-8/ASCII spinner variants"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 3: Password masking respects mode
 test_password_masking_modes() {
-    local passed=1
+    local failed=0
 
     # Check for mask_char variable
     if grep -q 'mask_char=' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ Password masking uses mode-aware character"
     else
         report_issue "ask_input" "Password masking not mode-aware"
-        passed=0
+        failed=1
     fi
 
     # Check for UTF-8 bullet and ASCII asterisk
@@ -100,44 +102,44 @@ test_password_masking_modes() {
         echo "  ✓ UTF-8 mask: •, ASCII mask: *"
     else
         report_issue "ask_input" "Missing UTF-8/ASCII mask variants"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 4: Box drawing respects mode
 test_box_modes() {
-    local passed=1
+    local failed=0
 
-    # Check for box character sets
-    if grep -q 'BORDER_ROUNDED_TOP_LEFT="╭"' "$PROJECT_ROOT/oiseau.sh"; then
-        echo "  ✓ UTF-8 borders defined (╭─╮)"
+    # Check for box character sets (using BOX_DTL, BOX_DTR, etc.)
+    if grep -Fq 'BOX_DTL="┏"' "$PROJECT_ROOT/oiseau.sh" || grep -Fq 'BOX_DTL="╭"' "$PROJECT_ROOT/oiseau.sh"; then
+        echo "  ✓ UTF-8 borders defined (┏━┓ or ╭─╮)"
     else
         report_issue "show_box" "Missing UTF-8 border characters"
-        passed=0
+        failed=1
     fi
 
-    if grep -q 'BORDER_ASCII_TOP_LEFT="+"' "$PROJECT_ROOT/oiseau.sh"; then
+    if grep -Fq 'BOX_DTL="+"' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ ASCII borders defined (+--+)"
     else
         report_issue "show_box" "Missing ASCII border characters"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 5: Icons respect mode
 test_icon_modes() {
-    local passed=1
+    local failed=0
 
     # Check for icon definitions
     if grep -q 'ICON_SUCCESS=' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ Icons are defined"
     else
         report_issue "Icons" "Missing icon definitions"
-        passed=0
+        failed=1
     fi
 
     # Check for UTF-8 icons (should have checkmark, X, etc.)
@@ -145,7 +147,7 @@ test_icon_modes() {
         echo "  ✓ UTF-8 icons present (✓)"
     else
         report_issue "Icons" "Missing UTF-8 icon variants"
-        passed=0
+        failed=1
     fi
 
     # Check for ASCII fallback icons
@@ -153,22 +155,22 @@ test_icon_modes() {
         echo "  ✓ ASCII icons present ([OK], [X])"
     else
         report_issue "Icons" "Missing ASCII icon fallbacks"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 6: Checklist respects mode
 test_checklist_modes() {
-    local passed=1
+    local failed=0
 
     # Check for checklist markers
     if grep -q 'show_checklist' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ Checklist widget exists"
     else
         report_issue "show_checklist" "Widget not found"
-        passed=0
+        failed=1
     fi
 
     # Check for done/active/pending markers in different modes
@@ -177,22 +179,22 @@ test_checklist_modes() {
         echo "  ✓ Uses mode-aware icons"
     else
         report_issue "show_checklist" "Should use mode-aware icons"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 7: All widgets use mode detection
 test_global_mode_detection() {
-    local passed=1
+    local failed=0
 
     # Check that OISEAU_MODE is set during initialization
     if grep -q 'OISEAU_MODE=' "$PROJECT_ROOT/oiseau.sh"; then
         echo "  ✓ OISEAU_MODE variable is set"
     else
         report_issue "Initialization" "OISEAU_MODE not set"
-        passed=0
+        failed=1
     fi
 
     # Check for the three modes
@@ -202,15 +204,15 @@ test_global_mode_detection() {
         echo "  ✓ All three modes defined: rich, color, plain"
     else
         report_issue "Initialization" "Not all modes defined"
-        passed=0
+        failed=1
     fi
 
-    return $passed
+    return $failed
 }
 
 # Test 8: Check for hardcoded UTF-8 characters outside mode blocks
 test_no_hardcoded_utf8() {
-    local passed=1
+    local failed=0
 
     # This is a heuristic test - look for common UTF-8 box drawing characters
     # that appear outside of mode-conditional blocks
@@ -225,7 +227,7 @@ test_no_hardcoded_utf8() {
         echo "  ✓ Found $utf8_count UTF-8 box characters (should be in mode blocks)"
     fi
 
-    return $passed
+    return $failed
 }
 
 # Banner

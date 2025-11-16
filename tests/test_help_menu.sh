@@ -149,7 +149,7 @@ paged_items=(
     "key2|description"
     "key3|description"
 )
-output=$(OISEAU_HELP_NO_KEYPRESS=1 show_help_paged "Test" paged_items 2 20 2>/dev/null)
+output=$(OISEAU_HELP_NO_KEYPRESS=1 show_help_paged "Test" paged_items 20 2>/dev/null)
 if [ $? -eq 0 ] && echo "$output" | grep -q "key1"; then
     echo "✓ show_help_paged works with pagination"
     ((TESTS_PASSED++))
