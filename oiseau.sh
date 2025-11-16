@@ -72,8 +72,7 @@ else
 fi
 
 # Get terminal width (cached)
-OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
-export OISEAU_WIDTH
+export OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
 
 # ==============================================================================
 # COLOR DEFINITIONS (ANSI 256-Color Palette)
@@ -159,8 +158,7 @@ _escape_input() {
 _visible_len() {
     local str="$1"
     # Remove ANSI codes before calculating length
-    local clean
-    clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
     echo "${#clean}"
 }
 
@@ -169,13 +167,13 @@ _visible_len() {
 _display_width() {
     local str="$1"
     # Remove ANSI codes first
-    local clean
-    clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
+    local clean=$(echo -e "$str" | sed $'s/\033[^m]*m//g')
 
     # Try perl for accurate display width calculation if the module is available
     if command -v perl >/dev/null 2>&1; then
         local perl_result
-        if perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null) && [ -n "$perl_result" ]; then
+        perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$perl_result" ]; then
             echo "$perl_result"
             return
         fi
@@ -185,7 +183,7 @@ _display_width() {
     # This handles CJK, emojis, and other wide characters more accurately
     if command -v perl >/dev/null 2>&1; then
         local perl_width
-        if perl_width=$(echo -n "$clean" | perl -C -ne '
+        perl_width=$(echo -n "$clean" | perl -C -ne '
             use utf8;
             binmode(STDIN, ":utf8");
             binmode(STDOUT, ":utf8");
@@ -242,7 +240,8 @@ _display_width() {
                 }
             }
             print $width;
-        ' 2>/dev/null) && [ -n "$perl_width" ]; then
+        ' 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$perl_width" ]; then
             echo "$perl_width"
             return
         fi
@@ -250,22 +249,19 @@ _display_width() {
 
     # Last resort: basic heuristic for systems without perl
     # This is less accurate but better than nothing
-    local char_count
-    char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
+    local char_count=$(echo -n "$clean" | wc -m | tr -d ' ')
 
     # Count characters that are likely wide (multibyte UTF-8 sequences of 3+ bytes)
     # CJK and emoji are typically 3-4 byte sequences
     # Use LC_ALL=C to get actual byte count instead of character count
-    local byte_count
-    byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
+    local byte_count=$(LC_ALL=C printf %s "$clean" | wc -c | tr -d ' ')
     local estimated_wide=$(( (byte_count - char_count) / 2 ))
 
     # Adjust for common icon characters that are narrow in modern terminals
     # These have 3-byte UTF-8 encoding but render as width 1
     local icon_count=0
     for icon in "✓" "✗" "⚠" "ℹ" "○" "●" "⊘"; do
-        local count
-        count=$(echo -n "$clean" | grep -o "$icon" 2>/dev/null | wc -l | tr -d ' ')
+        local count=$(echo -n "$clean" | grep -o "$icon" 2>/dev/null | wc -l | tr -d ' ')
         icon_count=$((icon_count + count))
     done
     estimated_wide=$((estimated_wide - icon_count))
@@ -283,8 +279,7 @@ _display_width() {
 _pad_to_width() {
     local text="$1"
     local target_width="$2"
-    local current_width
-    current_width=$(_display_width "$text")
+    local current_width=$(_display_width "$text")
     local padding=$((target_width - current_width))
 
     if [ "$padding" -gt 0 ]; then
@@ -302,12 +297,57 @@ _repeat_char() {
     printf "%${count}s" | tr ' ' "$char"
 }
 
+# Truncate text to a specific display width with ellipsis
+# Usage: _truncate_to_width "long text here" 20
+# Returns: Text truncated to fit within the display width, with "..." appended
+_truncate_to_width() {
+    local text="$1"
+    local max_width="$2"
+    local current_width
+    current_width=$(_display_width "$text")
+
+    # If text fits, return as-is
+    if [ "$current_width" -le "$max_width" ]; then
+        echo -n "$text"
+        return
+    fi
+
+    # Need to truncate - reserve 3 chars for ellipsis
+    local target_width=$((max_width - 3))
+    if [ "$target_width" -lt 1 ]; then
+        # Max width too small, just return ellipsis
+        echo -n "..."
+        return
+    fi
+
+    # Character-by-character truncation to respect display width
+    # This ensures we don't cut multibyte characters in the middle
+    local result=""
+    local i=0
+    local text_len=${#text}
+
+    while [ "$i" -lt "$text_len" ]; do
+        local char="${text:$i:1}"
+        local test_result="${result}${char}"
+        local test_width
+        test_width=$(_display_width "$test_result")
+
+        if [ "$test_width" -le "$target_width" ]; then
+            result="$test_result"
+            i=$((i + 1))
+        else
+            break
+        fi
+    done
+
+    echo -n "${result}..."
+}
+
 # Truncate string to max width with ellipsis
 _truncate() {
     local str="$1"
     local max_width="$2"
-    local visible_len
-    visible_len=$(_visible_len "$str")
+    local visible_len=$(_visible_len "$str")
 
     if [ "$visible_len" -le "$max_width" ]; then
         echo "$str"
@@ -334,29 +374,25 @@ _clamp_width() {
 
 # Show success message with green checkmark
 show_success() {
-    local msg
-    msg="$(_escape_input "$1")"
+    local msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  $msg"
 }
 
 # Show error message with red X
 show_error() {
-    local msg
-    msg="$(_escape_input "$1")"
+    local msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_ERROR}${ICON_ERROR}${RESET}  $msg"
 }
 
 # Show warning message with orange warning icon
 show_warning() {
-    local msg
-    msg="$(_escape_input "$1")"
+    local msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_WARNING}${ICON_WARNING}${RESET}  $msg"
 }
 
 # Show info message with blue info icon
 show_info() {
-    local msg
-    msg="$(_escape_input "$1")"
+    local msg="$(_escape_input "$1")"
     echo -e "  ${COLOR_INFO}${ICON_INFO}${RESET}  $msg"
 }
 
@@ -367,22 +403,19 @@ show_info() {
 # Show section header with optional step counter
 # Usage: show_section_header "Title" [step_num] [total_steps] [subtitle]
 show_section_header() {
-    local title
-    title="$(_escape_input "$1")"
+    local title="$(_escape_input "$1")"
     local step_num="${2:-}"
     local total_steps="${3:-}"
     local subtitle="${4:-}"
 
-    local width
-    width=$(_clamp_width 60)
+    local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo ""
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
 
     # Title line
-    local title_display_width
-    title_display_width=$(_display_width "$title")
+    local title_display_width=$(_display_width "$title")
     local title_padding=$((inner_width - title_display_width - 2))
     echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_HEADER}${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
 
@@ -392,8 +425,7 @@ show_section_header() {
         if [ -n "$subtitle" ]; then
             step_text="${step_text} › ${subtitle}"
         fi
-        local step_display_width
-        step_display_width=$(_display_width "$step_text")
+        local step_display_width=$(_display_width "$step_text")
         local step_padding=$((inner_width - step_display_width - 2))
         echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_MUTED}${step_text}${RESET}$(_repeat_char " " "$step_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     fi
@@ -404,28 +436,23 @@ show_section_header() {
 
 # Simple header
 show_header() {
-    local title
-    title="$(_escape_input "$1")"
+    local title="$(_escape_input "$1")"
     echo -e "\n${COLOR_HEADER}${BOLD}${title}${RESET}\n"
 }
 
 # Muted subheader
 show_subheader() {
-    local title
-    title="$(_escape_input "$1")"
+    local title="$(_escape_input "$1")"
     echo -e "${COLOR_MUTED}${title}${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
 # Usage: show_header_box "title" ["subtitle"]
 show_header_box() {
-    local title
-    title="$(_escape_input "$1")"
-    local subtitle
-    subtitle="$(_escape_input "$2")"
+    local title="$(_escape_input "$1")"
+    local subtitle="$(_escape_input "$2")"
 
-    local width
-    width=$(_clamp_width 60)
+    local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo ""
@@ -468,10 +495,8 @@ show_header_box() {
 # Types: error, warning, info, success
 show_box() {
     local type="$1"; shift
-    local title
-    title="$(_escape_input "$1")"; shift
-    local content
-    content="$(_escape_input "$1")"; shift
+    local title="$(_escape_input "$1")"; shift
+    local message="$(_escape_input "$1")"; shift
     local commands=("$@")
 
     # Determine colors and icon based on type
@@ -483,8 +508,7 @@ show_box() {
         *)       color="$COLOR_INFO"; icon="$ICON_INFO" ;;
     esac
 
-    local width
-    width=$(_clamp_width 60)
+    local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     # Top border
@@ -501,7 +525,7 @@ show_box() {
     echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "" "$inner_width")${color}${BOX_DV}${RESET}"
 
     # Message (word-wrapped if needed)
-    echo "$content" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
+    echo "$message" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
         echo -e "${color}${BOX_DV}${RESET}$(_pad_to_width "  $line" "$inner_width")${color}${BOX_DV}${RESET}"
     done
 
@@ -572,8 +596,7 @@ show_progress_bar() {
     fi
 
     # Sanitize label
-    local safe_label
-    safe_label="$(_escape_input "$label")"
+    local safe_label="$(_escape_input "$label")"
 
     # Calculate progress
     local percent=$((current * 100 / total))
@@ -590,9 +613,8 @@ show_progress_bar() {
             should_animate=1
         fi
     else
-        # Auto-detect: animate if stdout is a TTY and not plain mode
-        # Check at call time (not source time) to handle redirected output
-        if [ -t 1 ] && [ "$OISEAU_MODE" != "plain" ]; then
+        # Auto-detect: animate if TTY and not plain mode
+        if [ "$OISEAU_IS_TTY" = "1" ] && [ "$OISEAU_MODE" != "plain" ]; then
             should_animate=1
         fi
     fi
@@ -613,8 +635,7 @@ show_progress_bar() {
             empty_char="-"
         fi
 
-        local bar
-        bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
+        local bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
         bar_display="${bar} ${percent}%"
     fi
 
@@ -675,23 +696,20 @@ show_summary() {
     local title="$1"; shift
     local items=("$@")
 
-    local width
-    width=$(_clamp_width 60)
+    local width=$(_clamp_width 60)
     local inner_width=$((width - 2))
 
     echo -e "${COLOR_BORDER}${BOX_RTL}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_RTR}${RESET}"
 
     local title_content="  ${ICON_SUCCESS}  ${title}"
-    local title_display_width
-    title_display_width=$(_display_width "$title_content")
+    local title_display_width=$(_display_width "$title_content")
     local title_padding=$((inner_width - title_display_width))
     echo -e "${COLOR_BORDER}${BOX_V}${RESET}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${BOLD}${title}${RESET}$(_repeat_char " " "$title_padding")${COLOR_BORDER}${BOX_V}${RESET}"
 
     echo -e "${COLOR_BORDER}${BOX_VR}$(_repeat_char "${BOX_H}" "$inner_width")${BOX_VL}${RESET}"
 
     for item in "${items[@]}"; do
-        local item_display_width
-        item_display_width=$(_display_width "$item")
+        local item_display_width=$(_display_width "$item")
         local item_padding=$((inner_width - item_display_width - 2))
         echo -e "${COLOR_BORDER}${BOX_V}${RESET}  $item$(_repeat_char " " "$item_padding")${COLOR_BORDER}${BOX_V}${RESET}"
     done
@@ -726,6 +744,261 @@ prompt_confirm() {
 # Ask yes/no question
 ask_yes_no() {
     prompt_confirm "$@"
+}
+
+#===============================================================================
+# FUNCTION: ask_choice
+# DESCRIPTION: Multi-choice selection with automatic yes/no detection
+# PARAMETERS:
+#   $1 - prompt (string, required): Prompt message
+#   $2 - array_name (string, optional): Name of array variable with choices
+#   $3 - default (string/number, optional): Default choice (1-N for multi, y/n for binary)
+# RETURNS: Selected choice text (not index), 0 for yes, 1 for no, or error
+# MODES:
+#   Yes/No (Binary):   ask_choice "Continue?" "" "y"
+#   Multi-Choice:      ask_choice "Select option:" my_options "1"
+# BEHAVIOR:
+#   - Auto-detects yes/no (no array_name) vs multi-choice (array provided)
+#   - Non-TTY: numbered list fallback for multi-choice, standard y/n for binary
+#   - TTY with multi-choice: interactive numbered selection (1-N)
+#   - Sanitizes all input and prompts for security
+#   - Default selection works for both modes
+# EXAMPLE:
+#   # Binary yes/no
+#   if ask_choice "Continue?" "" "y"; then
+#     show_success "Confirmed"
+#   fi
+#
+#   # Multi-choice menu
+#   options=("Option A" "Option B" "Option C")
+#   selected=$(ask_choice "Choose one:" options "1")
+#   echo "You selected: $selected"
+#===============================================================================
+ask_choice() {
+    local prompt="$1"
+    local array_name="${2:-}"
+    local default="${3:-}"
+
+    # Validate inputs
+    if [ -z "$prompt" ]; then
+        echo "ERROR: ask_choice requires prompt argument" >&2
+        return 1
+    fi
+
+    # Sanitize prompt
+    local safe_prompt="$(_escape_input "$prompt")"
+
+    # BINARY MODE: No array provided - treat as yes/no
+    if [ -z "$array_name" ]; then
+        # Use default if provided, otherwise 'n'
+        local default_choice="${default:-n}"
+
+        # Normalize default to y or n
+        case "$default_choice" in
+            y|Y) default_choice="y" ;;
+            n|N) default_choice="n" ;;
+            *) default_choice="n" ;;
+        esac
+
+        # Build prompt with default indicator
+        local prompt_text
+        if [ "$default_choice" = "y" ]; then
+            prompt_text="${safe_prompt} [Y/n]: "
+        else
+            prompt_text="${safe_prompt} [y/N]: "
+        fi
+
+        echo -ne "${COLOR_INFO}${ICON_INFO}${RESET}  ${prompt_text}"
+        read -r response
+
+        response="${response:-$default_choice}"
+        [[ "$response" =~ ^[Yy] ]]
+        return $?
+    fi
+
+    # MULTI-CHOICE MODE: Array provided
+    # Load array items using eval for bash 3.x compatibility
+    eval "local items=(\"\${${array_name}[@]}\")"
+
+    if [ ${#items[@]} -eq 0 ]; then
+        echo "ERROR: ask_choice requires non-empty array" >&2
+        return 1
+    fi
+
+    # Validate default is numeric if provided
+    if [ -n "$default" ]; then
+        if ! [[ "$default" =~ ^[0-9]+$ ]] || [ "$default" -lt 1 ] || [ "$default" -gt ${#items[@]} ]; then
+            echo "ERROR: ask_choice default must be between 1 and ${#items[@]}" >&2
+            return 1
+        fi
+    fi
+
+    # NON-TTY FALLBACK: Numbered list
+    if [ "$OISEAU_IS_TTY" != "1" ]; then
+        echo "$safe_prompt" >&2
+        local i=1
+        for item in "${items[@]}"; do
+            local safe_item="$(_escape_input "$item")"
+            if [ -n "$default" ] && [ "$i" -eq "$default" ]; then
+                echo "  ${COLOR_INFO}${i})${RESET} ${COLOR_SUCCESS}${safe_item}${RESET} (default)" >&2
+            else
+                echo "  $i) $safe_item" >&2
+            fi
+            i=$((i + 1))
+        done
+
+        # Show default indicator in prompt
+        local default_text=""
+        if [ -n "$default" ]; then
+            default_text=" (default: $default)"
+        fi
+        echo -n "Enter number (1-${#items[@]})${default_text}: " >&2
+        read -r choice
+
+        # Use default if empty
+        if [ -z "$choice" ] && [ -n "$default" ]; then
+            choice="$default"
+        fi
+
+        # Validate choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#items[@]} ]; then
+            local safe_result="$(_escape_input "${items[$((choice - 1))]}")"
+            echo "$safe_result"
+            return 0
+        else
+            echo "ERROR: Invalid selection. Must be between 1 and ${#items[@]}" >&2
+            return 1
+        fi
+    fi
+
+    # INTERACTIVE TTY MODE: Numbered selection with keyboard navigation
+    local selected_index=0
+
+    # If default provided, convert to 0-based index
+    if [ -n "$default" ]; then
+        selected_index=$((default - 1))
+    fi
+
+    # Mode-aware visual indicators
+    local cursor_char=">"
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        cursor_char="›"
+    fi
+
+    # Helper function to render the choice menu
+    render_choice_menu() {
+        # Clear previous display (except on first render)
+        if [ "$1" != "first" ]; then
+            local lines_to_clear=$((${#items[@]} + 3))
+            for ((i=0; i<lines_to_clear; i++)); do
+                echo -ne "\033[1A\033[2K" >&2
+            done
+        fi
+
+        # Print prompt
+        echo -e "${COLOR_INFO}${safe_prompt}${RESET}" >&2
+
+        # Print numbered items
+        for ((i=0; i<${#items[@]}; i++)); do
+            local item="${items[$i]}"
+            local safe_item="$(_escape_input "$item")"
+            local prefix="  "
+            local num_display="$((i + 1))"
+
+            if [ "$i" -eq "$selected_index" ]; then
+                # Highlight selected item
+                echo -e "${prefix}${COLOR_INFO}${cursor_char}${RESET} ${COLOR_SUCCESS}${BOLD}${num_display}. ${safe_item}${RESET}" >&2
+            else
+                # Normal item
+                if [ -n "$default" ] && [ "$i" -eq "$((default - 1))" ]; then
+                    echo -e "${prefix}  ${COLOR_MUTED}${num_display}. ${safe_item} (default)${RESET}" >&2
+                else
+                    echo -e "${prefix}  ${num_display}. ${safe_item}" >&2
+                fi
+            fi
+        done
+
+        # Print help text
+        echo -e "${COLOR_DIM}[↑↓/jk:Navigate | Enter:Select | q:Cancel]${RESET}" >&2
+    }
+
+    # Initial render
+    render_choice_menu "first"
+
+    # Read keyboard input and handle selection
+    while true; do
+        # Read single character
+        IFS= read -r -s -n1 key
+
+        # Handle escape sequences (arrow keys)
+        if [ "$key" = $'\x1b' ]; then
+            read -r -s -n2 -t 0.1 key
+        fi
+
+        case "$key" in
+            '[A'|'k')  # Up arrow or k
+                selected_index=$(( (selected_index - 1 + ${#items[@]}) % ${#items[@]} ))
+                render_choice_menu
+                ;;
+            '[B'|'j')  # Down arrow or j
+                selected_index=$(( (selected_index + 1) % ${#items[@]} ))
+                render_choice_menu
+                ;;
+            '')  # Enter - confirm selection
+                echo "" >&2
+                local safe_result="$(_escape_input "${items[$selected_index]}")"
+                echo "$safe_result"
+                return 0
+                ;;
+            'q'|'Q'|$'\x1b')  # q or Esc - cancel
+                echo "" >&2
+                echo "ERROR: Selection cancelled" >&2
+                return 1
+                ;;
+        esac
+    done
+}
+
+#===============================================================================
+# FUNCTION: ask_quit
+# DESCRIPTION: Ask for quit confirmation with optional message
+# PARAMETERS:
+#   $1 - message (string, optional): Custom confirmation message
+# ENVIRONMENT VARIABLES:
+#   OISEAU_QUIT_CONFIRM - Enable quit confirmation (0=disabled, 1=enabled)
+# RETURNS: 0 for yes/quit allowed, 1 for no/quit denied
+# BEHAVIOR:
+#   - If OISEAU_QUIT_CONFIRM=0 (default): returns 0 immediately (quit allowed)
+#   - If OISEAU_QUIT_CONFIRM=1: shows warning box + asks confirmation
+#   - Uses ask_yes_no for user confirmation
+#   - Returns the confirmation result's exit code
+# EXAMPLE:
+#   if ask_quit "Exit TUI application?"; then
+#       # User confirmed quit, proceed with cleanup
+#       cleanup
+#   else
+#       # User cancelled quit, return to TUI
+#       continue_running
+#   fi
+#===============================================================================
+ask_quit() {
+    local message="${1:-Are you sure you want to quit?}"
+
+    # Check if quit confirmation is enabled
+    # Default: OISEAU_QUIT_CONFIRM=0 (disabled, allow quit immediately)
+    local confirm_enabled="${OISEAU_QUIT_CONFIRM:-0}"
+
+    # If disabled, return 0 (allow quit)
+    if [ "$confirm_enabled" != "1" ]; then
+        return 0
+    fi
+
+    # If enabled, show warning box and ask for confirmation
+    show_box warning "Quit Application" "$message"
+
+    # Use ask_yes_no for confirmation (returns 0 for yes, 1 for no)
+    # Note: ask_yes_no returns 0 if user confirms, 1 if they decline
+    ask_yes_no "Proceed with quit?" "n"
 }
 
 #===============================================================================
@@ -1158,8 +1431,7 @@ show_spinner() {
     local message="${1:-Loading...}"
 
     # Sanitize input
-    local safe_message
-    safe_message="$(_escape_input "$message")"
+    local safe_message="$(_escape_input "$message")"
 
     # Non-TTY: just print message once and return
     if [ "$OISEAU_IS_TTY" != "1" ]; then
@@ -1211,8 +1483,7 @@ show_spinner() {
         fps=10  # Fallback to default
     fi
 
-    local delay
-    delay=$(awk "BEGIN {print 1/$fps}")
+    local delay=$(awk "BEGIN {print 1/$fps}")
     local frame_idx=0
     local num_frames=${#frames[@]}
 
@@ -1220,7 +1491,6 @@ show_spinner() {
     echo -en "\033[?25l"
 
     # Cleanup on exit - clear line and show cursor, then exit
-    # shellcheck disable=SC2329  # Function is invoked via trap
     cleanup_spinner() {
         echo -en "\r\033[K\033[?25h"
         trap - EXIT INT TERM  # Remove trap to prevent recursion
@@ -1293,209 +1563,797 @@ stop_spinner() {
 }
 
 # ==============================================================================
+# TABLE WIDGET
+# ==============================================================================
+
+#===============================================================================
+# FUNCTION: show_table
+# DESCRIPTION: Display a formatted table with headers and borders
+# PARAMETERS:
+#   $1 - array_name (string, required): Name of array variable containing table data
+#   $2 - num_cols (number, required): Number of columns
+#   $3 - title (string, optional): Table title
+#   $4 - col_widths (string, optional): Comma-separated column widths (auto if not provided)
+# ARRAY FORMAT:
+#   Flat array with row-major order: [col1, col2, col3, col1, col2, col3, ...]
+#   First row is treated as header row
+# RETURNS: 0 on success, 1 on error
+# MODES:
+#   Rich:  UTF-8 box drawing characters (─│┌┐└┘├┤)
+#   Color: ASCII box drawing (+|-||)
+#   Plain: Minimal ASCII table
+# BEHAVIOR:
+#   - Calculates column widths automatically if not provided
+#   - Caches width calculations for performance (O(n) scan)
+#   - Truncates content with ellipsis if it exceeds column width
+#   - Handles CJK/wide characters correctly via _display_width
+#   - Header row uses bold styling
+#   - Borders adapt to terminal mode (UTF-8/ASCII/Plain)
+# EXAMPLE:
+#   data=("Name" "Age" "City" "Alice" "30" "NYC" "Bob" "25" "LA")
+#   show_table data 3 "Users"
+#   show_table data 3 "Users" "20,10,15"  # Custom column widths
+#===============================================================================
+show_table() {
+    local array_name="$1"
+    local num_cols="$2"
+    local title="${3:-}"
+    local col_widths_spec="${4:-}"
+
+    # Validate inputs
+    if [ -z "$array_name" ] || [ -z "$num_cols" ]; then
+        echo "ERROR: show_table requires array_name and num_cols arguments" >&2
+        return 1
+    fi
+
+    if ! [[ "$num_cols" =~ ^[0-9]+$ ]] || [ "$num_cols" -lt 1 ]; then
+        echo "ERROR: num_cols must be a positive integer" >&2
+        return 1
+    fi
+
+    # Load array using eval for bash 3.x compatibility
+    eval "local table_data=(\"\${${array_name}[@]}\")"
+
+    if [ ${#table_data[@]} -eq 0 ]; then
+        echo "ERROR: show_table requires non-empty array" >&2
+        return 1
+    fi
+
+    # Validate array size is multiple of num_cols
+    if [ $(( ${#table_data[@]} % num_cols )) -ne 0 ]; then
+        echo "ERROR: array size must be multiple of num_cols" >&2
+        return 1
+    fi
+
+    local num_rows=$(( ${#table_data[@]} / num_cols ))
+
+    # Sanitize all table data
+    local -a parsed_rows=()
+    for cell in "${table_data[@]}"; do
+        parsed_rows+=("$(_escape_input "$cell")")
+    done
+
+    # Sanitize title
+    local safe_title=""
+    if [ -n "$title" ]; then
+        safe_title="$(_escape_input "$title")"
+    fi
+
+    # Determine border characters based on mode
+    local border_h border_v border_tl border_tr border_bl border_br
+    local border_ml border_mr border_cross
+
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        border_h="─"
+        border_v="│"
+        border_tl="┌"
+        border_tr="┐"
+        border_bl="└"
+        border_br="┘"
+        border_ml="├"
+        border_mr="┤"
+        border_cross="┼"
+    elif [ "$OISEAU_MODE" = "color" ] || [ "$OISEAU_MODE" = "plain" ]; then
+        border_h="-"
+        border_v="|"
+        border_tl="+"
+        border_tr="+"
+        border_bl="+"
+        border_br="+"
+        border_ml="+"
+        border_mr="+"
+        border_cross="+"
+    fi
+
+    # Calculate column widths
+    local -a col_max_widths=()
+
+    # Parse custom widths if provided
+    if [ -n "$col_widths_spec" ]; then
+        IFS=',' read -ra col_max_widths <<< "$col_widths_spec"
+
+        # Validate we have correct number of widths
+        if [ ${#col_max_widths[@]} -ne "$num_cols" ]; then
+            echo "ERROR: col_widths must specify exactly $num_cols values" >&2
+            return 1
+        fi
+
+        # Validate all widths are numeric
+        for width in "${col_max_widths[@]}"; do
+            if ! [[ "$width" =~ ^[0-9]+$ ]]; then
+                echo "ERROR: col_widths must be numeric values" >&2
+                return 1
+            fi
+        done
+    else
+        # Auto-calculate widths based on content (cached approach)
+        for ((c=0; c<num_cols; c++)); do
+            col_max_widths[$c]=0
+        done
+
+        # Single pass through all cells to find max width per column
+        for ((r=0; r<num_rows; r++)); do
+            for ((c=0; c<num_cols; c++)); do
+                local idx=$((r * num_cols + c))
+                local cell="${parsed_rows[$idx]}"
+                local cell_width
+                cell_width=$(_display_width "$cell")
+
+                if [ "$cell_width" -gt "${col_max_widths[$c]}" ]; then
+                    col_max_widths[$c]=$cell_width
+                fi
+            done
+        done
+
+        # Ensure minimum width of 3 for each column
+        for ((c=0; c<num_cols; c++)); do
+            if [ "${col_max_widths[$c]}" -lt 3 ]; then
+                col_max_widths[$c]=3
+            fi
+        done
+    fi
+
+    # Calculate total table width
+    local total_width=1  # Start with 1 for left border
+    for width in "${col_max_widths[@]}"; do
+        total_width=$((total_width + width + 3))  # +3 for " " + content + " " + "|"
+    done
+
+    # Build border lines (cached for reuse)
+    local top_border="$border_tl"
+    local mid_border="$border_ml"
+    local bot_border="$border_bl"
+
+    for ((c=0; c<num_cols; c++)); do
+        local col_width="${col_max_widths[$c]}"
+        local segment
+        segment=$(_repeat_char "$border_h" $((col_width + 2)))
+
+        if [ "$c" -lt $((num_cols - 1)) ]; then
+            top_border="${top_border}${segment}${border_cross}"
+            mid_border="${mid_border}${segment}${border_cross}"
+            bot_border="${bot_border}${segment}${border_cross}"
+        else
+            top_border="${top_border}${segment}${border_tr}"
+            mid_border="${mid_border}${segment}${border_mr}"
+            bot_border="${bot_border}${segment}${border_br}"
+        fi
+    done
+
+    # Print title if provided
+    if [ -n "$safe_title" ]; then
+        echo -e "\n${COLOR_HEADER}${BOLD}${safe_title}${RESET}"
+    fi
+
+    # Print top border
+    echo -e "${COLOR_BORDER}${top_border}${RESET}"
+
+    # Print rows
+    for ((r=0; r<num_rows; r++)); do
+        local row_str="${COLOR_BORDER}${border_v}${RESET}"
+
+        for ((c=0; c<num_cols; c++)); do
+            local idx=$((r * num_cols + c))
+            local cell="${parsed_rows[$idx]}"
+            local col_width="${col_max_widths[$c]}"
+            local cell_width
+            cell_width=$(_display_width "$cell")
+
+            # Truncate if needed using display-width-aware truncation
+            if [ "$cell_width" -gt "$col_width" ]; then
+                # Use _truncate_to_width to safely handle multibyte characters (CJK, emojis)
+                # This prevents cutting characters in the middle of a multibyte sequence
+                cell=$(_truncate_to_width "$cell" "$col_width")
+                cell_width=$(_display_width "$cell")
+            fi
+
+            # Pad to column width
+            local padding=$((col_width - cell_width))
+            local padded_cell="${cell}$(_repeat_char ' ' $padding)"
+
+            # Apply styling for header row
+            if [ "$r" -eq 0 ]; then
+                row_str="${row_str} ${COLOR_HEADER}${BOLD}${padded_cell}${RESET} ${COLOR_BORDER}${border_v}${RESET}"
+            else
+                row_str="${row_str} ${padded_cell} ${COLOR_BORDER}${border_v}${RESET}"
+            fi
+        done
+
+        echo -e "$row_str"
+
+        # Print separator after header row
+        if [ "$r" -eq 0 ]; then
+            echo -e "${COLOR_BORDER}${mid_border}${RESET}"
+        fi
+    done
+
+    # Print bottom border
+    echo -e "${COLOR_BORDER}${bot_border}${RESET}"
+    echo ""
+}
+
+# ==============================================================================
 # HELP MENU WIDGET
 # ==============================================================================
 
 #===============================================================================
 # FUNCTION: show_help
-# DESCRIPTION: Display a formatted help menu with optional sections
+# DESCRIPTION: Display help menu with key-description pairs
 # PARAMETERS:
 #   $1 - title (string, required): Help menu title
-#   $2 - help_items_array_name (string, required): Name of array with help items
-#   $3 - key_width (number, optional): Width of key column (default: 20)
+#   $2 - array_name (string, required): Name of array with "key|description" entries
+#   $3 - key_width (number, optional): Width for key column (default: 20)
 # ARRAY FORMAT:
-#   Plain items:  "key|description"
-#   Sections:     "SECTION_HEADER|" (description is empty, treated as section)
-# ENVIRONMENT VARIABLES:
-#   OISEAU_HELP_NO_KEYPRESS - Skip keypress wait (default: auto-detect)
-# RETURNS: 0 on success, 1 on invalid input
-# BEHAVIOR:
-#   - Uses show_header_box() for title display
-#   - Uses print_kv() for key-description pairs
-#   - Detects TTY for "Press any key" prompt
-#   - Validates array is not empty
-#   - Sanitizes all input via _escape_input()
+#   Each element: "key|description" or "key|" for section headers
+#   Empty description creates a section header (bold, no value column)
+# RETURNS: 0 on success, 1 on error
 # MODES:
-#   Rich/Color: Full formatting with colors and borders
-#   Plain:      Text-only, no decorations
+#   All modes: Uses existing show_header_box and print_kv widgets
+# BEHAVIOR:
+#   - 100% widget reuse (show_header_box for title, print_kv for items)
+#   - Section headers: entries with empty description (key|)
+#   - Regular items: key-value pairs with customizable key column width
+#   - Prompts "Press any key to continue" at end (TTY only)
+#   - Falls back silently in non-TTY mode
 # EXAMPLE:
 #   help_items=(
-#     "q|Quit the program"
-#     "h|Show this help menu"
-#     "Navigation Commands|"
-#     "↑/↓|Move up and down"
-#     "[|Page up"
-#     "]|Page down"
+#     "Navigation|"
+#     "↑↓ or j/k|Move cursor up/down"
+#     "Enter|Select item"
+#     "Actions|"
+#     "Space|Toggle selection"
+#     "q|Quit"
 #   )
-#   show_help "Command Reference" help_items 25
+#   show_help "Keyboard Shortcuts" help_items 15
 #===============================================================================
 show_help() {
     local title="$1"
     local array_name="$2"
     local key_width="${3:-20}"
 
-    # Input validation
+    # Validate inputs
     if [ -z "$title" ] || [ -z "$array_name" ]; then
         echo "ERROR: show_help requires title and array_name arguments" >&2
         return 1
     fi
 
+    if ! [[ "$key_width" =~ ^[0-9]+$ ]] || [ "$key_width" -lt 5 ]; then
+        echo "ERROR: key_width must be a number >= 5" >&2
+        return 1
+    fi
+
+    # Load array using eval for bash 3.x compatibility
+    eval "local help_items=(\"\${${array_name}[@]}\")"
+
+    if [ ${#help_items[@]} -eq 0 ]; then
+        echo "ERROR: show_help requires non-empty array" >&2
+        return 1
+    fi
+
     # Sanitize title
     local safe_title
     safe_title="$(_escape_input "$title")"
 
-    # Get array items (bash 3.x/4.x compatibility using eval)
-    eval "local help_items=(\"\${${array_name}[@]}\")"
-
-    # Validate array is not empty
-    if [ ${#help_items[@]} -eq 0 ]; then
-        echo "ERROR: Help array '$array_name' is empty" >&2
-        return 1
-    fi
-
-    # Display title using show_header_box
+    # Show title using existing widget
     show_header_box "$safe_title"
 
-    # Process and display items
-    local last_was_section=0
+    # Process and display help items
     for item in "${help_items[@]}"; do
-        # Parse item into key and description
+        # Split on | delimiter
         # Use local IFS to avoid corrupting global field separator
         local IFS='|'
         read -r key description <<< "$item"
 
-        # Sanitize inputs
         local safe_key
         safe_key="$(_escape_input "$key")"
+        local safe_description
+        safe_description="$(_escape_input "$description")"
 
-        # Check if this is a section header (empty description)
         if [ -z "$description" ]; then
-            # Section header
-            if [ "$last_was_section" = "0" ] && [ -n "$safe_key" ]; then
-                echo ""
-            fi
+            # Section header (empty description)
             echo -e "${COLOR_HEADER}${BOLD}${safe_key}${RESET}"
-            last_was_section=1
         else
-            # Regular key-value pair
-            local safe_description
-            safe_description="$(_escape_input "$description")"
-
-            # Use print_kv for consistent formatting
+            # Regular key-value pair using existing widget
             print_kv "$safe_key" "$safe_description" "$key_width"
-            last_was_section=0
         fi
     done
 
     echo ""
 
-    # Wait for keypress (if TTY and not disabled)
-    if [ "$OISEAU_IS_TTY" = "1" ] && [ "${OISEAU_HELP_NO_KEYPRESS:-0}" != "1" ]; then
-        echo -e "${COLOR_MUTED}Press any key to continue...${RESET}"
-        read -r -n 1 -s
-        echo ""  # Clear the line after keypress
+    # Press any key to continue (TTY only)
+    # Skip if OISEAU_HELP_NO_KEYPRESS is set (used by show_help_paged)
+    if [ "$OISEAU_IS_TTY" = "1" ] && [ "${OISEAU_HELP_NO_KEYPRESS:-}" != "1" ]; then
+        echo -ne "${COLOR_DIM}Press any key to continue...${RESET}"
+        read -r -s -n1
+        echo ""
     fi
 }
 
 #===============================================================================
 # FUNCTION: show_help_paged
-# DESCRIPTION: Display help menu in pages with pauses between sections
+# DESCRIPTION: Display help menu with pager for long content
 # PARAMETERS:
 #   $1 - title (string, required): Help menu title
-#   $2 - help_items_array_name (string, required): Name of array with help items
-#   $3 - items_per_page (number, optional): Items to show per page (default: 15)
-#   $4 - key_width (number, optional): Width of key column (default: 20)
-# ARRAY FORMAT:
-#   Plain items:  "key|description"
-#   Sections:     "SECTION_HEADER|" (description is empty, treated as section)
+#   $2 - array_name (string, required): Name of array with "key|description" entries
+#   $3 - key_width (number, optional): Width for key column (default: 20)
 # BEHAVIOR:
-#   - Same as show_help() but pauses after N items
-#   - Useful for tutorials or very long help content
-#   - Non-TTY: displays all at once without pauses
+#   - Captures show_help output and pipes to show_pager
+#   - Provides scrolling for help menus with many items
+#   - Falls back to regular show_help in non-TTY mode
 # EXAMPLE:
-#   show_help_paged "Tutorial" help_items 10 25
+#   show_help_paged "Complete Reference" help_items 15
 #===============================================================================
 show_help_paged() {
     local title="$1"
     local array_name="$2"
-    local items_per_page="${3:-15}"
-    local key_width="${4:-20}"
+    local key_width="${3:-20}"
 
-    # Input validation
+    # Input validation (P2 fix from PR#20)
     if [ -z "$title" ] || [ -z "$array_name" ]; then
         echo "ERROR: show_help_paged requires title and array_name arguments" >&2
         return 1
     fi
 
-    # Validate items_per_page is a positive integer
-    if ! [[ "$items_per_page" =~ ^[0-9]+$ ]]; then
-        echo "ERROR: items_per_page must be a positive integer, got: '$items_per_page'" >&2
+    # Generate help content without the interactive "Press any key" prompt
+    # Set OISEAU_HELP_NO_KEYPRESS to suppress the prompt in show_help
+    local help_content
+    help_content=$(OISEAU_HELP_NO_KEYPRESS=1 show_help "$title" "$array_name" "$key_width" 2>&1)
+    local show_help_exit=$?
+
+    # Propagate errors from show_help (invalid args, etc.)
+    if [ $show_help_exit -ne 0 ]; then
+        return $show_help_exit
+    fi
+
+    # Display in pager
+    show_pager "$help_content" "$title"
+}
+
+# ==============================================================================
+# WINDOW RESIZE HANDLER
+# ==============================================================================
+
+#===============================================================================
+# FUNCTION: register_resize_handler
+# DESCRIPTION: Register a callback for terminal window resize events (SIGWINCH)
+# PARAMETERS:
+#   $1 - callback (string, required): Function name to call on resize
+# ENVIRONMENT VARIABLES:
+#   _OISEAU_RESIZE_CALLBACK - Stores user callback function name
+#   _OISEAU_RESIZE_ORIGINAL_TRAP - Stores original WINCH trap for chaining
+#   _OISEAU_RESIZE_IN_HANDLER - Prevents recursion during handling
+# RETURNS: 0 on success, 1 on error
+# BEHAVIOR:
+#   - Traps SIGWINCH signal for window resize detection
+#   - Chains with existing traps (preserves user's existing WINCH handlers)
+#   - Prevents recursion via flag-based check
+#   - Updates OISEAU_WIDTH and OISEAU_HEIGHT on resize
+#   - Calls user callback after updating dimensions
+#   - Gracefully handles missing tput (defaults to 80x24)
+# EXAMPLE:
+#   my_resize_handler() {
+#     echo "Window resized to: ${OISEAU_WIDTH}x${OISEAU_HEIGHT}"
+#     # Re-render your TUI here
+#   }
+#   register_resize_handler my_resize_handler
+#===============================================================================
+
+# Global variables for resize handling
+_OISEAU_RESIZE_CALLBACK=""
+_OISEAU_RESIZE_ORIGINAL_TRAP=""
+_OISEAU_RESIZE_IN_HANDLER=0
+
+register_resize_handler() {
+    local callback="$1"
+
+    if [ -z "$callback" ]; then
+        echo "ERROR: register_resize_handler requires callback function name" >&2
         return 1
     fi
-    if [ "$items_per_page" -eq 0 ]; then
-        echo "ERROR: items_per_page must be greater than 0" >&2
+
+    # Verify callback is a function
+    if ! type "$callback" >/dev/null 2>&1; then
+        echo "ERROR: callback '$callback' is not a defined function" >&2
         return 1
     fi
+
+    # Store callback
+    _OISEAU_RESIZE_CALLBACK="$callback"
+
+    # Save existing WINCH trap for chaining (only if not already saved)
+    # This prevents losing the original trap when re-registering
+    if [ -z "$_OISEAU_RESIZE_ORIGINAL_TRAP" ]; then
+        local current_trap=$(trap -p WINCH | sed "s/trap -- '\(.*\)' WINCH/\1/")
+        # Only save if it's not our own handler
+        if [ "$current_trap" != "_oiseau_resize_handler" ]; then
+            _OISEAU_RESIZE_ORIGINAL_TRAP="$current_trap"
+        fi
+    fi
+
+    # Install new trap
+    trap '_oiseau_resize_handler' WINCH
+}
+
+#===============================================================================
+# FUNCTION: _oiseau_resize_handler (internal)
+# DESCRIPTION: Internal handler for SIGWINCH, updates dimensions and calls callback
+#===============================================================================
+_oiseau_resize_handler() {
+    # Prevent recursion
+    if [ "$_OISEAU_RESIZE_IN_HANDLER" = "1" ]; then
+        return
+    fi
+    _OISEAU_RESIZE_IN_HANDLER=1
+
+    # Update terminal dimensions
+    update_terminal_size
+
+    # Call user callback if exists
+    if [ -n "$_OISEAU_RESIZE_CALLBACK" ]; then
+        "$_OISEAU_RESIZE_CALLBACK" || true
+    fi
+
+    # Chain original trap if it existed
+    if [ -n "$_OISEAU_RESIZE_ORIGINAL_TRAP" ]; then
+        eval "$_OISEAU_RESIZE_ORIGINAL_TRAP" || true
+    fi
+
+    _OISEAU_RESIZE_IN_HANDLER=0
+}
+
+#===============================================================================
+# FUNCTION: update_terminal_size
+# DESCRIPTION: Update OISEAU_WIDTH and OISEAU_HEIGHT environment variables
+# BEHAVIOR:
+#   - Uses tput cols/lines if available
+#   - Falls back to 80x24 if tput fails
+#   - Updates exported environment variables
+# EXAMPLE:
+#   update_terminal_size
+#   echo "Terminal is ${OISEAU_WIDTH}x${OISEAU_HEIGHT}"
+#===============================================================================
+update_terminal_size() {
+    if command -v tput >/dev/null 2>&1; then
+        OISEAU_WIDTH=$(tput cols 2>/dev/null || echo 80)
+        OISEAU_HEIGHT=$(tput lines 2>/dev/null || echo 24)
+    else
+        OISEAU_WIDTH=80
+        OISEAU_HEIGHT=24
+    fi
+
+    export OISEAU_WIDTH
+    export OISEAU_HEIGHT
+}
+
+#===============================================================================
+# FUNCTION: unregister_resize_handler
+# DESCRIPTION: Remove resize handler and restore original trap
+# BEHAVIOR:
+#   - Restores original WINCH trap if it existed
+#   - Clears callback and handler state
+#   - Idempotent (safe to call multiple times)
+# EXAMPLE:
+#   unregister_resize_handler
+#===============================================================================
+unregister_resize_handler() {
+    # Restore original trap
+    if [ -n "$_OISEAU_RESIZE_ORIGINAL_TRAP" ]; then
+        trap "$_OISEAU_RESIZE_ORIGINAL_TRAP" WINCH
+    else
+        trap - WINCH
+    fi
+
+    # Clear state
+    _OISEAU_RESIZE_CALLBACK=""
+    _OISEAU_RESIZE_ORIGINAL_TRAP=""
+    _OISEAU_RESIZE_IN_HANDLER=0
+}
+
+# Initialize OISEAU_HEIGHT on load
+if [ -z "$OISEAU_HEIGHT" ]; then
+    update_terminal_size
+fi
+
+# ==============================================================================
+# PAGER WIDGET
+# ==============================================================================
+
+#===============================================================================
+# FUNCTION: show_pager
+# DESCRIPTION: Display long content with less-like scrolling and navigation
+# PARAMETERS:
+#   $1 - content_source (string, optional): File path, "-" for stdin, or variable content
+#   $2 - title (string, optional): Title for the pager header
+# ENVIRONMENT VARIABLES:
+#   OISEAU_PAGER_HEIGHT - Override lines per page (default: auto-detect)
+# RETURNS: 0 on success, 1 on error
+# MODES:
+#   Rich:  Full pager with UTF-8 borders and smooth navigation
+#   Color: Pager with ASCII borders
+#   Plain: Falls back to less/cat
+#   Non-TTY: Falls back to less/cat
+# NAVIGATION:
+#   ↑/k      - Scroll up one line
+#   ↓/j      - Scroll down one line
+#   PgUp/b   - Scroll up one page
+#   PgDn/f   - Scroll down one page
+#   Home/g   - Jump to beginning
+#   End/G    - Jump to end
+#   q/Esc    - Quit pager
+# BEHAVIOR:
+#   - Buffers entire content in array (one line per element)
+#   - Calculates visible window from terminal height
+#   - Shows position counter [line/total] and percentage
+#   - Displays navigation hints in footer
+#   - Clears and redraws on each navigation action
+#   - Falls back to 'less' if available, else 'cat' in non-TTY
+# EXAMPLE:
+#   show_pager "/var/log/system.log" "System Logs"
+#   cat large_file.txt | show_pager "-" "Large File"
+#   show_pager "$long_variable" "Variable Content"
+#===============================================================================
+show_pager() {
+    local content_source="${1:-}"
+    local title="${2:-Pager}"
 
     # Sanitize title
-    local safe_title
-    safe_title="$(_escape_input "$title")"
+    local safe_title="$(_escape_input "$title")"
 
-    # Get array items (bash 3.x/4.x compatibility using eval)
-    eval "local help_items=(\"\${${array_name}[@]}\")"
-
-    # Validate array is not empty
-    if [ ${#help_items[@]} -eq 0 ]; then
-        echo "ERROR: Help array '$array_name' is empty" >&2
-        return 1
-    fi
-
-    show_header_box "$safe_title"
-
-    local count=0
-    local last_was_section=0
-
-    for item in "${help_items[@]}"; do
-        # Use local IFS to avoid corrupting global field separator
-        local IFS='|'
-        read -r key description <<< "$item"
-        local safe_key
-        safe_key="$(_escape_input "$key")"
-
-        if [ -z "$description" ]; then
-            # Section header
-            if [ "$last_was_section" = "0" ] && [ -n "$safe_key" ]; then
-                echo ""
+    # Non-TTY fallback: use less or cat
+    if [ "$OISEAU_IS_TTY" != "1" ]; then
+        if [ -z "$content_source" ] || [ "$content_source" = "-" ]; then
+            # Reading from stdin
+            if command -v less >/dev/null 2>&1; then
+                less
+            else
+                cat
             fi
-            echo -e "${COLOR_HEADER}${BOLD}${safe_key}${RESET}"
-            last_was_section=1
         else
-            # Regular item
-            local safe_description
-            safe_description="$(_escape_input "$description")"
-            print_kv "$safe_key" "$safe_description" "$key_width"
-            last_was_section=0
-            count=$((count + 1))
-
-            # Pause after N items
-            if [ $((count % items_per_page)) -eq 0 ]; then
-                echo ""
-                if [ "$OISEAU_IS_TTY" = "1" ] && [ "${OISEAU_HELP_NO_KEYPRESS:-0}" != "1" ]; then
-                    echo -e "${COLOR_MUTED}Press any key for more...${RESET}"
-                    read -r -n 1 -s
-                    echo ""
+            # Reading from file or variable
+            if [ -f "$content_source" ]; then
+                if command -v less >/dev/null 2>&1; then
+                    less "$content_source"
+                else
+                    cat "$content_source"
+                fi
+            else
+                # Variable content
+                if command -v less >/dev/null 2>&1; then
+                    echo "$content_source" | less
+                else
+                    echo "$content_source"
                 fi
             fi
         fi
-    done
-
-    # Final pause
-    echo ""
-    if [ "$OISEAU_IS_TTY" = "1" ] && [ "${OISEAU_HELP_NO_KEYPRESS:-0}" != "1" ]; then
-        echo -e "${COLOR_MUTED}Press any key to continue...${RESET}"
-        read -r -n 1 -s
-        echo ""
+        return 0
     fi
+
+    # Plain mode fallback (even in TTY, if explicitly set)
+    if [ "$OISEAU_MODE" = "plain" ]; then
+        if [ -z "$content_source" ] || [ "$content_source" = "-" ]; then
+            cat
+        elif [ -f "$content_source" ]; then
+            cat "$content_source"
+        else
+            echo "$content_source"
+        fi
+        return 0
+    fi
+
+    # Load content into array
+    local -a content_lines=()
+
+    if [ -z "$content_source" ] || [ "$content_source" = "-" ]; then
+        # Read from stdin
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
+            content_lines+=("$line")
+        done
+    elif [ -f "$content_source" ]; then
+        # Read from file
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
+            content_lines+=("$line")
+        done < "$content_source"
+    else
+        # Treat as variable content
+        # Use || [ -n "$line" ] to capture final line even without trailing newline
+        while IFS= read -r line || [ -n "$line" ]; do
+            content_lines+=("$line")
+        done <<< "$content_source"
+    fi
+
+    local total_lines=${#content_lines[@]}
+
+    # Handle empty content
+    if [ "$total_lines" -eq 0 ]; then
+        show_info "No content to display"
+        return 0
+    fi
+
+    # Calculate viewport dimensions
+    local term_height=$(tput lines 2>/dev/null || echo 24)
+    local header_lines=2  # Title + separator
+    local footer_lines=2  # Navigation hints + blank
+    local viewport_height="${OISEAU_PAGER_HEIGHT:-$((term_height - header_lines - footer_lines))}"
+
+    # Ensure viewport is at least 5 lines
+    if [ "$viewport_height" -lt 5 ]; then
+        viewport_height=5
+    fi
+
+    # If content fits on screen, just display it
+    if [ "$total_lines" -le "$viewport_height" ]; then
+        echo -e "${COLOR_HEADER}${BOLD}${safe_title}${RESET}"
+        echo -e "${COLOR_BORDER}$(_repeat_char "${BOX_H}" 60)${RESET}"
+        for line in "${content_lines[@]}"; do
+            echo "$line"
+        done
+        return 0
+    fi
+
+    # Initialize pager state
+    local current_line=0  # 0-indexed
+    local max_scroll=$((total_lines - viewport_height))
+
+    # Visual indicators
+    local nav_up="↑"
+    local nav_down="↓"
+    local nav_pgup="PgUp"
+    local nav_pgdn="PgDn"
+
+    if [ "$OISEAU_MODE" != "rich" ]; then
+        nav_up="UP"
+        nav_down="DN"
+    fi
+
+    # Helper function to render the current view
+    render_view() {
+        # Clear screen
+        clear
+
+        # Calculate position info
+        local visible_start=$((current_line + 1))
+        local visible_end=$((current_line + viewport_height))
+        if [ "$visible_end" -gt "$total_lines" ]; then
+            visible_end=$total_lines
+        fi
+        local percent=$((current_line * 100 / max_scroll))
+        if [ "$current_line" -ge "$max_scroll" ]; then
+            percent=100
+        fi
+
+        # Header
+        echo -e "${COLOR_HEADER}${BOLD}${safe_title}${RESET} ${COLOR_MUTED}[${visible_start}-${visible_end}/${total_lines}] ${percent}%${RESET}"
+        echo -e "${COLOR_BORDER}$(_repeat_char "${BOX_H}" 60)${RESET}"
+
+        # Content viewport
+        local end_idx=$((current_line + viewport_height))
+        if [ "$end_idx" -gt "$total_lines" ]; then
+            end_idx=$total_lines
+        fi
+
+        for ((i=current_line; i<end_idx; i++)); do
+            echo "${content_lines[$i]}"
+        done
+
+        # Footer with navigation hints
+        echo ""
+        if [ "$current_line" -eq 0 ]; then
+            # At top
+            echo -e "${COLOR_DIM}[${nav_down}/j:Down | ${nav_pgdn}/f:Page Down | End/G:Bottom | q:Quit]${RESET}"
+        elif [ "$current_line" -ge "$max_scroll" ]; then
+            # At bottom
+            echo -e "${COLOR_DIM}[${nav_up}/k:Up | ${nav_pgup}/b:Page Up | Home/g:Top | q:Quit]${RESET}"
+        else
+            # Middle
+            echo -e "${COLOR_DIM}[${nav_up}${nav_down}/jk:Scroll | ${nav_pgup}${nav_pgdn}/bf:Page | Home/End:Jump | q:Quit]${RESET}"
+        fi
+    }
+
+    # Hide cursor for cleaner display
+    echo -en "\033[?25l"
+
+    # Cleanup function
+    cleanup_pager() {
+        # Show cursor
+        echo -en "\033[?25h"
+        # Clear screen
+        clear
+        trap - EXIT INT TERM
+    }
+    trap cleanup_pager EXIT INT TERM
+
+    # Initial render
+    render_view
+
+    # Main input loop
+    while true; do
+        # Read single character from /dev/tty (not stdin)
+        # This allows piped input (cat file | show_pager "-") to work
+        # because content comes from stdin but keyboard input from /dev/tty
+        IFS= read -r -s -n1 key </dev/tty
+
+        # Handle escape sequences (arrow keys, page keys)
+        if [ "$key" = $'\x1b' ]; then
+            read -r -s -n2 -t 0.1 key </dev/tty
+
+            # Check for extended sequences (Page Up/Down are 5 chars total)
+            if [ "$key" = "[5" ] || [ "$key" = "[6" ]; then
+                read -r -s -n1 -t 0.1 extra </dev/tty
+                key="${key}${extra}"
+            fi
+        fi
+
+        # Process navigation
+        local moved=0
+
+        case "$key" in
+            '[A'|'k')  # Up arrow or k
+                if [ "$current_line" -gt 0 ]; then
+                    current_line=$((current_line - 1))
+                    moved=1
+                fi
+                ;;
+            '[B'|'j')  # Down arrow or j
+                if [ "$current_line" -lt "$max_scroll" ]; then
+                    current_line=$((current_line + 1))
+                    moved=1
+                fi
+                ;;
+            '[5~'|'b')  # Page Up or b
+                current_line=$((current_line - viewport_height))
+                if [ "$current_line" -lt 0 ]; then
+                    current_line=0
+                fi
+                moved=1
+                ;;
+            '[6~'|'f'|' ')  # Page Down or f or Space
+                current_line=$((current_line + viewport_height))
+                if [ "$current_line" -gt "$max_scroll" ]; then
+                    current_line=$max_scroll
+                fi
+                moved=1
+                ;;
+            '[H'|'g')  # Home or g
+                current_line=0
+                moved=1
+                ;;
+            '[F'|'G')  # End or G
+                current_line=$max_scroll
+                moved=1
+                ;;
+            'q'|'Q'|$'\x1b')  # q or Esc to quit
+                cleanup_pager
+                return 0
+                ;;
+        esac
+
+        # Re-render if moved
+        if [ "$moved" -eq 1 ]; then
+            render_view
+        fi
+    done
 }
 
 # ==============================================================================
