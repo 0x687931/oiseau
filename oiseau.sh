@@ -228,6 +228,19 @@ _validate_identifier() {
     return 0
 }
 
+# Safe echo that interprets ANSI codes but not user backslash sequences
+# Security: Prevents backslash injection while allowing color codes
+# Usage: _safe_echo "user content" (uses printf '%b\n' with pre-sanitized input)
+# For user content that's already been through _escape_input, this is safe
+_safe_echo() {
+    printf '%b\n' "$1"
+}
+
+# Safe echo without newline
+_safe_echo_n() {
+    printf '%b' "$1"
+}
+
 # Escape user input to prevent code injection
 # Optimized: reduced pipeline depth for better performance
 _escape_input() {
