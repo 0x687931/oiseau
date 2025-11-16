@@ -3,31 +3,9 @@
 
 # Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Source oiseau.sh
-source "$PROJECT_ROOT/oiseau.sh"
-
-# Test counter
-TESTS_RUN=0
-TESTS_PASSED=0
-
-# Helper function to run tests
-run_test() {
-    local test_name="$1"
-    local test_func="$2"
-
-    TESTS_RUN=$((TESTS_RUN + 1))
-    echo ""
-    echo "━━━ Test: $test_name ━━━"
-
-    if $test_func; then
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        echo "  ✓ PASS: $test_name"
-    else
-        echo "  ✗ FAIL: $test_name"
-    fi
-}
+# Source shared test helpers
+source "$SCRIPT_DIR/lib/test_helpers.sh"
 
 # Test 1: Basic functionality
 test_basic() {
@@ -174,9 +152,7 @@ test_visual_animation() {
 }
 
 # Banner
-echo ""
-show_header_box "Enhanced Progress Bar Validation Tests"
-echo ""
+print_test_banner "Enhanced Progress Bar Validation Tests"
 
 # Run all tests
 run_test "Basic Functionality" test_basic
@@ -192,17 +168,4 @@ run_test "Different Modes" test_modes
 run_test "Visual Animation" test_visual_animation
 
 # Summary
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Tests run: $TESTS_RUN"
-echo "Tests passed: $TESTS_PASSED"
-echo "Tests failed: $((TESTS_RUN - TESTS_PASSED))"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-if [ $TESTS_PASSED -eq $TESTS_RUN ]; then
-    show_success "All tests passed!"
-    exit 0
-else
-    show_error "Some tests failed"
-    exit 1
-fi
+print_test_summary
