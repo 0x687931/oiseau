@@ -137,14 +137,26 @@ for i in "${!test_files[@]}"; do
     bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
     progress_display="Testing: ${bar} ${percent}% (${current}/${total})"
 
+    # Calculate available width for test name
+    # Format: "Testing: " (9) + bar (20) + " " (1) + percentage (4-5) + " (X/YY)" (6-8) + "  " (2) + icon (1) + "  " (2)
+    # Total fixed width: ~45-50 characters
+    # Leave room for test name to fit within terminal width
+    max_name_width=$((OISEAU_WIDTH - 50))
+    if [ "$max_name_width" -lt 15 ]; then
+        max_name_width=15  # Minimum reasonable width
+    fi
+
+    # Truncate test name if needed
+    display_name=$(_truncate_to_width "$test_name" "$max_name_width")
+
     # Run test and show result on same line (update in place)
     if "$test_file" > /dev/null 2>&1; then
         TESTS_PASSED=$((TESTS_PASSED + 1))
-        echo -en "\r${progress_display}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${test_name}\033[K"
+        echo -en "\r${progress_display}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${display_name}\033[K"
     else
         TESTS_FAILED=$((TESTS_FAILED + 1))
         FAILED_TESTS+=("$test_name")
-        echo -en "\r${progress_display}  ${COLOR_ERROR}${ICON_ERROR}${RESET}  ${test_name}\033[K"
+        echo -en "\r${progress_display}  ${COLOR_ERROR}${ICON_ERROR}${RESET}  ${display_name}\033[K"
     fi
     sleep 0.1  # Brief pause to see each test update
 done
