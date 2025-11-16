@@ -341,19 +341,8 @@ _display_width() {
         return
     fi
 
-    # Try perl for accurate display width calculation if available (cached check)
-    if [ "$OISEAU_HAS_PERL" = "1" ]; then
-        local perl_result
-        if perl_result=$(echo "$clean" | perl -C -ne 'use Text::VisualWidth::PP qw(width); print width($_)' 2>/dev/null) && [ -n "$perl_result" ]; then
-            width="$perl_result"
-            [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
-            echo "$width"
-            return
-        fi
-    fi
-
-    # Fallback: Perl-based wcwidth estimation without external modules
-    # This handles CJK, emojis, and other wide characters more accurately
+    # Combined Perl width calculation (single interpreter invocation)
+    # Tries Text::VisualWidth::PP first, falls back to custom wcwidth implementation
     if [ "$OISEAU_HAS_PERL" = "1" ]; then
         local perl_width
         if perl_width=$(echo -n "$clean" | perl -C -ne '
@@ -361,55 +350,67 @@ _display_width() {
             binmode(STDIN, ":utf8");
             binmode(STDOUT, ":utf8");
             chomp;
-            my $width = 0;
-            for my $char (split //, $_) {
-                my $code = ord($char);
-                # Special case: Common icon characters that modern terminals render as width 1
-                # These are technically in wide ranges but render narrow in most terminals
-                if (
-                    $code == 0x2713 ||  # ✓ Check mark
-                    $code == 0x2717 ||  # ✗ Ballot X
-                    $code == 0x26A0 ||  # ⚠ Warning sign
-                    $code == 0x2139 ||  # ℹ Information source
-                    $code == 0x25CB ||  # ○ White circle
-                    $code == 0x25CF ||  # ● Black circle
-                    $code == 0x2298     # ⊘ Circled division slash
-                ) {
-                    $width += 1;
-                }
-                # East Asian Width ranges (CJK, full-width, etc.)
-                # Based on Unicode East Asian Width property
-                # Note: Ambiguous-width characters (hiragana, katakana) are treated as wide
-                # for better compatibility with CJK-aware terminal emulators
-                elsif (
-                    # Hiragana
-                    ($code >= 0x3040 && $code <= 0x309F) ||
-                    # Katakana
-                    ($code >= 0x30A0 && $code <= 0x30FF) ||
-                    # CJK Extension A
-                    ($code >= 0x3400 && $code <= 0x4DBF) ||
-                    # CJK Unified Ideographs
-                    ($code >= 0x4E00 && $code <= 0x9FFF) ||
-                    # Hangul Syllables
-                    ($code >= 0xAC00 && $code <= 0xD7AF) ||
-                    # CJK Compatibility Ideographs
-                    ($code >= 0xF900 && $code <= 0xFAFF) ||
-                    # Full-width Latin
-                    ($code >= 0xFF00 && $code <= 0xFF60) ||
-                    # Full-width Hangul
-                    ($code >= 0xFFA0 && $code <= 0xFFDC) ||
-                    # Emoji ranges (most common)
-                    ($code >= 0x1F300 && $code <= 0x1F9FF) ||
-                    # Supplementary Ideographic Plane
-                    ($code >= 0x20000 && $code <= 0x2FFFF) ||
-                    # Misc symbols and pictographs
-                    ($code >= 0x2600 && $code <= 0x26FF) ||
-                    # Dingbats
-                    ($code >= 0x2700 && $code <= 0x27BF)
-                ) {
-                    $width += 2;
-                } else {
-                    $width += 1;
+
+            # Try Text::VisualWidth::PP if available (most accurate)
+            my $width;
+            eval {
+                require Text::VisualWidth::PP;
+                Text::VisualWidth::PP->import("width");
+                $width = width($_);
+            };
+
+            # Fallback: Custom wcwidth estimation
+            if (!defined $width) {
+                $width = 0;
+                for my $char (split //, $_) {
+                    my $code = ord($char);
+                    # Special case: Common icon characters that modern terminals render as width 1
+                    # These are technically in wide ranges but render narrow in most terminals
+                    if (
+                        $code == 0x2713 ||  # ✓ Check mark
+                        $code == 0x2717 ||  # ✗ Ballot X
+                        $code == 0x26A0 ||  # ⚠ Warning sign
+                        $code == 0x2139 ||  # ℹ Information source
+                        $code == 0x25CB ||  # ○ White circle
+                        $code == 0x25CF ||  # ● Black circle
+                        $code == 0x2298     # ⊘ Circled division slash
+                    ) {
+                        $width += 1;
+                    }
+                    # East Asian Width ranges (CJK, full-width, etc.)
+                    # Based on Unicode East Asian Width property
+                    # Note: Ambiguous-width characters (hiragana, katakana) are treated as wide
+                    # for better compatibility with CJK-aware terminal emulators
+                    elsif (
+                        # Hiragana
+                        ($code >= 0x3040 && $code <= 0x309F) ||
+                        # Katakana
+                        ($code >= 0x30A0 && $code <= 0x30FF) ||
+                        # CJK Extension A
+                        ($code >= 0x3400 && $code <= 0x4DBF) ||
+                        # CJK Unified Ideographs
+                        ($code >= 0x4E00 && $code <= 0x9FFF) ||
+                        # Hangul Syllables
+                        ($code >= 0xAC00 && $code <= 0xD7AF) ||
+                        # CJK Compatibility Ideographs
+                        ($code >= 0xF900 && $code <= 0xFAFF) ||
+                        # Full-width Latin
+                        ($code >= 0xFF00 && $code <= 0xFF60) ||
+                        # Full-width Hangul
+                        ($code >= 0xFFA0 && $code <= 0xFFDC) ||
+                        # Emoji ranges (most common)
+                        ($code >= 0x1F300 && $code <= 0x1F9FF) ||
+                        # Supplementary Ideographic Plane
+                        ($code >= 0x20000 && $code <= 0x2FFFF) ||
+                        # Misc symbols and pictographs
+                        ($code >= 0x2600 && $code <= 0x26FF) ||
+                        # Dingbats
+                        ($code >= 0x2700 && $code <= 0x27BF)
+                    ) {
+                        $width += 2;
+                    } else {
+                        $width += 1;
+                    }
                 }
             }
             print $width;
