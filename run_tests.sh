@@ -16,18 +16,18 @@
 set -eo pipefail
 
 # Parse command line arguments
-TEST_MODE="${1:-auto}"
+RAW_ARG="${1:-auto}"
 RUN_ALL_MODES=0
 
-case "$TEST_MODE" in
+case "$RAW_ARG" in
     --rich|--utf8)
-        export OISEAU_MODE="rich"
+        TEST_MODE="rich"
         ;;
-    --color|--ascii|--ansi)
-        export OISEAU_MODE="color"
+    --color|--ansi)
+        TEST_MODE="color"
         ;;
-    --plain)
-        export OISEAU_MODE="plain"
+    --plain|--ascii)
+        TEST_MODE="plain"
         ;;
     --all)
         RUN_ALL_MODES=1
@@ -36,18 +36,18 @@ case "$TEST_MODE" in
         echo "Usage: $0 [MODE]"
         echo ""
         echo "Modes:"
-        echo "  --rich, --utf8    Force UTF-8 mode (full Unicode)"
-        echo "  --color, --ascii  Force ASCII mode (no Unicode)"
-        echo "  --plain           Force plain mode (no colors)"
+        echo "  --rich, --utf8    Force UTF-8 mode (Unicode + Color)"
+        echo "  --color, --ansi   Force color mode (ASCII + Color)"
+        echo "  --plain, --ascii  Force plain mode (ASCII, no color)"
         echo "  --all             Run tests in all three modes"
         echo "  (default)         Auto-detect mode"
         exit 0
         ;;
     auto|"")
-        # Auto-detect (default behavior)
+        TEST_MODE="auto"
         ;;
     *)
-        echo "Error: Unknown mode '$TEST_MODE'"
+        echo "Error: Unknown mode '$RAW_ARG'"
         echo "Run '$0 --help' for usage information"
         exit 1
         ;;

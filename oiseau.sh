@@ -24,7 +24,31 @@ if [ "${UI_DISABLE:-0}" = "1" ] || [ -n "${NO_COLOR+x}" ]; then
     export OISEAU_MODE="plain"
     export OISEAU_HAS_COLOR=0
     export OISEAU_HAS_UTF8=0
-else
+# Check if mode was explicitly set before sourcing (for testing/override)
+elif [ -n "${OISEAU_MODE+x}" ] && [ -n "$OISEAU_MODE" ]; then
+    # Mode override: set capabilities based on requested mode
+    case "$OISEAU_MODE" in
+        rich)
+            export OISEAU_HAS_COLOR=1
+            export OISEAU_HAS_UTF8=1
+            ;;
+        color)
+            export OISEAU_HAS_COLOR=1
+            export OISEAU_HAS_UTF8=0
+            ;;
+        plain)
+            export OISEAU_HAS_COLOR=0
+            export OISEAU_HAS_UTF8=0
+            ;;
+        *)
+            # Invalid mode, fall through to auto-detection
+            unset OISEAU_MODE
+            ;;
+    esac
+fi
+
+# Auto-detect mode if not explicitly set
+if [ -z "${OISEAU_MODE+x}" ] || [ -z "$OISEAU_MODE" ]; then
     # Detect if we're in a TTY
     if [[ -t 1 ]]; then
         export OISEAU_IS_TTY=1
