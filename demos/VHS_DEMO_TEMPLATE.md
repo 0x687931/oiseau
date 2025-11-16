@@ -5,31 +5,31 @@ This template documents the standard framework for creating VHS demos that show 
 ## Framework Pattern
 
 ### Part 1: Visible Code (What User Sees)
-Show simple, clean code that a normal user would write, assuming TTY auto-detection works:
+Show simple, clean code as bash comments (displayed but not executed):
 
 ```tape
-# Show the demo description
+# Display code as comments for user to see
 Type "# Demo: [Widget Name] in all 3 modes"
 Enter
 Sleep 500ms
 
-# Source the library
-Type "source ./oiseau.sh"
+Type "# source ./oiseau.sh"
 Enter
-Sleep 500ms
+Sleep 200ms
 
-# Show the simple usage code (NO environment variables, NO mode overrides)
-Type "[user's simple code line 1]"
+Type "# for i in {0..100}; do"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-Type "[user's simple code line 2]"
+Type "#   show_progress_bar \$i 100 'Processing'"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-# ... more lines as needed
+Type "#   sleep 0.05"
+Enter
+Sleep 200ms
 
-Type "done"  # or final line
+Type "# done"
 Enter
 Sleep 1s
 ```

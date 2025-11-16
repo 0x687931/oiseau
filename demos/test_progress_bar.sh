@@ -4,14 +4,13 @@
 
 cd "$(dirname "$0")/.."
 
-# Part 1: Echo example code (display only - not executed)
+# Part 1: Display example code as comments (not executed)
 echo '# Demo: Progress bar in all 3 modes'
-echo 'source ./oiseau.sh'
-echo 'for i in {0..100}; do'
-echo '  show_progress_bar $i 100 Processing'
-echo '  sleep 0.05'
-echo 'done'
-echo ''
+echo '# source ./oiseau.sh'
+echo '# for i in {0..100}; do'
+echo '#   show_progress_bar $i 100 '"'"'Processing'"'"
+echo '#   sleep 0.05'
+echo '# done'
 sleep 1
 
 # Part 2: Source library and reserve space for progress bars

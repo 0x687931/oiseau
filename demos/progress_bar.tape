@@ -9,32 +9,28 @@ Set Height 400
 Set FontSize 14
 Set Theme "Dracula"
 
-# Echo example code (display only - not executed)
-Type "echo '# Demo: Progress bar in all 3 modes'"
+# Display example code as comments (not executed)
+Type "# Demo: Progress bar in all 3 modes"
 Enter
-Sleep 300ms
+Sleep 500ms
 
-Type "echo 'source ./oiseau.sh'"
+Type "# source ./oiseau.sh"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-Type "echo 'for i in {0..100}; do'"
+Type "# for i in {0..100}; do"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-Type "echo '  show_progress_bar \$i 100 Processing'"
+Type "#   show_progress_bar \$i 100 'Processing'"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-Type "echo '  sleep 0.05'"
+Type "#   sleep 0.05"
 Enter
-Sleep 300ms
+Sleep 200ms
 
-Type "echo 'done'"
-Enter
-Sleep 300ms
-
-Type "echo ''"
+Type "# done"
 Enter
 Sleep 1s
 
