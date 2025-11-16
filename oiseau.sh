@@ -143,6 +143,9 @@ if [ "$OISEAU_HAS_UTF8" = "1" ]; then
     export ICON_SUCCESS="✓" ICON_ERROR="✗" ICON_WARNING="⚠" ICON_INFO="ℹ"
     export ICON_PENDING="○" ICON_ACTIVE="●" ICON_DONE="✓" ICON_SKIP="⊘"
 
+    # Ellipsis (U+2026 horizontal ellipsis)
+    export ICON_ELLIPSIS="…"
+
     # Box Drawing - Rounded
     export BOX_RTL="╭" BOX_RTR="╮" BOX_RBL="╰" BOX_RBR="╯"
     export BOX_H="─" BOX_V="│" BOX_VR="├" BOX_VL="┤"
@@ -154,6 +157,9 @@ else
     # ASCII Fallbacks
     export ICON_SUCCESS="[OK]" ICON_ERROR="[X]" ICON_WARNING="[!]" ICON_INFO="[i]"
     export ICON_PENDING="[ ]" ICON_ACTIVE="[*]" ICON_DONE="[+]" ICON_SKIP="[-]"
+
+    # Ellipsis (single character)
+    export ICON_ELLIPSIS=">"
 
     export BOX_RTL="+" BOX_RTR="+" BOX_RBL="+" BOX_RBR="+"
     export BOX_H="-" BOX_V="|" BOX_VR="+" BOX_VL="+"
@@ -520,11 +526,13 @@ _truncate_to_width() {
         return
     fi
 
-    # Need to truncate - reserve 3 chars for ellipsis
-    local target_width=$((max_width - 3))
+    # Need to truncate - reserve space for ellipsis
+    local ellipsis_width
+    ellipsis_width=$(_display_width "$ICON_ELLIPSIS")
+    local target_width=$((max_width - ellipsis_width))
     if [ "$target_width" -lt 1 ]; then
         # Max width too small, just return ellipsis
-        echo -n "..."
+        echo -n "$ICON_ELLIPSIS"
         return
     fi
 
@@ -554,7 +562,7 @@ _truncate_to_width() {
 
     # Extract the best substring and append ellipsis
     local result="${text:0:$best_len}"
-    echo -n "${result}..."
+    echo -n "${result}${ICON_ELLIPSIS}"
 }
 
 # Clamp width to terminal size
