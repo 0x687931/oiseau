@@ -466,32 +466,49 @@ show_box success "All Clear" "Systems operational"
 
 Oiseau automatically detects your terminal capabilities and adapts:
 
-### Rich Mode (Default)
+### Rich Mode (UTF-8 + Color)
 - **Requires:** Color support + UTF-8
-- **Features:** Full 256-color palette, Unicode box drawing, Unicode icons
+- **Features:** Full 256-color palette, Unicode box drawing (┏━┓ ╭─╮), Unicode icons (✓ ✗ ⚠ ℹ)
 - **Example:** Modern terminals (iTerm2, Alacritty, VS Code terminal, Claude Code)
+- **Force enable:** `export OISEAU_MODE=rich`
 
-### Color Mode
+### Color Mode (ASCII + Color)
 - **Requires:** Color support only
-- **Features:** 256-color palette, ASCII fallback characters
+- **Features:** 256-color palette, ASCII box drawing (+--+), ASCII icons ([OK] [X] [!] [i])
 - **Example:** Older terminals without UTF-8
+- **Force enable:** `export OISEAU_MODE=color`
 
-### Plain Mode
+### Plain Mode (ASCII + No Color)
 - **Triggers:** Pipes, redirects, `NO_COLOR=1`, `UI_DISABLE=1`, or no TTY
-- **Features:** No colors, ASCII-only
+- **Features:** No colors, ASCII-only characters
 - **Example:** `script.sh | tee log.txt` or CI/CD environments
+- **Force enable:** `export OISEAU_MODE=plain` or `export NO_COLOR=1` or `export UI_DISABLE=1`
 
-### Force Plain Mode
+### Manual Mode Control
 
 ```bash
-# Disable all UI enhancements
-export UI_DISABLE=1
-source oiseau/oiseau.sh
+# Force Rich mode (UTF-8 + Color)
+export OISEAU_MODE=rich
+source ./oiseau.sh
 
-# Or respect NO_COLOR standard
+# Force Color mode (ASCII + Color)
+export OISEAU_MODE=color
+source ./oiseau.sh
+
+# Force Plain mode (ASCII + No Color)
+export OISEAU_MODE=plain
+source ./oiseau.sh
+
+# Or use standard NO_COLOR environment variable
 export NO_COLOR=1
-source oiseau/oiseau.sh
+source ./oiseau.sh
+
+# Or disable all UI enhancements
+export UI_DISABLE=1
+source ./oiseau.sh
 ```
+
+**Note:** `OISEAU_MODE` must be set **before** sourcing `oiseau.sh`.
 
 ---
 
@@ -887,26 +904,37 @@ This unified test runner uses oiseau widgets to display beautiful test results w
 
 **Output:**
 ```
-  +==========================================================+
-  |                                                          |
-  |   Oiseau Test Suite Runner                               |
-  |                                                          |
-  +==========================================================+
++==========================================================+
+|                                                          |
+|   Oiseau Test Suite Runner                               |
+|                                                          |
++==========================================================+
+
 
   [i]  Found 10 test suites
 
 Running tests...
 
-Testing: 100% (10/10)
+Testing: #################### 100% (10/10)
   [OK]  test_edge_cases
   [OK]  test_help_menu
-  ...
+  [OK]  test_help
+  [OK]  test_input
+  [OK]  test_list
+  [OK]  test_mode_consistency
+  [OK]  test_progress
+  [OK]  test_resize
+  [OK]  test_spinner
+  [OK]  test_table
 
-  +==========================================================+
-  |                                                          |
-  |   Test Results Summary                                   |
-  |                                                          |
-  +==========================================================+
+
+
++==========================================================+
+|                                                          |
+|   Test Results Summary                                   |
+|                                                          |
++==========================================================+
+
 
   Total Test Suites    10
   Passed               10
@@ -914,6 +942,10 @@ Testing: 100% (10/10)
 
 +==========================================================+
 |  [OK]  All Tests Passed!                                 |
++==========================================================+
+|                                                          |
+|  All 10 test suites completed successfully.              |
+|                                                          |
 +==========================================================+
 
   [+]  Code quality validated
