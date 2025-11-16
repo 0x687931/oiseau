@@ -993,6 +993,17 @@ show_progress_bar() {
     if [ "$should_animate" = "1" ]; then
         if [ -n "$line_number" ]; then
             # Multi-line mode: use relative cursor positioning
+
+            # Auto-reset detection: if line_number=1 and previous group completed, reset for new group
+            if [ "$line_number" -eq 1 ] && [ -n "${OISEAU_PROGRESS_COMPLETED_LINES+x}" ]; then
+                local completed_count=$(echo "$OISEAU_PROGRESS_COMPLETED_LINES" | wc -w | tr -d ' ')
+                # If all lines were completed in previous group, reset now
+                if [ -n "${OISEAU_PROGRESS_MAX_LINE+x}" ] && [ "$completed_count" -ge "$OISEAU_PROGRESS_MAX_LINE" ]; then
+                    unset OISEAU_PROGRESS_MAX_LINE
+                    unset OISEAU_PROGRESS_COMPLETED_LINES
+                fi
+            fi
+
             # Track the maximum line number seen to support any number of progress bars
             if [ -z "${OISEAU_PROGRESS_MAX_LINE+x}" ] || [ "$line_number" -gt "$OISEAU_PROGRESS_MAX_LINE" ]; then
                 export OISEAU_PROGRESS_MAX_LINE="$line_number"
@@ -1001,6 +1012,16 @@ show_progress_bar() {
             # Calculate relative offset from bottom (assumes cursor is after all progress bars)
             # If max=3 and line=1: up_offset=3, if line=2: up_offset=2, if line=3: up_offset=1
             local up_offset=$((OISEAU_PROGRESS_MAX_LINE - line_number + 1))
+
+            # Track completion for auto-reset between multiple progress bar groups
+            if [ "$current" -ge "$total" ]; then
+                # Mark this line as completed
+                if [ -z "${OISEAU_PROGRESS_COMPLETED_LINES+x}" ]; then
+                    export OISEAU_PROGRESS_COMPLETED_LINES="$line_number"
+                elif ! echo " $OISEAU_PROGRESS_COMPLETED_LINES " | grep -q " $line_number "; then
+                    export OISEAU_PROGRESS_COMPLETED_LINES="$OISEAU_PROGRESS_COMPLETED_LINES $line_number"
+                fi
+            fi
 
             # Move up to the target line
             tput cuu "$up_offset" 2>/dev/null || printf '\033[%dA' "$up_offset"
