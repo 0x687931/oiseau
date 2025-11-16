@@ -97,6 +97,20 @@ source ./oiseau.sh
 
 ### Simple Messages
 
+Quick one-line status messages with colored icons.
+
+**Syntax:**
+```bash
+show_success <message>
+show_error <message>
+show_warning <message>
+show_info <message>
+```
+
+**Parameters:**
+- `message` - Text to display after the status icon
+
+**Example:**
 ```bash
 show_success "Build completed successfully"
 show_error "Failed to connect to server"
@@ -104,13 +118,19 @@ show_warning "This will delete all files"
 show_info "Processing 142 items..."
 ```
 
-Output:
+**Output:**
 ```
   ✓  Build completed successfully
   ✗  Failed to connect to server
   ⚠  This will delete all files
   ℹ  Processing 142 items...
 ```
+
+**Use cases:**
+- `show_success` - Confirmations, completed tasks
+- `show_error` - Failures, errors that occurred
+- `show_warning` - Cautions, important notices
+- `show_info` - General information, status updates
 
 ### Styled Boxes
 
@@ -165,6 +185,19 @@ show_box error "Connection Failed" \
 
 ### Progress Bar
 
+Visual progress indicator showing task completion percentage.
+
+**Syntax:**
+```bash
+show_progress_bar <current> <total> [label]
+```
+
+**Parameters:**
+- `current` - Current progress value (e.g., 6)
+- `total` - Total items to complete (e.g., 10)
+- `label` - Optional text shown before the progress bar
+
+**Example:**
 ```bash
 for i in {1..10}; do
     show_progress_bar "$i" 10 "Installation"
@@ -172,17 +205,31 @@ for i in {1..10}; do
 done
 ```
 
-Output:
+**Output:**
 ```
 Installation: ████████████░░░░░░░░ 60% (6/10)
 ```
+
+**Use cases:**
+- File downloads or uploads
+- Installation progress
+- Build or compilation steps
+- Any long-running task with measurable progress
 
 ### Checklists
 
 Track multi-step workflows with visual status indicators.
 
-**Item format:**
+**Syntax:**
 ```bash
+show_checklist <array_name>
+```
+
+**Parameters:**
+- `array_name` - Name of array containing tasks (not `$array_name`)
+
+**Item format:** Each array item is a pipe-separated string:
+```
 "<status>|<task_name>|<details>"
 ```
 
@@ -209,27 +256,26 @@ show_checklist tasks
   ○  Deploy to staging  Waiting
 ```
 
-**Visual indicators:**
-- `✓` (green) = Task completed
-- `●` (animated) = Task in progress
-- `○` (hollow) = Task pending
-
-Use checklists to show progress through deployment pipelines, installation steps, or any multi-stage process.
+**Use cases:**
+- Deployment pipelines with multiple stages
+- Installation wizards with sequential steps
+- Build processes with multiple tasks
+- Any multi-stage workflow where users need to see overall progress
 
 ### Section Headers
 
-Display titled sections with optional step counters - perfect for multi-step workflows.
+Display titled sections with optional step counters.
 
 **Syntax:**
 ```bash
-show_section_header "title" [current_step] [total_steps] [subtitle]
+show_section_header <title> [current_step] [total_steps] [subtitle]
 ```
 
 **Parameters:**
 - `title` - Main header text
-- `current_step` - Optional: Which step you're on (e.g., 2)
+- `current_step` - Optional: Current step number (e.g., 2)
 - `total_steps` - Optional: Total number of steps (e.g., 4)
-- `subtitle` - Optional: Additional context
+- `subtitle` - Optional: Additional context text
 
 **Example:**
 ```bash
@@ -244,11 +290,11 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 ╰──────────────────────────────────────────────────────────╯
 ```
 
-**Parts explained:**
-- Line 1: Main title ("Deploy Application")
-- Line 2: Step counter (2 of 4) + subtitle ("Building Docker image")
-
-Use this to show users where they are in a multi-step process (installation, deployment, setup wizards).
+**Use cases:**
+- Multi-step installation wizards
+- Deployment pipelines showing progress
+- Setup processes with multiple stages
+- Any workflow where users need to know "Step X of Y"
 
 ---
 
