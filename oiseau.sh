@@ -1239,7 +1239,7 @@ ask_choice() {
 
         # Handle escape sequences (arrow keys)
         if [ "$key" = $'\x1b' ]; then
-            read -r -s -n2 -t 0.1 key
+            read -r -s -n2 -t 1 key
         fi
 
         case "$key" in
@@ -1593,7 +1593,7 @@ ask_list() {
 
         # Handle escape sequences (arrow keys)
         if [ "$key" = $'\x1b' ]; then
-            read -r -s -n2 -t 0.1 key  # Read the rest of the escape sequence (100ms timeout)
+            read -r -s -n2 -t 1 key  # Read the rest of the escape sequence (100ms timeout)
         fi
 
         case "$key" in
@@ -2629,11 +2629,11 @@ show_pager() {
 
         # Handle escape sequences (arrow keys, page keys)
         if [ "$key" = $'\x1b' ]; then
-            read -r -s -n2 -t 0.1 key </dev/tty
+            read -r -s -n2 -t 1 key </dev/tty
 
             # Check for extended sequences (Page Up/Down are 5 chars total)
             if [ "$key" = "[5" ] || [ "$key" = "[6" ]; then
-                read -r -s -n1 -t 0.1 extra </dev/tty
+                read -r -s -n1 -t 1 extra </dev/tty
                 key="${key}${extra}"
             fi
         fi
