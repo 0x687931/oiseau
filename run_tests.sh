@@ -117,24 +117,40 @@ for i in "${!test_files[@]}"; do
 
     # Run test and capture result
     TESTS_RUN=$((TESTS_RUN + 1))
+
+    # Build progress bar manually for inline display
+    percent=$((current * 100 / total))
+    bar_width=20
+    filled=$((current * bar_width / total))
+    empty=$((bar_width - filled))
+
+    # Choose characters based on mode
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        filled_char="█"
+        empty_char="░"
+    else
+        filled_char="#"
+        empty_char="-"
+    fi
+
+    # Build bar string
+    bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
+    progress_display="Testing: ${bar} ${percent}% (${current}/${total})"
+
+    # Run test and show result on same line (update in place)
     if "$test_file" > /dev/null 2>&1; then
         TESTS_PASSED=$((TESTS_PASSED + 1))
-        # Show progress bar + success on same line
-        show_progress_bar "$current" "$total" "Testing"
-        echo -n "  "
-        show_success "$test_name"
+        echo -en "\r${progress_display}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${test_name}\033[K"
     else
         TESTS_FAILED=$((TESTS_FAILED + 1))
         FAILED_TESTS+=("$test_name")
-        # Show progress bar + error on same line
-        show_progress_bar "$current" "$total" "Testing"
-        echo -n "  "
-        show_error "$test_name"
+        echo -en "\r${progress_display}  ${COLOR_ERROR}${ICON_ERROR}${RESET}  ${test_name}\033[K"
     fi
+    sleep 0.1  # Brief pause to see each test update
 done
 
-# Final progress line
-show_progress_bar "$total" "$total" "Complete"
+# Print final newline after progress updates
+echo ""
 echo ""  # Extra blank line
 echo ""
 
