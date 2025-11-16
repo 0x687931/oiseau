@@ -14,37 +14,28 @@ Type "# Demo: Progress bar in all 3 modes"
 Enter
 Sleep 500ms
 
-Type "# source ./oiseau.sh"
-Enter
-Sleep 200ms
-
-Type "# for i in {0..100}; do"
-Enter
-Sleep 200ms
-
-Type "#   show_progress_bar \$i 100 'Processing'"
-Enter
-Sleep 200ms
-
-Type "#   sleep 0.05"
-Enter
-Sleep 200ms
-
-Type "# done"
-Enter
-Sleep 1s
-
-# Now execute the actual demo code (hidden)
-Hide
 Type "source ./oiseau.sh"
 Enter
-Type "echo ''"
+Sleep 200ms
+
+Type "for i in {0..100}; do"
 Enter
-Type "echo ''"
+Sleep 200ms
+
+Type "  show_progress_bar \$i 100 'Processing'"
 Enter
-Type "echo ''"
+Sleep 200ms
+
+Type "  sleep 0.05"
 Enter
-Type "echo ''"
+Sleep 200ms
+
+Type "done"
+Hide
+Type clear
+
+# Now execute the actual demo code (hidden)
+Type "source ./oiseau.sh"
 Enter
 Type "for i in {0..100}; do"
 Enter

@@ -881,6 +881,130 @@ show_box() {
 # ==============================================================================
 
 #===============================================================================
+# FUNCTION: init_progress_bars
+# DESCRIPTION: Pre-declare the number of progress bars for multi-line mode
+# PARAMETERS:
+#   $1 - count (number, required): Number of progress bars (1-N)
+# BEHAVIOR:
+#   - Eliminates race condition when dynamically adding bars mid-execution
+#   - Call once before starting progress bar updates
+#   - Optional but recommended for multi-line progress bars
+# EXAMPLE:
+#   init_progress_bars 3
+#   for i in {1..100}; do
+#     show_progress_bar $i 100 "Task 1" 1
+#     show_progress_bar $i 100 "Task 2" 2
+#     show_progress_bar $i 100 "Task 3" 3
+#   done
+#===============================================================================
+init_progress_bars() {
+    local count="$1"
+
+    # Validate input
+    if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -lt 1 ]; then
+        echo "Error: init_progress_bars requires a positive integer" >&2
+        return 1
+    fi
+
+    # Pre-declare the maximum line number
+    export OISEAU_PROGRESS_MAX_LINE="$count"
+    export OISEAU_PROGRESS_INITIALIZED=1
+
+    # Reset other state
+    unset OISEAU_PROGRESS_COMPLETED_LINES
+    unset OISEAU_PROGRESS_LAST_UPDATE
+
+    return 0
+}
+
+#===============================================================================
+# FUNCTION: reset_progress_bars
+# DESCRIPTION: Explicitly reset progress bar state for next group
+# USAGE: reset_progress_bars
+# BEHAVIOR:
+#   - Clears all progress bar state variables
+#   - Call between sequential progress bar groups
+#   - Auto-reset still works if you don't call this
+# EXAMPLE:
+#   # Group 1
+#   init_progress_bars 2
+#   for i in {1..100}; do ... done
+#   reset_progress_bars
+#
+#   # Group 2
+#   init_progress_bars 3
+#   for i in {1..100}; do ... done
+#===============================================================================
+reset_progress_bars() {
+    unset OISEAU_PROGRESS_MAX_LINE
+    unset OISEAU_PROGRESS_COMPLETED_LINES
+    unset OISEAU_PROGRESS_LAST_UPDATE
+    unset OISEAU_PROGRESS_INITIALIZED
+    unset OISEAU_PROGRESS_LOCK
+    return 0
+}
+
+#===============================================================================
+# FUNCTION: _acquire_progress_lock
+# DESCRIPTION: Internal - Acquire mutex lock for progress bar updates
+# RETURNS: 0 on success, 1 if lock already held (parallel update detected)
+#===============================================================================
+_acquire_progress_lock() {
+    if [ -n "${OISEAU_PROGRESS_LOCK+x}" ]; then
+        echo "Error: Parallel progress bar updates detected. Call show_progress_bar sequentially only." >&2
+        return 1
+    fi
+    export OISEAU_PROGRESS_LOCK=1
+    return 0
+}
+
+#===============================================================================
+# FUNCTION: _release_progress_lock
+# DESCRIPTION: Internal - Release mutex lock for progress bar updates
+#===============================================================================
+_release_progress_lock() {
+    unset OISEAU_PROGRESS_LOCK
+    return 0
+}
+
+#===============================================================================
+# FUNCTION: _throttle_progress_update
+# DESCRIPTION: Internal - Auto-throttle progress updates to prevent buffer overflow
+# BEHAVIOR:
+#   - Enforces minimum 10ms between updates
+#   - Automatically sleeps if updates are too frequent
+#   - Configurable via OISEAU_PROGRESS_MIN_INTERVAL (milliseconds)
+#===============================================================================
+_throttle_progress_update() {
+    local min_interval="${OISEAU_PROGRESS_MIN_INTERVAL:-10}"  # Default 10ms
+
+    # Get current time in milliseconds
+    # Use perl for cross-platform compatibility (macOS date doesn't support %N)
+    local current_time
+    if command -v perl >/dev/null 2>&1; then
+        current_time=$(perl -MTime::HiRes=time -e 'printf "%.0f\n", time()*1000')
+    else
+        # Fallback to seconds resolution
+        current_time=$(($(date +%s) * 1000))
+    fi
+
+    # Check if we need to throttle
+    if [ -n "${OISEAU_PROGRESS_LAST_UPDATE+x}" ]; then
+        local elapsed=$((current_time - OISEAU_PROGRESS_LAST_UPDATE))
+        if [ "$elapsed" -lt "$min_interval" ]; then
+            local sleep_ms=$((min_interval - elapsed))
+            # Convert to seconds for sleep (bash sleep takes seconds)
+            local sleep_sec=$(echo "scale=3; $sleep_ms / 1000" | bc 2>/dev/null || echo "0.01")
+            sleep "$sleep_sec" 2>/dev/null || :
+        fi
+    fi
+
+    # Update last update time
+    export OISEAU_PROGRESS_LAST_UPDATE="$current_time"
+    return 0
+}
+
+#===============================================================================
 # FUNCTION: show_progress_bar
 # DESCRIPTION: Display a progress bar with optional animation
 # PARAMETERS:
@@ -928,6 +1052,12 @@ show_progress_bar() {
         echo "ERROR: show_progress_bar total cannot be zero" >&2
         return 1
     fi
+
+    # RACE CONDITION MITIGATION #1: Acquire mutex lock to prevent parallel updates
+    _acquire_progress_lock || return 1
+
+    # RACE CONDITION MITIGATION #4: Auto-throttle to prevent terminal buffer overflow
+    _throttle_progress_update
 
     # Validate line_number if provided (security: prevent injection)
     if [ -n "$line_number" ]; then
@@ -994,20 +1124,26 @@ show_progress_bar() {
         if [ -n "$line_number" ]; then
             # Multi-line mode: use relative cursor positioning
 
-            # Auto-reset detection: if line_number=1 and previous group completed, reset for new group
-            if [ "$line_number" -eq 1 ] && [ -n "${OISEAU_PROGRESS_COMPLETED_LINES+x}" ]; then
-                local completed_count=$(echo "$OISEAU_PROGRESS_COMPLETED_LINES" | wc -w | tr -d ' ')
-                # If all lines were completed in previous group, reset now
-                if [ -n "${OISEAU_PROGRESS_MAX_LINE+x}" ] && [ "$completed_count" -ge "$OISEAU_PROGRESS_MAX_LINE" ]; then
-                    unset OISEAU_PROGRESS_MAX_LINE
-                    unset OISEAU_PROGRESS_COMPLETED_LINES
+            # RACE CONDITION MITIGATION #2: If init_progress_bars was called, use pre-declared count
+            if [ -z "${OISEAU_PROGRESS_INITIALIZED+x}" ]; then
+                # Legacy mode: auto-detect maximum line number
+
+                # Auto-reset detection: if line_number=1 and previous group completed, reset for new group
+                if [ "$line_number" -eq 1 ] && [ -n "${OISEAU_PROGRESS_COMPLETED_LINES+x}" ]; then
+                    local completed_count=$(echo "$OISEAU_PROGRESS_COMPLETED_LINES" | wc -w | tr -d ' ')
+                    # If all lines were completed in previous group, reset now
+                    if [ -n "${OISEAU_PROGRESS_MAX_LINE+x}" ] && [ "$completed_count" -ge "$OISEAU_PROGRESS_MAX_LINE" ]; then
+                        unset OISEAU_PROGRESS_MAX_LINE
+                        unset OISEAU_PROGRESS_COMPLETED_LINES
+                    fi
+                fi
+
+                # Track the maximum line number seen to support any number of progress bars
+                if [ -z "${OISEAU_PROGRESS_MAX_LINE+x}" ] || [ "$line_number" -gt "$OISEAU_PROGRESS_MAX_LINE" ]; then
+                    export OISEAU_PROGRESS_MAX_LINE="$line_number"
                 fi
             fi
-
-            # Track the maximum line number seen to support any number of progress bars
-            if [ -z "${OISEAU_PROGRESS_MAX_LINE+x}" ] || [ "$line_number" -gt "$OISEAU_PROGRESS_MAX_LINE" ]; then
-                export OISEAU_PROGRESS_MAX_LINE="$line_number"
-            fi
+            # else: MAX_LINE already set by init_progress_bars, use it directly
 
             # Calculate relative offset from bottom (assumes cursor is after all progress bars)
             # If max=3 and line=1: up_offset=3, if line=2: up_offset=2, if line=3: up_offset=1
@@ -1044,6 +1180,10 @@ show_progress_bar() {
         # Static mode: print new line each time
         printf '%b\n' "${full_display}"
     fi
+
+    # Release mutex lock
+    _release_progress_lock
+    return 0
 }
 
 # Show a checklist with status indicators
