@@ -93,46 +93,138 @@ source ./oiseau.sh
 
 ---
 
-## 🚀 Quick Examples
+## 📚 Widget Catalog
 
-### Simple Messages
+Jump to any widget:
 
-Quick one-line status messages with colored icons.
+**Status & Messages**
+[`show_success`](#show_success) • [`show_error`](#show_error) • [`show_warning`](#show_warning) • [`show_info`](#show_info)
+
+**Boxes & Containers**
+[`show_box`](#show_box) • [`show_summary`](#show_summary) • [`show_header_box`](#show_header_box)
+
+**Headers**
+[`show_header`](#show_header) • [`show_subheader`](#show_subheader) • [`show_section_header`](#show_section_header)
+
+**Progress & Status**
+[`show_progress_bar`](#show_progress_bar) • [`show_checklist`](#show_checklist) • [`show_spinner`](#show_spinner) • [`start_spinner`](#start_spinner) • [`stop_spinner`](#stop_spinner)
+
+**Interactive Input**
+[`ask_input`](#ask_input) • [`ask_list`](#ask_list) • [`ask_yes_no`](#ask_yes_no) • [`prompt_confirm`](#prompt_confirm)
+
+**Formatting Helpers**
+[`print_kv`](#print_kv) • [`print_command`](#print_command) • [`print_item`](#print_item) • [`print_step`](#print_step) • [`print_next_steps`](#print_next_steps) • [`print_section`](#print_section)
+
+**Advanced**
+[`show_table`](#show_table) • [`show_pager`](#show_pager)
+
+---
+
+### show_success
+
+Quick one-line success message with green checkmark.
 
 **Syntax:**
 ```bash
 show_success <message>
-show_error <message>
-show_warning <message>
-show_info <message>
 ```
 
 **Parameters:**
-- `message` - Text to display after the status icon
+- `message` - Text to display
 
 **Example:**
 ```bash
 show_success "Build completed successfully"
-show_error "Failed to connect to server"
-show_warning "This will delete all files"
-show_info "Processing 142 items..."
 ```
 
 **Output:**
 ```
   ✓  Build completed successfully
+```
+
+**Use cases:** Confirmations, completed tasks, successful operations
+
+---
+
+### show_error
+
+Quick one-line error message with red X.
+
+**Syntax:**
+```bash
+show_error <message>
+```
+
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
+show_error "Failed to connect to server"
+```
+
+**Output:**
+```
   ✗  Failed to connect to server
+```
+
+**Use cases:** Failures, errors that occurred, critical issues
+
+---
+
+### show_warning
+
+Quick one-line warning message with orange warning icon.
+
+**Syntax:**
+```bash
+show_warning <message>
+```
+
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
+show_warning "This will delete all files"
+```
+
+**Output:**
+```
   ⚠  This will delete all files
+```
+
+**Use cases:** Cautions, important notices, potential issues
+
+---
+
+### show_info
+
+Quick one-line informational message with blue info icon.
+
+**Syntax:**
+```bash
+show_info <message>
+```
+
+**Parameters:**
+- `message` - Text to display
+
+**Example:**
+```bash
+show_info "Processing 142 items..."
+```
+
+**Output:**
+```
   ℹ  Processing 142 items...
 ```
 
-**Use cases:**
-- `show_success` - Confirmations, completed tasks
-- `show_error` - Failures, errors that occurred
-- `show_warning` - Cautions, important notices
-- `show_info` - General information, status updates
+**Use cases:** General information, status updates, helpful tips
 
-### Styled Boxes
+---
+
+### show_box
 
 Display important information in bordered boxes with icons, titles, messages, and optional action commands.
 
@@ -183,7 +275,9 @@ show_box error "Connection Failed" \
 - `info` - Helpful tips or informational messages
 - `success` - Confirmations of successful operations
 
-### Progress Bar
+---
+
+### show_progress_bar
 
 Visual progress indicator showing task completion percentage.
 
@@ -216,7 +310,9 @@ Installation: ████████████░░░░░░░░ 60% (
 - Build or compilation steps
 - Any long-running task with measurable progress
 
-### Checklists
+---
+
+### show_checklist
 
 Track multi-step workflows with visual status indicators.
 
@@ -262,7 +358,9 @@ show_checklist tasks
 - Build processes with multiple tasks
 - Any multi-stage workflow where users need to see overall progress
 
-### Section Headers
+---
+
+### show_section_header
 
 Display titled sections with optional step counters.
 
@@ -298,214 +396,491 @@ show_section_header "Deploy Application" 2 4 "Building Docker image"
 
 ---
 
-## 📚 Widget Reference
 
-Oiseau includes **25+ widgets** organized into the following categories:
 
-### Status Messages
+---
 
-| Function | Description |
-|----------|-------------|
-| `show_success "msg"` | Green checkmark message |
-| `show_error "msg"` | Red X message |
-| `show_warning "msg"` | Orange warning message |
-| `show_info "msg"` | Blue info message |
+### show_header
 
-### Headers
+Simple bold header for section titles.
 
-| Function | Description |
-|----------|-------------|
-| `show_header "title"` | Simple bold header |
-| `show_subheader "title"` | Muted subheader |
-| `show_header_box "title" [subtitle]` | Decorative boxed header with optional subtitle |
-| `show_section_header "title" [step] [total] [subtitle]` | Boxed header with optional step counter |
+**Syntax:**
+```bash
+show_header <title>
+```
 
-### Boxes & Containers
-
-| Function | Usage |
-|----------|-------|
-| `show_box <type> <title> <msg> [cmd...]` | Styled box with title, message, and optional commands |
-| `show_summary "title" "item1" "item2" ...` | Summary box with multiple items |
-
-**Box Types:** `error`, `warning`, `info`, `success`
-
-### Progress Indicators
-
-| Function | Description |
-|----------|-------------|
-| `show_progress_bar <current> <total> [label]` | Animated progress bar with percentage |
-| `show_checklist <array_name>` | Checklist with status icons (done/active/pending/skip) |
-
-**Progress Bar Features:**
-- **Auto-animation:** Updates in place when in TTY
-- **Smart fallback:** Prints new lines in pipes/redirects
-- **Validation:** Prevents division by zero, validates numeric input
-- **Customizable:** Width and animation can be overridden
-
-**Environment Variables:**
-- `OISEAU_PROGRESS_ANIMATE` - Force animation on/off (default: auto-detect)
-- `OISEAU_PROGRESS_WIDTH` - Bar width in characters (default: 20)
+**Parameters:**
+- `title` - Header text
 
 **Example:**
 ```bash
-for i in {1..100}; do
-  show_progress_bar $i 100 "Downloading"
-  sleep 0.05
-done
+show_header "Installation"
 ```
 
-**Checklist Statuses:**
+**Output:**
+```
+  Installation
+```
+
+**Use cases:** Section dividers, major steps in a script
+
+---
+
+### show_subheader
+
+Muted subheader for subsections.
+
+**Syntax:**
 ```bash
-tasks=(
-    "done|Task completed|Additional info"
-    "active|Task in progress|Working..."
-    "pending|Task waiting|Not started"
-    "skip|Task skipped|Not needed"
-)
-show_checklist tasks
+show_subheader <title>
 ```
 
-### Spinner (Loading Indicators)
+**Parameters:**
+- `title` - Subheader text
 
-| Function | Description |
-|----------|-------------|
-| `show_spinner "message"` | Animated loading spinner (runs until killed) |
-| `start_spinner "message"` | Start spinner in background, tracks PID |
-| `stop_spinner` | Stop background spinner started with start_spinner |
+**Example:**
+```bash
+show_subheader "Configuring environment..."
+```
 
-**Styles:** dots (default), line, circle, pulse, arc
+**Output:**
+```
+  Configuring environment...
+```
 
-**Environment Variables:**
-- `OISEAU_SPINNER_STYLE` - Spinner animation style
-- `OISEAU_SPINNER_FPS` - Frames per second (default: 10)
+**Use cases:** Subsection titles, secondary information
+
+---
+
+### show_header_box
+
+Decorative boxed header with optional subtitle.
+
+**Syntax:**
+```bash
+show_header_box <title> [subtitle]
+```
+
+**Parameters:**
+- `title` - Main header text
+- `subtitle` - Optional secondary text
+
+**Example:**
+```bash
+show_header_box "Deployment Pipeline"
+```
+
+**Output:**
+```
+╭──────────────────────────────────────────────────────────╮
+│                                                          │
+│   Deployment Pipeline                                    │
+│                                                          │
+╰──────────────────────────────────────────────────────────╯
+```
+
+**Use cases:** Script start, major section headings, prominent titles
+
+---
+
+### show_summary
+
+Summary box with multiple key-value items.
+
+**Syntax:**
+```bash
+show_summary <title> <item1> <item2> ...
+```
+
+**Parameters:**
+- `title` - Box title
+- `item...` - List items to display
+
+**Example:**
+```bash
+show_summary "Deployment Complete" \
+    "Environment: Production" \
+    "Build: #432" \
+    "Status: All systems operational"
+```
+
+**Output:**
+```
+╭──────────────────────────────────────────────────────────╮
+│  [OK]  Deployment Complete                               │
+╰──────────────────────────────────────────────────────────╯
+│  Environment: Production                                 │
+│  Build: #432                                             │
+│  Status: All systems operational                         │
+╰──────────────────────────────────────────────────────────╯
+```
+
+**Use cases:** Final status summaries, completion reports, build info
+
+---
+
+### show_spinner
+
+Animated loading spinner (runs until killed).
+
+**Syntax:**
+```bash
+show_spinner <message>
+```
+
+**Parameters:**
+- `message` - Text to show next to spinner
+
+**Example:**
+```bash
+show_spinner "Loading..." &
+SPINNER_PID=$!
+sleep 5
+kill $SPINNER_PID
+```
+
+**Use cases:** Long-running operations with unknown duration
+
+---
+
+### start_spinner
+
+Start spinner in background (tracks PID automatically).
+
+**Syntax:**
+```bash
+start_spinner <message>
+```
+
+**Parameters:**
+- `message` - Text to show next to spinner
 
 **Example:**
 ```bash
 start_spinner "Processing files..."
-# ... do work ...
+# do work
 stop_spinner
-show_success "Done!"
 ```
 
-### Interactive Prompts
-
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `prompt_confirm "msg" [default]` | 0=yes, 1=no | Yes/no confirmation |
-| `ask_yes_no "msg"` | 0=yes, 1=no | Alias for prompt_confirm |
-| `ask_input "msg" [default] [mode]` | string | Enhanced text input with validation |
-| `ask_list "prompt" array_name [mode]` | string(s) | Interactive list selection with arrow keys |
-
-#### Enhanced Text Input
-
-The `ask_input` function provides secure text input with validation, password masking, and auto-detection:
-
-**Modes:**
-- `text` (default) - Normal text input
-- `password` - Masked input (• in UTF-8, * in ASCII/Plain), backspace support
-- `email` - Validates email format, loops until valid
-- `number` - Validates numeric input only
-
-**Auto-detection:**
-Automatically switches to password mode when prompt contains: `password`, `passwd`, `pass`, `secret`, `token`, `key`, or `api`
-
-**Examples:**
-
-```bash
-# Basic text input with default
-name=$(ask_input "Your name" "John")
-
-# Password - auto-detected from prompt
-password=$(ask_input "Enter password")          # Shows • (UTF-8) or * (ASCII)
-api_key=$(ask_input "API key")                  # Auto-detected as password
-
-# Explicit password mode
-password=$(ask_input "PIN" "" "password")
-
-# Email validation (loops until valid)
-email=$(ask_input "Email address" "" "email")
-
-# Number validation (loops until valid)
-age=$(ask_input "Your age" "" "number")
-```
-
-**Security features:**
-- All input sanitized with `_escape_input()`
-- Prompts sanitized before display
-- No ANSI injection or command substitution possible
-- Password mode never echoes sensitive data
-
-#### Interactive List Selection
-
-The `ask_list` function provides interactive list selection with arrow key navigation:
-
-**Modes:**
-- `single` (default) - Select one item with Enter
-- `multi` - Toggle multiple items with Space, confirm with Enter
-
-**Navigation:**
-- Arrow keys (↑↓) or vim keys (j/k) to navigate
-- Enter to select (single mode) or confirm (multi mode)
-- Space to toggle selection (multi mode only)
-- q or Esc to cancel
-
-**Auto-detection:**
-Automatically falls back to numbered list in non-TTY environments (pipes, redirects)
-
-**Mode-aware:**
-- UTF-8 mode: › cursor, ✓ checkbox
-- ASCII mode: > cursor, X checkbox
-
-**Examples:**
-
-```bash
-# Single-select
-options=("Deploy to staging" "Deploy to production" "Rollback")
-choice=$(ask_list "Select action:" options)
-echo "You selected: $choice"
-
-# Multi-select
-files=("app.log" "error.log" "access.log" "debug.log")
-selected=$(ask_list "Select files to delete:" files "multi")
-
-# Process multi-select results (newline-separated)
-echo "$selected" | while IFS= read -r file; do
-    echo "Deleting: $file"
-done
-```
-
-**Features:**
-- Bash 3.x compatible (works on macOS default bash)
-- Input sanitization built-in
-- Real-time screen updates with smooth navigation
-- Graceful non-TTY fallback
-
-### Formatting Helpers
-
-| Function | Description |
-|----------|-------------|
-| `print_kv "key" "value" [width]` | Key-value pair with aligned columns |
-| `print_command "cmd"` | Code-styled command display |
-| `print_command_inline "text"` | Inline code-styled text |
-| `print_item "text"` | Bulleted list item |
-| `print_section "title"` | Section title (colored header) |
-| `print_step <num> "text"` | Numbered step with text |
-| `print_next_steps "step1" "step2" ...` | Numbered next steps list |
-
-### Backward Compatibility Aliases
-
-The following `print_*` aliases are provided for backward compatibility:
-
-| Alias | Maps To |
-|-------|---------|
-| `print_info()` | `show_info()` |
-| `print_success()` | `show_success()` |
-| `print_error()` | `show_error()` |
-| `print_warning()` | `show_warning()` |
-| `print_header()` | `show_header()` |
-| `print_box()` | `show_summary()` |
+**Use cases:** Easier spinner management with automatic PID tracking
 
 ---
+
+### stop_spinner
+
+Stop background spinner started with `start_spinner`.
+
+**Syntax:**
+```bash
+stop_spinner
+```
+
+**Example:**
+```bash
+start_spinner "Downloading..."
+curl -O https://example.com/file.zip
+stop_spinner
+show_success "Download complete"
+```
+
+---
+
+### ask_input
+
+Enhanced text input with validation and password masking.
+
+**Syntax:**
+```bash
+ask_input <prompt> [default] [mode]
+```
+
+**Parameters:**
+- `prompt` - Question to ask
+- `default` - Default value if user presses Enter
+- `mode` - Validation mode: `text`, `password`, `email`, `number`
+
+**Example:**
+```bash
+name=$(ask_input "Your name" "John")
+email=$(ask_input "Email" "" "email")
+password=$(ask_input "Password" "" "password")
+```
+
+**Use cases:** User input, configuration wizards, password collection
+
+---
+
+### ask_list
+
+Interactive list selection with arrow key navigation.
+
+**Syntax:**
+```bash
+ask_list <prompt> <array_name> [mode]
+```
+
+**Parameters:**
+- `prompt` - Question to ask
+- `array_name` - Name of array (not `$array`)
+- `mode` - `single` (default) or `multi`
+
+**Example:**
+```bash
+options=("Deploy" "Test" "Cancel")
+choice=$(ask_list "Select action:" options)
+```
+
+**Use cases:** Menu selections, multi-choice questions
+
+---
+
+### ask_yes_no
+
+Ask yes/no question (alias for `prompt_confirm`).
+
+**Syntax:**
+```bash
+ask_yes_no <question>
+```
+
+**Parameters:**
+- `question` - Question to ask
+
+**Example:**
+```bash
+if ask_yes_no "Delete all files?"; then
+    echo "Deleting..."
+fi
+```
+
+**Use cases:** Confirmations, yes/no decisions
+
+---
+
+### prompt_confirm
+
+Yes/no confirmation prompt.
+
+**Syntax:**
+```bash
+prompt_confirm <question> [default]
+```
+
+**Parameters:**
+- `question` - Question to ask
+- `default` - Default answer: `y` or `n`
+
+**Example:**
+```bash
+if prompt_confirm "Continue?" "y"; then
+    proceed
+fi
+```
+
+**Use cases:** Same as `ask_yes_no`, with default value support
+
+---
+
+### print_kv
+
+Key-value pair with aligned columns.
+
+**Syntax:**
+```bash
+print_kv <key> <value> [width]
+```
+
+**Parameters:**
+- `key` - Left-side label
+- `value` - Right-side value
+- `width` - Optional column width
+
+**Example:**
+```bash
+print_kv "Version" "2.0.1"
+print_kv "Status" "Running"
+```
+
+**Output:**
+```
+  Version    2.0.1
+  Status     Running
+```
+
+**Use cases:** Configuration display, system information
+
+---
+
+### print_command
+
+Code-styled command display (monospace box).
+
+**Syntax:**
+```bash
+print_command <command>
+```
+
+**Parameters:**
+- `command` - Command text to display
+
+**Example:**
+```bash
+print_command "npm install oiseau"
+```
+
+**Use cases:** Showing commands to run, code examples
+
+---
+
+### print_item
+
+Bulleted list item.
+
+**Syntax:**
+```bash
+print_item <text>
+```
+
+**Parameters:**
+- `text` - Item text
+
+**Example:**
+```bash
+print_item "First item"
+print_item "Second item"
+```
+
+**Output:**
+```
+  • First item
+  • Second item
+```
+
+**Use cases:** Lists, enumeration
+
+---
+
+### print_step
+
+Numbered step with text.
+
+**Syntax:**
+```bash
+print_step <number> <text>
+```
+
+**Parameters:**
+- `number` - Step number
+- `text` - Step description
+
+**Example:**
+```bash
+print_step 1 "Clone repository"
+print_step 2 "Install dependencies"
+```
+
+**Output:**
+```
+  1. Clone repository
+  2. Install dependencies
+```
+
+**Use cases:** Sequential instructions, tutorials
+
+---
+
+### print_next_steps
+
+Numbered list of next steps.
+
+**Syntax:**
+```bash
+print_next_steps <step1> <step2> ...
+```
+
+**Parameters:**
+- `step...` - List of steps
+
+**Example:**
+```bash
+print_next_steps \
+    "Run tests: npm test" \
+    "Deploy: npm run deploy"
+```
+
+**Output:**
+```
+Next steps:
+
+  1. Run tests: npm test
+  2. Deploy: npm run deploy
+```
+
+**Use cases:** Post-installation steps, what to do next
+
+---
+
+### print_section
+
+Section title with colored header.
+
+**Syntax:**
+```bash
+print_section <title>
+```
+
+**Parameters:**
+- `title` - Section title
+
+**Example:**
+```bash
+print_section "Configuration"
+```
+
+**Use cases:** Organizing output into sections
+
+---
+
+### show_table
+
+Display data in a formatted table.
+
+**Syntax:**
+```bash
+show_table <array_name>
+```
+
+**Parameters:**
+- `array_name` - Name of array containing rows (pipe-separated values)
+
+**Example:**
+```bash
+data=("Name|Age|City" "Alice|30|NYC" "Bob|25|LA")
+show_table data
+```
+
+**Use cases:** Structured data display, reports
+
+---
+
+### show_pager
+
+Display content in a pager (less/more).
+
+**Syntax:**
+```bash
+show_pager <content>
+```
+
+**Parameters:**
+- `content` - Text to display in pager
+
+**Example:**
+```bash
+show_pager "$(cat longfile.txt)"
+```
+
+**Use cases:** Long text output, help documentation
 
 ## 🎨 Customization
 
