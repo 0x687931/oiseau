@@ -90,10 +90,11 @@ if [ ! -d "$TEST_DIR" ]; then
 fi
 
 # Find all test files (Bash 3.x compatible)
+# Exclude lib directory to avoid picking up helper library
 test_files=()
 while IFS= read -r file; do
     test_files+=("$file")
-done < <(find "$TEST_DIR" -name "test_*.sh" -type f | sort)
+done < <(find "$TEST_DIR" -name "test_*.sh" -type f -not -path "*/lib/*" | sort)
 
 if [ ${#test_files[@]} -eq 0 ]; then
     show_box warning "No Tests Found" "No test files found in $TEST_DIR"
