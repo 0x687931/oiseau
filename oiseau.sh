@@ -1539,8 +1539,8 @@ ask_list() {
     render_list() {
         # Clear screen area (move cursor up and clear lines)
         if [ "$1" != "first" ]; then
-            # Move cursor up by number of items + header + footer
-            local lines_to_clear=$((${#items[@]} + 3))
+            # Move cursor up by number of items + prompt + help line
+            local lines_to_clear=$((${#items[@]} + 2))
             for ((i=0; i<lines_to_clear; i++)); do
                 echo -ne "\033[1A\033[2K" >&2  # Move up and clear line
             done
