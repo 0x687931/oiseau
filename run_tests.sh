@@ -137,13 +137,19 @@ for i in "${!test_files[@]}"; do
     bar="${COLOR_SUCCESS}$(_repeat_char "$filled_char" "$filled")${COLOR_DIM}$(_repeat_char "$empty_char" "$empty")${RESET}"
     progress_display="Testing: ${bar} ${percent}% (${current}/${total})"
 
-    # Calculate available width for test name
-    # Format: "Testing: " (9) + bar (20) + " " (1) + percentage (4-5) + " (X/YY)" (6-8) + "  " (2) + icon (1) + "  " (2)
-    # Total fixed width: ~45-50 characters
-    # Leave room for test name to fit within terminal width
-    max_name_width=$((OISEAU_WIDTH - 50))
-    if [ "$max_name_width" -lt 15 ]; then
-        max_name_width=15  # Minimum reasonable width
+    # Calculate available width for test name to match box width (60 chars)
+    # Format: "Testing: " (9) + bar (20) + " " (1) + percentage (4) + " (X/YY)" (~7) + "  " (2) + icon (1) + "  " (2)
+    # Total fixed: ~46 characters, leaving ~14 for test name
+    max_line_width=60
+
+    # Calculate fixed width (without color codes which don't take visual space)
+    # "Testing: " = 9, bar = 20, " " = 1, percentage = 3-4, " (X/YY)" = 6-7, "  " = 2, icon = 1-4, "  " = 2
+    fixed_width=$((9 + 20 + 1 + 4 + 7 + 2 + 1 + 2))  # ~46 chars
+
+    # Calculate remaining space for test name
+    max_name_width=$((max_line_width - fixed_width))
+    if [ "$max_name_width" -lt 10 ]; then
+        max_name_width=10  # Minimum reasonable width
     fi
 
     # Truncate test name if needed
@@ -152,11 +158,11 @@ for i in "${!test_files[@]}"; do
     # Run test and show result on same line (update in place)
     if "$test_file" > /dev/null 2>&1; then
         TESTS_PASSED=$((TESTS_PASSED + 1))
-        echo -en "\r${progress_display}  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${display_name}\033[K"
+        echo -en "\rTesting: ${bar} ${percent}% (${current}/${total})  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  ${display_name}\033[K"
     else
         TESTS_FAILED=$((TESTS_FAILED + 1))
         FAILED_TESTS+=("$test_name")
-        echo -en "\r${progress_display}  ${COLOR_ERROR}${ICON_ERROR}${RESET}  ${display_name}\033[K"
+        echo -en "\rTesting: ${bar} ${percent}% (${current}/${total})  ${COLOR_ERROR}${ICON_ERROR}${RESET}  ${display_name}\033[K"
     fi
     sleep 0.1  # Brief pause to see each test update
 done
