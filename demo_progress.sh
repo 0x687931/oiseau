@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Demo: Multiline progress bars with race condition mitigations
 
 cd "$(dirname "$0")"

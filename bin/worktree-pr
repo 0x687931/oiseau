@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Push current worktree branch and create a pull request
 # Usage: bin/worktree-pr [pr-title] [pr-body]
 

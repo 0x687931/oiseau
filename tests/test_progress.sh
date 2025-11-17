@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for enhanced show_progress_bar
 
 # Get the directory of this script

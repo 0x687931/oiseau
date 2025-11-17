@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script to validate UTF-8/ASCII/Plain mode consistency across all widgets
 # This ensures all widgets respect OISEAU_MODE and degrade gracefully
 

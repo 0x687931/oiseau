@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for show_table widget
 
 # Get the directory of this script

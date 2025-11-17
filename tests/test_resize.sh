@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for window resize handler
 
 # Get the directory of this script

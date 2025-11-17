@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Complete workflow: merge PR, check reviews, and cleanup worktree
 # Usage: bin/worktree-complete <feature-name> [merge-method]
 #

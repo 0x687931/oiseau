@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test dynamically adding bars mid-execution to check for race conditions
 
 cd "$(dirname "$0")"

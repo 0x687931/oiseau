@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Oiseau - A Modern Terminal UI Library for Bash
 # Version: 1.0.0
 # License: MIT
@@ -14,6 +14,33 @@
 #   source oiseau/oiseau.sh
 #   show_success "Operation completed!"
 #   show_box error "Failed" "Something went wrong" "command to fix"
+
+# ==============================================================================
+# SHELL COMPATIBILITY LAYER
+# ==============================================================================
+# Oiseau is authored for Bash, but macOS users often work from zsh (and some
+# developer workstations no longer have Bash 5+ installed at all).  We detect
+# the active shell and enable the right compatibility toggles so sourcing the
+# library from zsh works even when Bash is not available.
+if [ -n "${BASH_VERSION:-}" ]; then
+    OISEAU_SHELL="bash"
+elif [ -n "${ZSH_VERSION:-}" ]; then
+    OISEAU_SHELL="zsh"
+
+    # Match Bash semantics so arithmetic for-loops, [[ ]], and arrays behave.
+    if command -v emulate >/dev/null 2>&1; then
+        emulate -L sh
+    fi
+    setopt KSH_ARRAYS SH_WORD_SPLIT KSH_GLOB NO_BARE_GLOB_QUAL > /dev/null 2>&1
+
+    # Ensure declare -A works by delegating to typeset (zsh's native builtin).
+    declare() {
+        builtin typeset "$@"
+    }
+else
+    OISEAU_SHELL="sh"
+fi
+
 
 # ==============================================================================
 # TERMINAL DETECTION & INITIALIZATION
@@ -108,12 +135,20 @@ fi
 # Cache for display width calculations and repeated strings
 # Using bash 3.x compatible approach with eval for older systems
 # Note: Caching is disabled on bash < 4.0 (lacks associative arrays)
-if [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
+if [ "$OISEAU_SHELL" = "bash" ] && [ "${BASH_VERSINFO[0]:-0}" -ge 4 ]; then
     # Bash 4.0+ supports associative arrays for efficient caching
-    declare -A OISEAU_WIDTH_CACHE
+    if declare -gA OISEAU_WIDTH_CACHE 2>/dev/null; then
+        :
+    else
+        declare -A OISEAU_WIDTH_CACHE
+    fi
+    export OISEAU_HAS_CACHE=1
+elif [ "$OISEAU_SHELL" = "zsh" ]; then
+    # Modern zsh has associative arrays available out of the box
+    builtin typeset -gA OISEAU_WIDTH_CACHE
     export OISEAU_HAS_CACHE=1
 else
-    # Bash 3.x fallback: disable caching (still works, just slower)
+    # Fallback shells disable caching (still works, just slower)
     export OISEAU_HAS_CACHE=0
 fi
 
@@ -353,13 +388,11 @@ _safe_echo_n() {
 # Performance: ~10x faster than previous pipeline-based approach
 _escape_input() {
     local input="$1"
-    local result="$input"
 
-    # Strip ANSI escape sequences using bash pattern matching
-    # Matches: ESC [ <params> m
-    while [[ "$result" =~ $'\033'\[([0-9;]*)?m ]]; do
-        result="${result//${BASH_REMATCH[0]}}"
-    done
+    # Reuse the ANSI stripper to avoid BASH_REMATCH differences across shells.
+    # It walks characters manually, so it works in bash, zsh, and POSIX sh.
+    local result
+    result=$(_strip_ansi "$input")
 
     # Remove control characters (0x00-0x1F and 0x7F)
     # Use LC_COLLATE=C for consistent character class behavior
@@ -402,14 +435,19 @@ _display_width() {
     local can_cache=0
     local cache_key=""
     if [ "$OISEAU_HAS_CACHE" = "1" ]; then
-        cache_key=$(printf '%q' "$clean")
+        # Generate a portable key that works in both bash and zsh associative arrays
+        # by hex-encoding the string.  Using od avoids relying on bash-specific printf %q.
+        cache_key=$(printf '%s' "$clean" | LC_ALL=C od -An -tx1 | tr -d ' \n')
+        if [ -z "$cache_key" ]; then
+            cache_key="__OISEAU_EMPTY__"
+        fi
         can_cache=1
     fi
 
     # Check cache first (huge performance boost for repeated strings)
     # Only available on bash 4.0+
-    if [ "$can_cache" = "1" ] && [ -n "${OISEAU_WIDTH_CACHE["$cache_key"]+_}" ]; then
-        echo "${OISEAU_WIDTH_CACHE["$cache_key"]}"
+    if [ "$can_cache" = "1" ] && [ -n "${OISEAU_WIDTH_CACHE[$cache_key]+_}" ]; then
+        echo "${OISEAU_WIDTH_CACHE[$cache_key]}"
         return
     fi
 
@@ -488,7 +526,7 @@ _display_width() {
             print $width;
         ' 2>/dev/null) && [ -n "$perl_width" ]; then
             width="$perl_width"
-            [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
+            [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE[$cache_key]="$width"
             echo "$width"
             return
         fi
@@ -523,7 +561,7 @@ _display_width() {
     fi
 
     width=$((char_count + estimated_wide))
-    [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE["$cache_key"]="$width"
+    [ "$can_cache" = "1" ] && OISEAU_WIDTH_CACHE[$cache_key]="$width"
     echo "$width"
 }
 
