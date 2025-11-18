@@ -30,7 +30,21 @@ elif [ -n "${ZSH_VERSION:-}" ]; then
     # Match Bash semantics so arithmetic for-loops, [[ ]], and arrays behave.
     if command -v emulate >/dev/null 2>&1; then
         emulate -L sh
+        OISEAU_ZSH_EMULATION_ACTIVE=1
+    else
+        OISEAU_ZSH_EMULATION_ACTIVE=0
     fi
+
+    for _oiseau_opt in KSH_ARRAYS SH_WORD_SPLIT KSH_GLOB NO_BARE_GLOB_QUAL; do
+        _oiseau_opt_lc=$(printf '%s\n' "$_oiseau_opt" | tr 'A-Z' 'a-z')
+        if setopt | grep -q "^${_oiseau_opt_lc}$" 2>/dev/null; then
+            eval "OISEAU_ZSH_PREV_${_oiseau_opt}=1"
+        else
+            eval "OISEAU_ZSH_PREV_${_oiseau_opt}=0"
+        fi
+    done
+    unset _oiseau_opt _oiseau_opt_lc
+
     setopt KSH_ARRAYS SH_WORD_SPLIT KSH_GLOB NO_BARE_GLOB_QUAL > /dev/null 2>&1
 
     # Ensure declare -A works by delegating to typeset (zsh's native builtin).
@@ -2992,3 +3006,21 @@ print_header() { show_header "$@"; }
 # ==============================================================================
 
 export OISEAU_LOADED=1
+
+if [ -n "${ZSH_VERSION:-}" ]; then
+    if [ "${OISEAU_ZSH_EMULATION_ACTIVE:-0}" = "1" ]; then
+        emulate -R zsh > /dev/null 2>&1 || true
+        unset OISEAU_ZSH_EMULATION_ACTIVE
+    fi
+
+    for _oiseau_opt in KSH_ARRAYS SH_WORD_SPLIT KSH_GLOB NO_BARE_GLOB_QUAL; do
+        eval "_oiseau_prev=\${OISEAU_ZSH_PREV_${_oiseau_opt}:-}" 2>/dev/null
+        if [ "$_oiseau_prev" = "1" ]; then
+            setopt "$_oiseau_opt" > /dev/null 2>&1
+        elif [ "$_oiseau_prev" = "0" ]; then
+            unsetopt "$_oiseau_opt" > /dev/null 2>&1
+        fi
+        unset "OISEAU_ZSH_PREV_${_oiseau_opt}" 2>/dev/null || true
+    done
+    unset _oiseau_opt _oiseau_prev
+fi
