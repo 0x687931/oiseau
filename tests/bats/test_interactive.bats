@@ -104,7 +104,8 @@ teardown() {
 
     run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && items=("Item with spaces" "Item-with-dashes" "Item_with_underscores" "Item/with/slashes") && echo "1" | ask_list "Choose:" items "single"' _ "$PROJECT_ROOT"
 
-    [ "$status" -eq 0 ] || [[ "$output" =~ "Item" ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Item" ]]
 }
 
 @test "ask_list handles items with emoji" {
@@ -114,7 +115,8 @@ teardown() {
 
     run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && items=("📁 Folder" "🌿 Branch" "🎉 Party") && echo "1" | ask_list "Choose:" items "single"' _ "$PROJECT_ROOT"
 
-    [ "$status" -eq 0 ] || [[ "$output" =~ "Folder" ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Folder" ]]
 }
 
 @test "ask_list handles very long item names" {
@@ -124,7 +126,8 @@ teardown() {
 
     run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && items=("This is a very long item name that should be handled gracefully by the list component without breaking the layout or causing issues" "Short") && echo "1" | ask_list "Choose:" items "single"' _ "$PROJECT_ROOT"
 
-    [ "$status" -eq 0 ] || [[ "$output" =~ "long" ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "long" ]]
 }
 
 # ==============================================================================
@@ -138,10 +141,11 @@ teardown() {
 
     # In non-TTY mode, multi-select might use different input format
     # Test that the mode is recognized
-    result=$(echo -e "1\n2\n" | ask_list "Choose multiple:" test_items "multi" 2>&1)
+    run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && items=("Option 1" "Option 2" "Option 3") && echo -e "1\n2\n" | ask_list "Choose multiple:" items "multi"' _ "$PROJECT_ROOT"
 
     # Should accept the multi mode without error
-    [ "$status" -eq 0 ] || [[ "$result" =~ "Option" ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Option" ]]
 }
 
 # ==============================================================================
@@ -162,9 +166,11 @@ teardown() {
 @test "ask_choice works in non-TTY mode" {
     force_non_tty_mode
 
-    run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && echo "y" | ask_choice "Continue?" "y/n"' _ "$PROJECT_ROOT"
+    # Binary mode - no array argument (y/n is just the prompt hint, not an argument)
+    run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && echo "y" | ask_choice "Continue?"' _ "$PROJECT_ROOT"
 
-    [ "$status" -eq 0 ] || [[ "$output" =~ "y" ]] || [[ "$output" =~ "Continue" ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Continue" ]]
 }
 
 # ==============================================================================
@@ -204,16 +210,17 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
-@test "ask_list handles empty prompt" {
+@test "ask_list rejects empty prompt" {
     force_non_tty_mode
 
     local test_items=("Item 1" "Item 2")
 
-    # Empty prompt should work (fallback to default or no prompt)
+    # Empty prompt should be rejected with error
     run bash -c 'source "$1/oiseau.sh" && export OISEAU_IS_TTY=0 && items=("Item 1" "Item 2") && echo "1" | ask_list "" items "single"' _ "$PROJECT_ROOT"
 
-    # Should not error just because prompt is empty
-    [ "$status" -eq 0 ] || [[ "$output" =~ "Item" ]] || [[ "$output" =~ "ERROR" ]]
+    # Should error because prompt is required
+    [ "$status" -ne 0 ]
+    [[ "$output" =~ "ERROR" ]]
 }
 
 # ==============================================================================

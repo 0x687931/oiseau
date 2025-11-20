@@ -4,20 +4,21 @@
 # Mock terminal size
 # Usage: mock_terminal_size rows cols
 mock_terminal_size() {
-    local rows="${1:-24}"
-    local cols="${2:-80}"
+    # Use global scope so tput function can access these
+    declare -g MOCK_ROWS="${1:-24}"
+    declare -g MOCK_COLS="${2:-80}"
 
-    export LINES="$rows"
-    export COLUMNS="$cols"
+    export LINES="$MOCK_ROWS"
+    export COLUMNS="$MOCK_COLS"
 
     # Also mock tput if needed
     tput() {
         case "$1" in
             lines)
-                echo "$rows"
+                echo "$MOCK_ROWS"
                 ;;
             cols)
-                echo "$cols"
+                echo "$MOCK_COLS"
                 ;;
             *)
                 # Fallback to real tput for other commands
