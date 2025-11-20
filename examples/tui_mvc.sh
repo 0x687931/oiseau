@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # TUI MVC Demo - Model-View-Controller pattern for Terminal UI
 # Demonstrates clean separation: Model (data) / View (rendering) / Controller (logic)
 

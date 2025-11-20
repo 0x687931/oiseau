@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Shared test helper library for Oiseau test suite
 # Eliminates duplication across test files
 

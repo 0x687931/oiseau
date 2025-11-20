@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Oiseau Gallery - Showcase all available widgets
 # Run this script to see all Oiseau UI components in action
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Clean up a worktree after PR is merged
 # Usage: bin/worktree-cleanup feature-name
 
