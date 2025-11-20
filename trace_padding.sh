@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+source "$(dirname "$0")/oiseau.sh"
+
+# Test the exact scenario
+line="📁 file"
+inner_width=58  # 60 - 2 for borders
+padded_line="   $line"
+
+echo "Input line: '$line'"
+echo "With 3-space prefix: '$padded_line'"
+echo ""
+
+# Check display width
+display_width=$(_display_width "$padded_line")
+echo "Display width of '   $line': $display_width"
+echo "Target inner_width: $inner_width"
+echo ""
+
+# Apply padding
+padded=$(_pad_to_width "$padded_line" "$inner_width")
+echo "After _pad_to_width: '$padded'"
+
+# Check result width
+result_width=$(_display_width "$padded")
+echo "Result display width: $result_width"
+echo ""
+
+# Check character count vs display width
+char_count=${#padded}
+echo "Character count: $char_count"
+echo "Display width: $result_width"
+
+# Create the full line with borders
+full_line="┃${padded}┃"
+echo ""
+echo "Full line: '$full_line'"
+full_width=$(echo -n "$full_line" | wc -m | tr -d ' ')
+echo "Full line character count: $full_width (should be 60)"
