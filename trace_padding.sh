@@ -35,5 +35,10 @@ echo "Display width: $result_width"
 full_line="┃${padded}┃"
 echo ""
 echo "Full line: '$full_line'"
-full_width=$(echo -n "$full_line" | wc -m | tr -d ' ')
-echo "Full line character count: $full_width (should be 60)"
+char_count=$(echo -n "$full_line" | wc -m | tr -d ' ')
+display_width=$(_display_width "$full_line")
+echo "Full line character count: $char_count"
+echo "Full line display width: $display_width (should be 60)"
+echo ""
+echo "NOTE: Character count ≠ display width for emoji/CJK."
+echo "      Emojis are 1 char but 2 cols wide (expected difference)."

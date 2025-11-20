@@ -96,13 +96,22 @@ while IFS= read -r file; do
     test_files+=("$file")
 done < <(find "$TEST_DIR" -name "test_*.sh" -type f -not -path "*/lib/*" | sort)
 
-if [ ${#test_files[@]} -eq 0 ]; then
+# Find all BATS test files
+bats_files=()
+if command -v bats >/dev/null 2>&1; then
+    while IFS= read -r file; do
+        bats_files+=("$file")
+    done < <(find "$TEST_DIR/bats" -name "*.bats" -type f 2>/dev/null | sort)
+fi
+
+if [ ${#test_files[@]} -eq 0 ] && [ ${#bats_files[@]} -eq 0 ]; then
     show_box warning "No Tests Found" "No test files found in $TEST_DIR"
     return 1
 fi
 
 # Show test summary
-show_info "Found ${#test_files[@]} test suites"
+total_suites=$((${#test_files[@]} + ${#bats_files[@]}))
+show_info "Found $total_suites test suites (${#test_files[@]} shell, ${#bats_files[@]} BATS)"
 echo ""
 
 # Progress tracking
@@ -171,6 +180,35 @@ done
 # Print final newline after progress updates
 echo ""
 echo ""  # Extra blank line
+
+# Run BATS tests if available
+if [ ${#bats_files[@]} -gt 0 ]; then
+    echo ""
+    show_info "Running BATS test suites..."
+    echo ""
+
+    for i in "${!bats_files[@]}"; do
+        bats_file="${bats_files[$i]}"
+        bats_name="$(basename "$bats_file" .bats)"
+        current=$((i + 1 + ${#test_files[@]}))
+        total=$total_suites
+
+        TESTS_RUN=$((TESTS_RUN + 1))
+
+        # Run BATS and capture result
+        if bats "$bats_file" > /dev/null 2>&1; then
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+            echo "  ${COLOR_SUCCESS}${ICON_SUCCESS}${RESET}  $bats_name"
+        else
+            TESTS_FAILED=$((TESTS_FAILED + 1))
+            FAILED_TESTS+=("$bats_name (BATS)")
+            echo "  ${COLOR_ERROR}${ICON_ERROR}${RESET}  $bats_name"
+        fi
+    done
+
+    echo ""
+fi
+
 echo ""
 
 # Summary section

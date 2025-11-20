@@ -6,6 +6,9 @@
 BATS_TEST_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)"
 PROJECT_ROOT="$(cd "$BATS_TEST_DIR/../.." && pwd)"
 
+# Load independent width calculator (does NOT use oiseau's _display_width)
+source "$BATS_TEST_DIR/helpers/independent_width.bash"
+
 # Helper function to strip ANSI codes
 strip_ansi() {
     echo "$1" | sed 's/\x1b\[[0-9;]*m//g'
@@ -18,12 +21,12 @@ extract_box_lines() {
 }
 
 # Helper function to measure line width (DISPLAY width, not character count)
+# Uses INDEPENDENT implementation, NOT oiseau's _display_width
 measure_line_width() {
     local line="$1"
     local clean=$(strip_ansi "$line")
-    # Must use _display_width to account for emoji/CJK double-width characters
-    source "$PROJECT_ROOT/oiseau.sh" 2>/dev/null
-    _display_width "$clean"
+    # Use independent Python/Perl width calculator
+    python_display_width "$clean"
 }
 
 # Helper function to check if all box lines have same width
@@ -144,23 +147,31 @@ setup() {
 
 @test "_display_width: ASCII text returns correct width" {
     width=$(_display_width "Hello World")
+    independent=$(python_display_width "Hello World")
+    [ "$width" -eq "$independent" ]
     [ "$width" -eq 11 ]
 }
 
 @test "_display_width: single emoji counted as width 2" {
     width=$(_display_width "📁 test")
+    independent=$(python_display_width "📁 test")
+    [ "$width" -eq "$independent" ]
     # 📁 = 2, space = 1, test = 4, total = 7
     [ "$width" -eq 7 ]
 }
 
 @test "_display_width: two emojis counted correctly" {
     width=$(_display_width "📁 🌿 test")
+    independent=$(python_display_width "📁 🌿 test")
+    [ "$width" -eq "$independent" ]
     # 📁 = 2, space = 1, 🌿 = 2, space = 1, test = 4, total = 10
     [ "$width" -eq 10 ]
 }
 
 @test "_display_width: CJK characters counted as width 2" {
     width=$(_display_width "中文")
+    independent=$(python_display_width "中文")
+    [ "$width" -eq "$independent" ]
     # Each CJK character is width 2, so 2 chars = 4
     [ "$width" -eq 4 ]
 }
@@ -168,6 +179,8 @@ setup() {
 @test "_display_width: handles ANSI escape codes" {
     # ANSI codes should be stripped before width calculation
     width=$(_display_width $'\e[31mRed\e[0m')
+    independent=$(python_display_width $'\e[31mRed\e[0m')
+    [ "$width" -eq "$independent" ]
     [ "$width" -eq 3 ]
 }
 
@@ -177,26 +190,26 @@ setup() {
 
 @test "_pad_to_width: ASCII text padded correctly" {
     result=$(_pad_to_width "test" 10)
-    width=$(_display_width "$result")
+    width=$(python_display_width "$result")
     [ "$width" -eq 10 ]
 }
 
 @test "_pad_to_width: emoji text padded correctly" {
     result=$(_pad_to_width "📁 test" 15)
-    width=$(_display_width "$result")
+    width=$(python_display_width "$result")
     [ "$width" -eq 15 ]
 }
 
 @test "_pad_to_width: CJK text padded correctly" {
     result=$(_pad_to_width "中文" 10)
-    width=$(_display_width "$result")
+    width=$(python_display_width "$result")
     [ "$width" -eq 10 ]
 }
 
 @test "_pad_to_width: no padding when already at target width" {
     # "test" is 4 chars wide
     result=$(_pad_to_width "test" 4)
-    width=$(_display_width "$result")
+    width=$(python_display_width "$result")
     [ "$width" -eq 4 ]
 }
 

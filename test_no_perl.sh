@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
+# MANUAL DIAGNOSTIC TOOL (not automated test)
 # Test alignment when Perl is disabled (fallback mode)
+# This script displays output for visual inspection - no automated assertions
 
 export OISEAU_MODE="rich"
 export OISEAU_HAS_PERL=0  # Force disable Perl

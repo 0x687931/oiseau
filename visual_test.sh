@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# Simple visual test - if you see misalignment, there's a problem
+# MANUAL VISUAL DIAGNOSTIC TOOL (not automated test)
+# Simple visual verification - inspect output for misaligned right edges
+# For automated testing, use: bats tests/bats/test_vertical_alignment.bats
 
 export OISEAU_MODE="rich"
 source "$(dirname "$0")/oiseau.sh"

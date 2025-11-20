@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-# Comprehensive test for vertical bar alignment issues
-# This script tests and validates vertical bar alignment with various character types
+# MANUAL DIAGNOSTIC TOOL (not automated test)
+# Comprehensive analysis for vertical bar alignment
+# This script displays detailed width measurements for visual inspection
+# For automated testing, use: bats tests/bats/test_vertical_alignment.bats
 
 export OISEAU_MODE="rich"
 source "$(dirname "$0")/oiseau.sh"
