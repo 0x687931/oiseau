@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PR Review Dashboard - Check all open PRs for code review issues
 # Usage: bin/pr-review-dashboard
 

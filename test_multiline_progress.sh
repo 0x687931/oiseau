@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test multi-line progress bar support
 
 cd "$(dirname "$0")"

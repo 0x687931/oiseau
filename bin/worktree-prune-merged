@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Remove merged git worktrees with progress/timeout handling
 
 set -euo pipefail

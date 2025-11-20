@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for enhanced ask_input function
 
 # Get the directory of this script

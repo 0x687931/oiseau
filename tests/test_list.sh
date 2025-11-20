@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for ask_list interactive list selection
 
 # Get the directory of this script

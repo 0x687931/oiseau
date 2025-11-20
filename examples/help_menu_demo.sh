@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Interactive Menu Demo
 # Shows interactive menus with arrow key navigation
 

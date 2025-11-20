@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Spinner Widget Demo
 # Demonstrates all spinner styles and usage patterns
 

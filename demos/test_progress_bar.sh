@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for progress_bar demo
 # This replicates exactly what the VHS tape will do
 

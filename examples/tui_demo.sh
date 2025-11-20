@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # TUI Demo - Non-scrolling Terminal UI with Oiseau
 # Demonstrates a refreshing TUI that updates in place (like htop, vim, etc.)
 
