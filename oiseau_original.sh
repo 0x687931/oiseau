@@ -596,47 +596,6 @@ _pad_to_width() {
     fi
 }
 
-# Render a box content line with byte-aligned borders
-# This ensures all lines have the same byte count for aligned borders
-# Usage: _render_box_line "content" display_width border_char
-_render_box_line() {
-    local content="$1"
-    local display_width="$2"
-    local border="${3:-${BOX_DV}}"
-
-    # Simple approach: Pad content to exactly display_width BYTES
-    # This ensures all lines have same byte count
-    local content_bytes=$(LC_ALL=C printf '%s' "$content" | wc -c | tr -d ' ')
-    local padding_bytes=$((display_width - content_bytes))
-
-    if [ "$padding_bytes" -gt 0 ]; then
-        content="${content}$(_repeat_char ' ' "$padding_bytes")"
-    fi
-
-    printf '%s%s%s\n' "$border" "$content" "$border"
-}
-
-# Render a colored box line (for show_box, show_error, etc.)
-# Handles ANSI color codes while maintaining byte alignment
-# Usage: _render_colored_box_line "content" display_width color border
-_render_colored_box_line() {
-    local content="$1"
-    local display_width="$2"
-    local color="$3"
-    local border="${4:-${BOX_DV}}"
-
-    # Strip ANSI codes to count actual content bytes
-    local clean_content=$(echo "$content" | sed 's/\x1b\[[0-9;]*m//g')
-    local content_bytes=$(LC_ALL=C printf '%s' "$clean_content" | wc -c | tr -d ' ')
-    local padding_bytes=$((display_width - content_bytes))
-
-    if [ "$padding_bytes" -gt 0 ]; then
-        content="${content}$(_repeat_char ' ' "$padding_bytes")"
-    fi
-
-    printf '%b%b%b%b%b%b\n' "${color}" "${border}" "${RESET}${content}${color}" "${border}" "${RESET}" ""
-}
-
 # Repeat a character N times (optimized with 3-layer architecture)
 # Layer 1: Robustness - validates inputs to fix 11 critical edge cases
 # Layer 2: Performance - static + dynamic cache for 95% speedup
@@ -881,24 +840,24 @@ show_header_box() {
     printf '%b%s%b\n' "${BOX_DTL}" "$(_repeat_char "${BOX_DH}" "$inner_width")" "${BOX_DTR}"
 
     # Empty line
-    _render_box_line "" "$inner_width"
+    printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Title (word-wrapped if needed)
     # Security: Use printf %s for user content to prevent backslash injection
     echo "$title" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-        _render_box_line "   $line" "$inner_width"
+        printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
     done
 
     # Empty line
-    _render_box_line "" "$inner_width"
+    printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
 
     # Subtitle (word-wrapped if needed)
     # Security: Use printf %s for user content to prevent backslash injection
     if [ -n "$subtitle" ]; then
         echo "$subtitle" | fold -s -w $((inner_width - 6)) | while IFS= read -r line; do
-            _render_box_line "   $line" "$inner_width"
+            printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "   $line" "$inner_width")" "${BOX_DV}"
         done
-        _render_box_line "" "$inner_width"
+        printf '%b%s%b\n' "${BOX_DV}" "$(_pad_to_width "" "$inner_width")" "${BOX_DV}"
     fi
 
     # Bottom border
@@ -937,31 +896,35 @@ show_box() {
     printf '%b%s%b%b\n' "${color}" "${BOX_DTL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DTR}" "${RESET}" ""
 
     # Title line (with proper right border)
+    # Security: User content in title_content is already escaped via _escape_input at function start
+    # Use %b for the padded content because it contains ANSI escape codes (RESET and color)
     local title_content="  ${icon}  ${title}"
-    _render_colored_box_line "$title_content" "$inner_width" "$color"
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "$title_content" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
 
     # Separator
     printf '%b%s%b%b\n' "${color}" "${BOX_DVR}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DVL}" "${RESET}" ""
 
     # Empty line
-    _render_colored_box_line "" "$inner_width" "$color"
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
 
     # Message (word-wrapped if needed)
+    # Security: User content in line is already escaped via _escape_input at function start
+    # Use %b for the padded content because it contains ANSI escape codes (RESET and color)
     echo "$message" | fold -s -w $((inner_width - 4)) | while IFS= read -r line; do
-        _render_colored_box_line "  $line" "$inner_width" "$color"
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  $line" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
     done
 
     # Commands section if provided
     if [ "${#commands[@]}" -gt 0 ]; then
-        _render_colored_box_line "" "$inner_width" "$color"
-        _render_colored_box_line "  To resolve:" "$inner_width" "$color"
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
+        printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "  To resolve:" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
         for cmd in "${commands[@]}"; do
-            _render_colored_box_line "    ${cmd}" "$inner_width" "$color"
+            printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "    ${cmd}" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
         done
     fi
 
     # Bottom empty line and border
-    _render_colored_box_line "" "$inner_width" "$color"
+    printf '%b%b%b%b%b%b\n' "${color}" "${BOX_DV}" "${RESET}$(_pad_to_width "" "$inner_width")${color}" "${BOX_DV}" "${RESET}" ""
     printf '%b%s%b%b\n' "${color}" "${BOX_DBL}$(_repeat_char "${BOX_DH}" "$inner_width")${BOX_DBR}" "${RESET}" ""
 }
 
