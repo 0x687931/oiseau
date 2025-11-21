@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Create a new worktree for feature development
 # Usage: bin/worktree-new feature-name [base-branch]
 

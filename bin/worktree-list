@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # List all worktrees for this project
 # Usage: bin/worktree-list
 # This script can be edited on main branch (whitelisted for emergency fixes)

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test multiple sequential progress bar groups to verify auto-reset
 
 cd "$(dirname "$0")"

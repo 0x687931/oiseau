@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for edge cases discovered in code review
 
 # Get the directory of this script

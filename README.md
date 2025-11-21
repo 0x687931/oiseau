@@ -9,7 +9,22 @@ source ./oiseau.sh
 
 **Requirements:** Bash 3.2+, standard POSIX utilities (`tput`, `tr`, `wc`, `grep`, `awk`, `sed`, `cat`, `sleep`), optional `perl`
 
-**Shell:** Bash only (not zsh compatible). macOS users: use `#!/bin/bash` shebang in scripts.
+**Shell:** Widgets still target Bash 3.2+, but all helper tooling now uses POSIX `sh` or
+`#!/usr/bin/env bash` shebangs so macOS (default zsh) and Linux users can invoke demos,
+tests, and git helpers without switching shells.
+
+### Using Oiseau from zsh
+
+`oiseau.sh` now detects when it is sourced from zsh and automatically flips the
+compatibility switches (`emulate -L sh`, `setopt KSH_ARRAYS`, `setopt
+SH_WORD_SPLIT`, and a `declare` shim) required for its associative arrays and
+widgets to work.  This keeps the public API identical regardless of whether you
+develop from `bash` or macOS' default `zsh`.
+
+> **No Bash installed?** That's OK.  Source `oiseau.sh` straight from `zsh` and
+> the compatibility layer will load without spawning Bash.  All demos/tests keep
+> their `#!/usr/bin/env bash` shebangs, but simply sourcing the library (the
+> common macOS workflow) no longer depends on `/bin/bash` being present.
 
 **Graceful degradation:** UTF-8+256color → ASCII+256color → ASCII monochrome
 
@@ -653,60 +668,23 @@ show_success "$user_input"  # Safe
 ## Testing
 
 ```bash
-./run_tests.sh
+# POSIX runner; works from zsh, bash, dash, etc.
+./run_tests.sh --plain
+
+# Iterate across rich/color/plain sequentially
+./run_tests.sh --all
 ```
 
-Output:
+Sample:
 
 ```
-+==========================================================+
-|                                                          |
-|   Oiseau Test Suite Runner                               |
-|                                                          |
-+==========================================================+
+== Running tests with OISEAU_MODE=plain ==
+(1/10) test_edge_cases.sh ... ok
+(2/10) test_help_menu.sh ... ok
+...
+(10/10) test_table.sh ... ok
 
-
-  [i]  Found 10 test suites
-
-Running tests...
-
-Testing: #################### 100% (10/10)
-  [OK]  test_edge_cases
-  [OK]  test_help_menu
-  [OK]  test_help
-  [OK]  test_input
-  [OK]  test_list
-  [OK]  test_mode_consistency
-  [OK]  test_progress
-  [OK]  test_resize
-  [OK]  test_spinner
-  [OK]  test_table
-
-
-
-+==========================================================+
-|                                                          |
-|   Test Results Summary                                   |
-|                                                          |
-+==========================================================+
-
-
-  Total Test Suites    10
-  Passed               10
-  Failed               0
-
-+==========================================================+
-|  [OK]  All Tests Passed!                                 |
-+==========================================================+
-|                                                          |
-|  All 10 test suites completed successfully.              |
-|                                                          |
-+==========================================================+
-
-  [+]  Code quality validated
-  [+]  All widgets tested
-  [+]  Security checks passed
-  [+]  Bash compatibility verified
+Summary (plain mode): 10/10 passed
 ```
 
 Individual test suites:
