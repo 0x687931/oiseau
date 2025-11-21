@@ -586,7 +586,13 @@ _pad_to_width() {
     local text="$1"
     local target_width="$2"
     local current_width=$(_display_width "$text")
-    local padding=$((target_width - current_width))
+
+    # Calculate byte count of the text
+    local byte_count=$(LC_ALL=C printf '%s' "$text" | wc -c | tr -d ' ')
+
+    # Padding must account for the difference between display width and byte count
+    # If emoji/CJK take more display columns but fewer bytes, we need less padding
+    local padding=$((target_width - current_width + (current_width - byte_count)))
 
     if [ "$padding" -gt 0 ]; then
         # Use cached _repeat_char for padding (much faster than printf)
