@@ -67,78 +67,120 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "vertical alignment: single emoji at start" {
+@test "vertical alignment: emoji stripped from input" {
+    # Emoji are now stripped by _escape_input, so "📁 file.txt" becomes " file.txt"
     output=$(show_header_box "Test" "📁 file.txt" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # Verify emoji was stripped
+    [[ "$output" =~ "file.txt" ]]
+    [[ ! "$output" =~ "📁" ]]
 }
 
-@test "vertical alignment: two emojis (issue #68 example)" {
+@test "vertical alignment: multiple emoji stripped (issue #68 fixed)" {
+    # Multiple emoji are stripped, "📁 ynm  •  🌿" becomes " ynm    "
     output=$(show_header_box "Tild Menu" "📁 ynm  •  🌿" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # Verify emoji were stripped
+    [[ "$output" =~ "ynm" ]]
+    [[ ! "$output" =~ "📁" ]]
+    [[ ! "$output" =~ "🌿" ]]
 }
 
-@test "vertical alignment: three emojis" {
+@test "vertical alignment: emoji stripped - three emojis" {
     output=$(show_header_box "Test" "📁 🌿 🎉 Three emojis" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # Verify emoji stripped, ASCII kept
+    [[ "$output" =~ "Three emojis" ]]
 }
 
-@test "vertical alignment: CJK characters" {
+@test "vertical alignment: CJK characters stripped" {
     output=$(show_header_box "Test" "中文字符测试" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # All CJK stripped, only empty padding remains
+    [[ ! "$output" =~ "中文" ]]
 }
 
-@test "vertical alignment: mixed emoji and CJK" {
+@test "vertical alignment: mixed emoji and CJK stripped" {
     output=$(show_header_box "Test" "Mix 📁 emoji 中文 CJK" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # ASCII preserved, emoji/CJK stripped
+    [[ "$output" =~ "Mix" ]]
+    [[ "$output" =~ "emoji" ]]
+    [[ "$output" =~ "CJK" ]]
+    [[ ! "$output" =~ "📁" ]]
+    [[ ! "$output" =~ "中文" ]]
 }
 
-@test "vertical alignment: emoji at end of line" {
+@test "vertical alignment: emoji at end stripped" {
     output=$(show_header_box "Test" "Text ending with emoji 📁" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    [[ "$output" =~ "Text ending with emoji" ]]
+    [[ ! "$output" =~ "📁" ]]
 }
 
-@test "vertical alignment: only emojis" {
+@test "vertical alignment: only emojis results in empty" {
     output=$(show_header_box "Test" "📁🌿🎉😀" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # All emoji stripped, box still renders (just empty content)
 }
 
 # ==============================================================================
 # TEST GROUP: show_box Vertical Alignment
 # ==============================================================================
 
-@test "vertical alignment: show_box with emoji" {
+@test "vertical alignment: show_box emoji stripped" {
     output=$(show_box info "Status" "📁 repo • 🌿 branch" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # Emoji stripped, ASCII kept
+    [[ "$output" =~ "repo" ]]
+    [[ "$output" =~ "branch" ]]
+    [[ ! "$output" =~ "📁" ]]
+    [[ ! "$output" =~ "🌿" ]]
 }
 
-@test "vertical alignment: show_box with CJK" {
+@test "vertical alignment: show_box CJK stripped" {
     output=$(show_box warning "Chinese" "中文字符" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
 }
 
-@test "vertical alignment: show_box with mixed content" {
+@test "vertical alignment: show_box mixed content stripped" {
     output=$(show_box success "Mixed" "Text 📁 emoji 中文 CJK" 2>&1)
 
     run check_box_width_consistency "$output" 60
     [ "$status" -eq 0 ]
+
+    # ASCII preserved, emoji/CJK stripped
+    [[ "$output" =~ "Text" ]]
+    [[ "$output" =~ "emoji" ]]
+    [[ "$output" =~ "CJK" ]]
+    [[ ! "$output" =~ "📁" ]]
+    [[ ! "$output" =~ "中文" ]]
 }
 
 # ==============================================================================
