@@ -421,6 +421,11 @@ _escape_input() {
         fi
     done
 
+    # Strip non-ASCII characters (emoji, CJK) to prevent alignment issues
+    # Keeps ASCII (0x00-0x7F), removes everything else (0x80-0xFF)
+    # This prevents terminal rendering inconsistencies with wide characters
+    clean=$(echo "$clean" | LC_ALL=C sed 's/[\x80-\xFF]//g')
+
     printf '%s' "$clean"
 }
 
