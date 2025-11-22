@@ -1,529 +1,529 @@
 #!/usr/bin/env bash
-# iseau allery - howcase all available widgets
-# un this script to see all iseau  components in action
+# Oiseau Gallery - Showcase all available widgets
+# Run this script to see all Oiseau UI components in action
 
-# et the directory where this script is located
-_"$(cd "$(dirname "${_]}")" && pwd)"
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ource the iseau library
-source "$_/oiseau.sh"
+# Source the Oiseau library
+source "$SCRIPT_DIR/oiseau.sh"
 
-# 
-#  
-# 
+# ==============================================================================
+# GALLERY FUNCTIONS
+# ==============================================================================
 
 
 pause_between_sections() {
-    if  "${__-}" ! "" ] then
+    if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
         echo ""
-        echo -e "${_}ress nter to continue...${}"
+        echo -e "${COLOR_DIM}Press Enter to continue...${RESET}"
         read -r
     else
-        sleep 
+        sleep 1
     fi
 }
 
-# 
-#  
-# 
+# ==============================================================================
+# MAIN GALLERY
+# ==============================================================================
 
 clear
 
-# eader - demonstrates the new show_header_bo widget with emoji
-show_header_bo "🐦  iseau - odern erminal  ibrary for ash" " showcase of all available widgets and components"
+# Header - demonstrates the new show_header_box widget with emoji
+show_header_box "  Oiseau - Modern Terminal UI Library for Bash" "A showcase of all available widgets and components"
 
-echo -e "${_}ode ${_} | olors ${__} | - ${__} | idth ${_}${}"
-
-pause_between_sections
-
-# 
-# .  
-# 
-
-print_section ". imple tatus essages"
-
-echo -e "${_}ode${}"
-echo -e "  ${_}show_success "peration completed successfully"${}"
-echo -e "  ${_}show_error "ailed to connect to server"${}"
-echo -e "  ${_}show_warning "his action cannot be undone"${}"
-echo -e "  ${_}show_info "rocessing  files..."${}"
-echo ""
-echo -e "${_}utput${}"
-show_success "peration completed successfully"
-show_error "ailed to connect to server"
-show_warning "his action cannot be undone"
-show_info "rocessing  files..."
+echo -e "${COLOR_MUTED}Mode: ${OISEAU_MODE} | Colors: ${OISEAU_HAS_COLOR} | UTF-8: ${OISEAU_HAS_UTF8} | Width: ${OISEAU_WIDTH}${RESET}"
 
 pause_between_sections
 
-# 
-# . 
-# 
+# ==============================================================================
+# 1. SIMPLE MESSAGES
+# ==============================================================================
 
-print_section ". eaders & itles"
+print_section "1. Simple Status Messages"
 
-echo -e "${_}ode ${_}show_header "roject etup"${}"
-show_header "roject etup"
-
-echo -e "${_}ode ${_}show_subheader "onfiguring dependencies..."${}"
-show_subheader "onfiguring dependencies..."
-
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "  ${COLOR_CODE}show_success \"Operation completed successfully\"${RESET}"
+echo -e "  ${COLOR_CODE}show_error \"Failed to connect to server\"${RESET}"
+echo -e "  ${COLOR_CODE}show_warning \"This action cannot be undone\"${RESET}"
+echo -e "  ${COLOR_CODE}show_info \"Processing 50 files...\"${RESET}"
 echo ""
-echo -e "${_}ode ${_}show_section_header "eploy pplication"   "uilding ocker image"${}"
-show_section_header "eploy pplication"   "uilding ocker image"
+echo -e "${COLOR_MUTED}Output:${RESET}"
+show_success "Operation completed successfully"
+show_error "Failed to connect to server"
+show_warning "This action cannot be undone"
+show_info "Processing 50 files..."
 
 pause_between_sections
 
-# 
-# . 
-# 
+# ==============================================================================
+# 2. HEADERS
+# ==============================================================================
 
-print_section ". tyled oes"
+print_section "2. Headers & Titles"
 
-echo -e "${_}rror o${}"
-show_bo error "onnection ailed" "nable to connect to database at localhost. lease check if the service is running."
+echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_header \"Project Setup\"${RESET}"
+show_header "Project Setup"
+
+echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_subheader \"Configuring dependencies...\"${RESET}"
+show_subheader "Configuring dependencies..."
 
 echo ""
-echo -e "${_}arning o with ommands${}"
-show_bo warning "ncommitted hanges" "ou have  uncommitted files in your working directory." 
-    "git add ." 
-    "git commit -m 'ave changes'" 
+echo -e "${COLOR_MUTED}Code: ${COLOR_CODE}show_section_header \"Deploy Application\" 2 4 \"Building Docker image\"${RESET}"
+show_section_header "Deploy Application" 2 4 "Building Docker image"
+
+pause_between_sections
+
+# ==============================================================================
+# 3. BOXES
+# ==============================================================================
+
+print_section "3. Styled Boxes"
+
+echo -e "${COLOR_MUTED}Error Box:${RESET}"
+show_box error "Connection Failed" "Unable to connect to database at localhost:5432. Please check if the service is running."
+
+echo ""
+echo -e "${COLOR_MUTED}Warning Box with Commands:${RESET}"
+show_box warning "Uncommitted Changes" "You have 3 uncommitted files in your working directory." \
+    "git add ." \
+    "git commit -m 'Save changes'" \
     "git push"
 
 echo ""
-echo -e "${_}nfo o${}"
-show_bo info "ew eature vailable" "ersion . includes improved performance and new debugging tools. pdate to get the latest features."
+echo -e "${COLOR_MUTED}Info Box:${RESET}"
+show_box info "New Feature Available" "Version 2.0 includes improved performance and new debugging tools. Update to get the latest features."
 
 echo ""
-echo -e "${_}uccess o${}"
-show_bo success "eployment omplete" "our application has been successfully deployed to production. ll health checks passed."
+echo -e "${COLOR_MUTED}Success Box:${RESET}"
+show_box success "Deployment Complete" "Your application has been successfully deployed to production. All health checks passed."
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 4. PROGRESS BAR
+# ==============================================================================
 
-print_section ". rogress ar (ow with nimation!)"
+print_section "4. Progress Bar (Now with Animation!)"
 
-echo -e "${_}ode${}"
-echo -e "  ${_}for i in {..} do${}"
-echo -e "  ${_}  show_progress_bar $i  "ownloading"${}"
-echo -e "  ${_}  sleep .${}"
-echo -e "  ${_}done${}"
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "  ${COLOR_CODE}for i in {1..100}; do${RESET}"
+echo -e "  ${COLOR_CODE}  show_progress_bar \$i 100 \"Downloading\"${RESET}"
+echo -e "  ${COLOR_CODE}  sleep 0.05${RESET}"
+echo -e "  ${COLOR_CODE}done${RESET}"
 echo ""
 
-echo -e "${_}eatures${}"
-print_item "uto-animates in  (updates in place)"
-print_item "rints new line in pipes/redirects"
-print_item "ustomizable width and override controls"
-print_item "nput validation and sanitization"
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "Auto-animates in TTY (updates in place)"
+print_item "Prints new line in pipes/redirects"
+print_item "Customizable width and override controls"
+print_item "Input validation and sanitization"
 echo ""
 
-echo -e "${_}enders as${}"
-for i in {..} do
-    show_progress_bar "$i"  "rocessing"
-    sleep .
+echo -e "${COLOR_MUTED}Renders as:${RESET}"
+for i in {1..50}; do
+    show_progress_bar "$i" 50 "Processing"
+    sleep 0.03
 done
 echo ""
 
 pause_between_sections
 
-# 
-# . 
-# 
+# ==============================================================================
+# 5. CHECKLIST
+# ==============================================================================
 
-print_section ". hecklist with tatus ndicators"
+print_section "5. Checklist with Status Indicators"
 
-echo -e "${_}ode${}"
-echo -e "${_}  checklist(${}"
-echo -e "${_}    "done|uild ocker image|ompleted in s"${}"
-echo -e "${_}    "done|un unit tests| tests passed"${}"
-echo -e "${_}    "active|eploy to staging|n progress..."${}"
-echo -e "${_}    "pending|un integration tests|aiting"${}"
-echo -e "${_}    "pending|eploy to production|aiting"${}"
-echo -e "${_}  )${}"
-echo -e "${_}  show_checklist checklist${}"
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "${COLOR_CODE}  checklist=(${RESET}"
+echo -e "${COLOR_CODE}    \"done|Build Docker image|Completed in 45s\"${RESET}"
+echo -e "${COLOR_CODE}    \"done|Run unit tests|142 tests passed\"${RESET}"
+echo -e "${COLOR_CODE}    \"active|Deploy to staging|In progress...\"${RESET}"
+echo -e "${COLOR_CODE}    \"pending|Run integration tests|Waiting\"${RESET}"
+echo -e "${COLOR_CODE}    \"pending|Deploy to production|Waiting\"${RESET}"
+echo -e "${COLOR_CODE}  )${RESET}"
+echo -e "${COLOR_CODE}  show_checklist checklist${RESET}"
 echo ""
 
-echo -e "${_}utput${}"
-checklist(
-    "done|uild ocker image|ompleted in s"
-    "done|un unit tests| tests passed"
-    "active|eploy to staging|n progress..."
-    "pending|un integration tests|aiting"
-    "pending|eploy to production|aiting"
+echo -e "${COLOR_MUTED}Output:${RESET}"
+checklist=(
+    "done|Build Docker image|Completed in 45s"
+    "done|Run unit tests|142 tests passed"
+    "active|Deploy to staging|In progress..."
+    "pending|Run integration tests|Waiting"
+    "pending|Deploy to production|Waiting"
 )
 show_checklist checklist
 
 echo ""
-echo -e "${_}ith skip status${}"
-checklist_skip(
-    "done|nstall dependencies|npm install completed"
-    "done|ompile ypecript|o errors found"
-    "skip|un linter|kipped (--no-lint flag)"
-    "active|uild production bundle|ptimizing..."
+echo -e "${COLOR_MUTED}With skip status:${RESET}"
+checklist_skip=(
+    "done|Install dependencies|npm install completed"
+    "done|Compile TypeScript|No errors found"
+    "skip|Run linter|Skipped (--no-lint flag)"
+    "active|Build production bundle|Optimizing..."
 )
 show_checklist checklist_skip
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 6. SUMMARY BOX
+# ==============================================================================
 
-print_section ". ummary o"
+print_section "6. Summary Box"
 
-echo -e "${_}ode${}"
-echo -e "${_}  show_summary "eployment ummary" ${}"
-echo -e "${_}    "nvironment roduction" ${}"
-echo -e "${_}    "uild # (fac)" ${}"
-echo -e "${_}    "uration m s"${}"
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "${COLOR_CODE}  show_summary \"Deployment Summary\" \\${RESET}"
+echo -e "${COLOR_CODE}    \"Environment: Production\" \\${RESET}"
+echo -e "${COLOR_CODE}    \"Build: #432 (2f3a8c9)\" \\${RESET}"
+echo -e "${COLOR_CODE}    \"Duration: 3m 45s\"${RESET}"
 echo ""
 
-echo -e "${_}utput${}"
-show_summary "eployment ummary" 
-    "nvironment roduction" 
-    "uild # (fac)" 
-    "uration m s" 
-    "tatus ll health checks passed"
+echo -e "${COLOR_MUTED}Output:${RESET}"
+show_summary "Deployment Summary" \
+    "Environment: Production" \
+    "Build: #432 (2f3a8c9)" \
+    "Duration: 3m 45s" \
+    "Status: All health checks passed"
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 7. FORMATTING HELPERS
+# ==============================================================================
 
-print_section ". ormatting elpers"
+print_section "7. Formatting Helpers"
 
-echo -e "${_}ey-alue airs${}"
-print_kv "roject" "my-awesome-app"
-print_kv "ersion" ".."
-print_kv "nvironment" "production"
-print_kv "tatus" "running"
+echo -e "${COLOR_MUTED}Key-Value Pairs:${RESET}"
+print_kv "Project" "my-awesome-app"
+print_kv "Version" "1.2.3"
+print_kv "Environment" "production"
+print_kv "Status" "running"
 
 echo ""
-echo -e "${_}ommands${}"
+echo -e "${COLOR_MUTED}Commands:${RESET}"
 print_command "npm install"
 print_command "npm run build"
 print_command "npm test"
 
 echo ""
-echo -e "${_}ulleted tems${}"
-print_item "ero dependencies - pure bash"
-print_item "-color  palette"
-print_item "mart degradation for all terminals"
-print_item "+ reusable widgets"
+echo -e "${COLOR_MUTED}Bulleted Items:${RESET}"
+print_item "Zero dependencies - pure bash"
+print_item "256-color ANSI palette"
+print_item "Smart degradation for all terminals"
+print_item "30+ reusable widgets"
 
 echo ""
-echo -e "${_}umbered teps${}"
-print_step  "lone the repository"
-print_step  "ource the oiseau.sh file"
-print_step  "tart using widgets in your scripts"
+echo -e "${COLOR_MUTED}Numbered Steps:${RESET}"
+print_step 1 "Clone the repository"
+print_step 2 "Source the oiseau.sh file"
+print_step 3 "Start using widgets in your scripts"
 
 echo ""
-echo -e "${_}ection itles${}"
-print_section "onfiguration"
-echo "  our configuration goes here..."
-print_section "nstallation"
-echo "  nstallation steps go here..."
+echo -e "${COLOR_MUTED}Section Titles:${RESET}"
+print_section "Configuration"
+echo "  Your configuration goes here..."
+print_section "Installation"
+echo "  Installation steps go here..."
 
 pause_between_sections
 
-# 
-# .    ()
-# 
+# ==============================================================================
+# 8. ENHANCED TEXT INPUT (INTERACTIVE)
+# ==============================================================================
 
-print_section ". nhanced et nput with alidation"
+print_section "8. Enhanced Text Input with Validation"
 
-echo -e "${_}eatures${}"
-print_item " input modes tet, password, email, number"
-print_item "uto-detects password fields from prompt keywords"
-print_item "assword masking (• in -, * in /lain)"
-print_item "mail and number validation with error messages"
-print_item "nput sanitization built-in"
-print_item "alidation loops until valid input"
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "4 input modes: text, password, email, number"
+print_item "Auto-detects password fields from prompt keywords"
+print_item "Password masking (• in UTF-8, * in ASCII/Plain)"
+print_item "Email and number validation with error messages"
+print_item "Input sanitization built-in"
+print_item "Validation loops until valid input"
 echo ""
 
-echo -e "${_}vailable modes${}"
+echo -e "${COLOR_MUTED}Available modes:${RESET}"
 echo ""
 
-echo -e "${_}. et mode (default)${}"
-echo -e "  ${_}name$(ask_input "our name" "ohn")${}"
-if  "${__-}" ! "" ] then
-    name$(ask_input "our name" "ohn")
-    show_success "ou entered $name"
+echo -e "${COLOR_MUTED}1. Text mode (default):${RESET}"
+echo -e "  ${COLOR_CODE}name=\$(ask_input \"Your name\" \"John\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    name=$(ask_input "Your name" "John")
+    show_success "You entered: $name"
 else
-    echo "  (nteractive in real usage)"
+    echo "  (Interactive in real usage)"
 fi
 echo ""
 
-echo -e "${_}. assword mode (auto-detected)${}"
-echo -e "  ${_}pass$(ask_input "nter password")${}"
-echo "  uto-detects keywords password, pass, secret, token, key, api"
-if  "${__-}" ! "" ] then
-    pass$(ask_input "nter password")
-    if  "$_"  "rich" ] then
-        show_success "assword set (hidden as ••••)"
+echo -e "${COLOR_MUTED}2. Password mode (auto-detected):${RESET}"
+echo -e "  ${COLOR_CODE}pass=\$(ask_input \"Enter password\")${RESET}"
+echo "  Auto-detects keywords: password, pass, secret, token, key, api"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    pass=$(ask_input "Enter password")
+    if [ "$OISEAU_MODE" = "rich" ]; then
+        show_success "Password set (hidden as ••••)"
     else
-        show_success "assword set (hidden as ****)"
+        show_success "Password set (hidden as ****)"
     fi
 else
-    echo "  (nteractive - shows • in -, * in )"
+    echo "  (Interactive - shows • in UTF-8, * in ASCII)"
 fi
 echo ""
 
-echo -e "${_}. mail validation${}"
-echo -e "  ${_}email$(ask_input "mail" "" "email")${}"
-if  "${__-}" ! "" ] then
-    email$(ask_input "mail address" "" "email")
-    show_success "mail saved $email"
+echo -e "${COLOR_MUTED}3. Email validation:${RESET}"
+echo -e "  ${COLOR_CODE}email=\$(ask_input \"Email\" \"\" \"email\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    email=$(ask_input "Email address" "" "email")
+    show_success "Email saved: $email"
 else
-    echo "  (nteractive - validates format, loops on error)"
+    echo "  (Interactive - validates format, loops on error)"
 fi
 echo ""
 
-echo -e "${_}. umber validation${}"
-echo -e "  ${_}age$(ask_input "ge" "" "number")${}"
-if  "${__-}" ! "" ] then
-    age$(ask_input "our age" "" "number")
-    show_success "ge recorded $age"
+echo -e "${COLOR_MUTED}4. Number validation:${RESET}"
+echo -e "  ${COLOR_CODE}age=\$(ask_input \"Age\" \"\" \"number\")${RESET}"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    age=$(ask_input "Your age" "" "number")
+    show_success "Age recorded: $age"
 else
-    echo "  (nteractive - validates numeric input)"
+    echo "  (Interactive - validates numeric input)"
 fi
 echo ""
 
-echo -e "${_}ecurity features${}"
-print_item "ll input is sanitized with _escape_input()"
-print_item "rompts are sanitized before display"
-print_item "o  injection or command substitution possible"
+echo -e "${COLOR_MUTED}Security features:${RESET}"
+print_item "All input is sanitized with _escape_input()"
+print_item "Prompts are sanitized before display"
+print_item "No ANSI injection or command substitution possible"
 
 pause_between_sections
 
-# 
-# .   
-# 
+# ==============================================================================
+# 9. INTERACTIVE LIST SELECTION
+# ==============================================================================
 
-print_section ". nteractive ist election"
+print_section "9. Interactive List Selection"
 
-echo -e "${_}eatures${}"
-print_item "ingle-select and multi-select modes"
-print_item "rrow keys (↑↓) or vim keys (j/k) to navigate"
-print_item "pace to toggle (multi-select), nter to confirm"
-print_item "uto-detects , falls back to numbered list"
-print_item "ode-aware › (-) vs  ()"
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "Single-select and multi-select modes"
+print_item "Arrow keys (↑�) or vim keys (j/k) to navigate"
+print_item "Space to toggle (multi-select), Enter to confirm"
+print_item "Auto-detects TTY, falls back to numbered list"
+print_item "Mode-aware: › (UTF-8) vs > (ASCII)"
 echo ""
 
-echo -e "${_}ingle-select eample${}"
-echo -e "  ${_}options("eploy to staging" "eploy to production" "ollback")${}"
-echo -e "  ${_}choice$(ask_list "elect action" options)${}"
+echo -e "${COLOR_MUTED}Single-select example:${RESET}"
+echo -e "  ${COLOR_CODE}options=(\"Deploy to staging\" \"Deploy to production\" \"Rollback\")${RESET}"
+echo -e "  ${COLOR_CODE}choice=\$(ask_list \"Select action:\" options)${RESET}"
 echo ""
 
-if  "${__-}" ! "" ] then
-    options("eploy to staging" "eploy to production" "ollback" "ancel")
-    choice$(ask_list "elect action" options)
-    show_success "ou selected $choice"
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    options=("Deploy to staging" "Deploy to production" "Rollback" "Cancel")
+    choice=$(ask_list "Select action:" options)
+    show_success "You selected: $choice"
 else
-    echo "  (nteractive in real usage - try it yourself!)"
+    echo "  (Interactive in real usage - try it yourself!)"
 fi
 echo ""
 
-echo -e "${_}ulti-select eample${}"
-echo -e "  ${_}files("app.log" "error.log" "access.log" "debug.log")${}"
-echo -e "  ${_}selected$(ask_list "elect files to delete" files "multi")${}"
+echo -e "${COLOR_MUTED}Multi-select example:${RESET}"
+echo -e "  ${COLOR_CODE}files=(\"app.log\" \"error.log\" \"access.log\" \"debug.log\")${RESET}"
+echo -e "  ${COLOR_CODE}selected=\$(ask_list \"Select files to delete:\" files \"multi\")${RESET}"
 echo ""
 
-if  "${__-}" ! "" ] then
-    files("app.log" "error.log" "access.log" "debug.log")
-    echo "ry multi-select (pace to toggle, nter to confirm)"
-    selected$(ask_list "elect files to delete" files "multi")
+if [ "${OISEAU_GALLERY_AUTO:-0}" != "1" ]; then
+    files=("app.log" "error.log" "access.log" "debug.log")
+    echo "Try multi-select (Space to toggle, Enter to confirm):"
+    selected=$(ask_list "Select files to delete:" files "multi")
     echo ""
-    echo -e "${_}elected files${}"
-    echo "$selected" | while  read -r file do
+    echo -e "${COLOR_SUCCESS}Selected files:${RESET}"
+    echo "$selected" | while IFS= read -r file; do
         echo "  - $file"
     done
 else
-    echo "  (nteractive - pace to toggle, nter to confirm)"
+    echo "  (Interactive - Space to toggle, Enter to confirm)"
 fi
 echo ""
 
-echo -e "${_}avigation${}"
-print_item "↑↓ or j/k avigate through list"
-print_item "nter elect item (single) or confirm (multi)"
-print_item "pace oggle selection (multi-select only)"
-print_item "q or sc ancel selection"
+echo -e "${COLOR_MUTED}Navigation:${RESET}"
+print_item "↑� or j/k: Navigate through list"
+print_item "Enter: Select item (single) or confirm (multi)"
+print_item "Space: Toggle selection (multi-select only)"
+print_item "q or Esc: Cancel selection"
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 10. SPINNER WIDGET
+# ==============================================================================
 
-print_section ". pinner idget (oading ndicators)"
+print_section "10. Spinner Widget (Loading Indicators)"
 
-echo -e "${_}ode${}"
-echo -e "  ${_}start_spinner "oading data..."${}"
-echo -e "  ${_}# ... do work ...${}"
-echo -e "  ${_}stop_spinner${}"
+echo -e "${COLOR_MUTED}Code:${RESET}"
+echo -e "  ${COLOR_CODE}start_spinner \"Loading data...\"${RESET}"
+echo -e "  ${COLOR_CODE}# ... do work ...${RESET}"
+echo -e "  ${COLOR_CODE}stop_spinner${RESET}"
 echo ""
 
-echo -e "${_}enders as (showing  styles for . seconds each)${}"
+echo -e "${COLOR_MUTED}Renders as (showing 3 styles for 1.5 seconds each):${RESET}"
 echo ""
 
-# emo all spinner styles with shorter duration
-echo -e "${_}tyle dots (default)${}"
-eport __"dots"
-start_spinner "oading with dots spinner..."
-sleep .
+# Demo all spinner styles with shorter duration
+echo -e "${COLOR_MUTED}Style: dots (default)${RESET}"
+export OISEAU_SPINNER_STYLE="dots"
+start_spinner "Loading with dots spinner..."
+sleep 1.5
 stop_spinner
-show_success "one!"
+show_success "Done!"
 
 echo ""
-echo -e "${_}tyle circle${}"
-eport __"circle"
-start_spinner "oading with circle spinner..."
-sleep .
+echo -e "${COLOR_MUTED}Style: circle${RESET}"
+export OISEAU_SPINNER_STYLE="circle"
+start_spinner "Loading with circle spinner..."
+sleep 1.5
 stop_spinner
-show_success "one!"
+show_success "Done!"
 
 echo ""
-echo -e "${_}tyle pulse${}"
-eport __"pulse"
-start_spinner "oading with pulse spinner..."
-sleep .
+echo -e "${COLOR_MUTED}Style: pulse${RESET}"
+export OISEAU_SPINNER_STYLE="pulse"
+start_spinner "Loading with pulse spinner..."
+sleep 1.5
 stop_spinner
-show_success "one!"
+show_success "Done!"
 
-unset __
+unset OISEAU_SPINNER_STYLE
 echo ""
 
 echo ""
-echo -e "${_}eatures${}"
-print_item " spinner styles dots, line, circle, pulse, arc"
-print_item "onfigurable  (frames per second)"
-print_item "uto-adapts to terminal (-, , lain)"
-print_item "imple start/stop helpers"
-print_item "utomatic cleanup on eit"
+echo -e "${COLOR_MUTED}Features:${RESET}"
+print_item "5 spinner styles: dots, line, circle, pulse, arc"
+print_item "Configurable FPS (frames per second)"
+print_item "Auto-adapts to terminal (UTF-8, ASCII, Plain)"
+print_item "Simple start/stop helpers"
+print_item "Automatic cleanup on exit"
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 10. COMPLEX EXAMPLE
+# ==============================================================================
 
-print_section ". eal-orld ample it orkflow"
+print_section "11. Real-World Example: Git Workflow"
 
-show_section_header "it orktree orkflow"   "reating ull equest"
+show_section_header "Git Worktree Workflow" 3 5 "Creating Pull Request"
 
-workflow_steps(
-    "done|reate feature branch|ranch feature/user-auth"
-    "done|ake code changes| files modified"
-    "done|un tests|ll  tests passing"
-    "active|ush to remote|ploading..."
-    "pending|reate pull request|aiting"
+workflow_steps=(
+    "done|Create feature branch|Branch: feature/user-auth"
+    "done|Make code changes|12 files modified"
+    "done|Run tests|All 156 tests passing"
+    "active|Push to remote|Uploading..."
+    "pending|Create pull request|Waiting"
 )
 show_checklist workflow_steps
 
 echo ""
-show_info "ushing commits to origin/feature/user-auth..."
+show_info "Pushing commits to origin/feature/user-auth..."
 
 echo ""
-show_success "uccessfully pushed  commits"
+show_success "Successfully pushed 3 commits"
 
 echo ""
-show_summary "ranch ummary" 
-    "eature ser authentication" 
-    "ommits " 
-    "ests  passed" 
-    "eady for  creation"
+show_summary "Branch Summary" \
+    "Feature: User authentication" \
+    "Commits: 3" \
+    "Tests: 156 passed" \
+    "Ready for PR creation"
 
 pause_between_sections
 
-# 
-# .  
-# 
+# ==============================================================================
+# 11. DEGRADATION MODES
+# ==============================================================================
 
-print_section ". erminal apability etection"
+print_section "12. Terminal Capability Detection"
 
-echo -e "${_}urrent erminal ode${}"
-print_kv "_" "$_"
-print_kv "olor upport" "$__"
-print_kv "- upport" "$__"
-print_kv "erminal idth" "$_"
-
-echo ""
-echo -e "${_}iseau automatically detects your terminal capabilities${}"
-print_item "${}ich mode${} ull -color + - bo drawing"
-print_item "${}olor mode${} olors with  fallback characters"
-print_item "${}lain mode${} o colors,  only (pipes/redirects)"
+echo -e "${COLOR_MUTED}Current Terminal Mode:${RESET}"
+print_kv "OISEAU_MODE" "$OISEAU_MODE"
+print_kv "Color Support" "$OISEAU_HAS_COLOR"
+print_kv "UTF-8 Support" "$OISEAU_HAS_UTF8"
+print_kv "Terminal Width" "$OISEAU_WIDTH"
 
 echo ""
-show_info "et _ or _ to force plain mode"
+echo -e "${COLOR_MUTED}Oiseau automatically detects your terminal capabilities:${RESET}"
+print_item "${BOLD}Rich mode${RESET}: Full 256-color + UTF-8 box drawing"
+print_item "${BOLD}Color mode${RESET}: Colors with ASCII fallback characters"
+print_item "${BOLD}Plain mode${RESET}: No colors, ASCII only (pipes/redirects)"
+
+echo ""
+show_info "Set UI_DISABLE=1 or NO_COLOR=1 to force plain mode"
 
 pause_between_sections
 
-# 
-# .  &   
-# 
+# ==============================================================================
+# 12. CJK & WIDE CHARACTER SUPPORT
+# ==============================================================================
 
-print_section ".  & ide haracter upport"
+print_section "13. CJK & Wide Character Support"
 
-echo -e "${_}iseau correctly handles wide characters (, emoji, full-width)${}"
+echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
 echo ""
 
-echo -e "${_}hinese (中文)${}"
-show_bo success "成功" "数据库连接成功 - atabase connection successful"
+echo -e "${COLOR_MUTED}Chinese ():${RESET}"
+show_box success "搊�" "�据�连�搊� - Database connection successful"
 
 echo ""
-echo -e "${_}apanese (日本語)${}"
-show_bo info "情報" "こんにちは - ello in apanese (hiragana/katakana/kanji)"
+echo -e "${COLOR_MUTED}Japanese ():${RESET}"
+show_box info "惱" " - Hello in Japanese (hiragana/katakana/kanji)"
 
 echo ""
-echo -e "${_}orean (한국어)${}"
-show_bo warning "경고" "안녕하세요 - ello in orean"
+echo -e "${COLOR_MUTED}Korean ():${RESET}"
+show_box warning "��" " - Hello in Korean"
 
 echo ""
-echo -e "${_}ied content${}"
-show_bo info "ied 混合 🌏" "ello 你好 こんにちは 안녕 🚀 orld"
+echo -e "${COLOR_MUTED}Mixed content:${RESET}"
+show_box info "Mixed 混� 🌏" "Hello    � World"
 
 echo ""
-echo -e "${_}haracter width analysis${}"
-print_kv " 'ello'" "$(_display_width 'ello') columns"
-print_kv "hinese '你好'" "$(_display_width '你好') columns"
-print_kv "apanese 'こんにちは'" "$(_display_width 'こんにちは') columns"
-print_kv "orean '안녕하세요'" "$(_display_width '안녕하세요') columns"
-print_kv "ull-width 'ＡＢＣ'" "$(_display_width 'ＡＢＣ') columns"
+echo -e "${COLOR_MUTED}Character width analysis:${RESET}"
+print_kv "ASCII 'Hello'" "$(_display_width 'Hello') columns"
+print_kv "Chinese ''" "$(_display_width '') columns"
+print_kv "Japanese ''" "$(_display_width '') columns"
+print_kv "Korean ''" "$(_display_width '') columns"
+print_kv "Full-width '�ＢＣ'" "$(_display_width '�ＢＣ') columns"
 
 echo ""
-show_success "ll wide characters are correctly measured at  columns each!"
+show_success "All wide characters are correctly measured at 2 columns each!"
 
 pause_between_sections
 
-# 
-# 
-# 
+# ==============================================================================
+# FINALE
+# ==============================================================================
 
-print_section "allery omplete!"
+print_section "Gallery Complete!"
 
-echo -e "${_}${}"
-echo "  ou've seen all the widgets iseau has to offer!"
-echo -e "${}"
+echo -e "${COLOR_SUCCESS}${BOLD}"
+echo "  You've seen all the widgets Oiseau has to offer!"
+echo -e "${RESET}"
 
-print_net_steps 
-    "ead the .md for installation instructions" 
-    "heck out eamples/ directory for real-world usage" 
-    "tart using iseau in your bash scripts" 
-    "tar the repo on itub if you find it useful!"
-
-echo ""
-show_summary "iseau eatures" 
-    "✓ + widgets including new spinner!" 
-    "✓ ero dependencies (pure bash)" 
-    "✓ -color  palette" 
-    "✓ mart terminal detection" 
-    "✓ nput sanitization built-in" 
-    "✓ orks in all environments"
+print_next_steps \
+    "Read the README.md for installation instructions" \
+    "Check out examples/ directory for real-world usage" \
+    "Start using Oiseau in your bash scripts" \
+    "Star the repo on GitHub if you find it useful!"
 
 echo ""
-echo -e "${_}${}hank you for trying iseau! 🐦${}"
+show_summary "Oiseau Features" \
+    "� 30+ widgets including new spinner!" \
+    "� Zero dependencies (pure bash)" \
+    "� 256-color ANSI palette" \
+    "� Smart terminal detection" \
+    "� Input sanitization built-in" \
+    "� Works in all environments"
+
+echo ""
+echo -e "${COLOR_HEADER}${BOLD}Thank you for trying Oiseau! ${RESET}"
 echo ""
