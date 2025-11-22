@@ -30,7 +30,7 @@ pause_between_sections() {
 clear
 
 # Header - demonstrates the new show_header_box widget with emoji
-show_header_box "🐦  Oiseau - Modern Terminal UI Library for Bash" "A showcase of all available widgets and components"
+show_header_box "  Oiseau - Modern Terminal UI Library for Bash" "A showcase of all available widgets and components"
 
 echo -e "${COLOR_MUTED}Mode: ${OISEAU_MODE} | Colors: ${OISEAU_HAS_COLOR} | UTF-8: ${OISEAU_HAS_UTF8} | Width: ${OISEAU_WIDTH}${RESET}"
 
@@ -308,7 +308,7 @@ print_section "9. Interactive List Selection"
 
 echo -e "${COLOR_MUTED}Features:${RESET}"
 print_item "Single-select and multi-select modes"
-print_item "Arrow keys (↑↓) or vim keys (j/k) to navigate"
+print_item "Arrow keys (↑�) or vim keys (j/k) to navigate"
 print_item "Space to toggle (multi-select), Enter to confirm"
 print_item "Auto-detects TTY, falls back to numbered list"
 print_item "Mode-aware: › (UTF-8) vs > (ASCII)"
@@ -348,7 +348,7 @@ fi
 echo ""
 
 echo -e "${COLOR_MUTED}Navigation:${RESET}"
-print_item "↑↓ or j/k: Navigate through list"
+print_item "↑� or j/k: Navigate through list"
 print_item "Enter: Select item (single) or confirm (multi)"
 print_item "Space: Toggle selection (multi-select only)"
 print_item "q or Esc: Cancel selection"
@@ -463,39 +463,34 @@ show_info "Set UI_DISABLE=1 or NO_COLOR=1 to force plain mode"
 pause_between_sections
 
 # ==============================================================================
-# 12. CJK & WIDE CHARACTER SUPPORT
+# 12. ASCII-ONLY INPUT POLICY
 # ==============================================================================
 
-print_section "13. CJK & Wide Character Support"
+print_section "13. ASCII-Only Input for Perfect Alignment"
 
-echo -e "${COLOR_MUTED}Oiseau correctly handles wide characters (CJK, emoji, full-width):${RESET}"
+echo -e "${COLOR_MUTED}Oiseau strips non-ASCII characters from user input to ensure perfect box alignment:${RESET}"
 echo ""
 
-echo -e "${COLOR_MUTED}Chinese (中文):${RESET}"
-show_box success "成功" "数据库连接成功 - Database connection successful"
-
+echo -e "${COLOR_MUTED}Why ASCII-only?${RESET}"
+print_item "Different terminals render emoji/CJK with inconsistent widths"
+print_item "Even professional TUI libraries cannot solve this universally"
+print_item "ASCII-only ensures perfect alignment on ALL terminals"
 echo ""
-echo -e "${COLOR_MUTED}Japanese (日本語):${RESET}"
-show_box info "情報" "こんにちは - Hello in Japanese (hiragana/katakana/kanji)"
 
+echo -e "${COLOR_MUTED}What gets stripped:${RESET}"
+print_item "Emoji characters"
+print_item "CJK characters (Chinese, Japanese, Korean)"
+print_item "All non-ASCII Unicode (bytes >= 0x80)"
 echo ""
-echo -e "${COLOR_MUTED}Korean (한국어):${RESET}"
-show_box warning "경고" "안녕하세요 - Hello in Korean"
 
+echo -e "${COLOR_MUTED}What is preserved:${RESET}"
+print_item "All ASCII letters (A-Z, a-z)"
+print_item "All ASCII numbers (0-9)"
+print_item "All ASCII punctuation and symbols"
+print_item "Oiseau's own UTF-8 box-drawing characters (not user input)"
 echo ""
-echo -e "${COLOR_MUTED}Mixed content:${RESET}"
-show_box info "Mixed 混合 🌏" "Hello 你好 こんにちは 안녕 🚀 World"
 
-echo ""
-echo -e "${COLOR_MUTED}Character width analysis:${RESET}"
-print_kv "ASCII 'Hello'" "$(_display_width 'Hello') columns"
-print_kv "Chinese '你好'" "$(_display_width '你好') columns"
-print_kv "Japanese 'こんにちは'" "$(_display_width 'こんにちは') columns"
-print_kv "Korean '안녕하세요'" "$(_display_width '안녕하세요') columns"
-print_kv "Full-width 'ＡＢＣ'" "$(_display_width 'ＡＢＣ') columns"
-
-echo ""
-show_success "All wide characters are correctly measured at 2 columns each!"
+show_success "Perfect box alignment on all terminals, guaranteed!"
 
 pause_between_sections
 
@@ -517,13 +512,13 @@ print_next_steps \
 
 echo ""
 show_summary "Oiseau Features" \
-    "✓ 30+ widgets including new spinner!" \
-    "✓ Zero dependencies (pure bash)" \
-    "✓ 256-color ANSI palette" \
-    "✓ Smart terminal detection" \
-    "✓ Input sanitization built-in" \
-    "✓ Works in all environments"
+    "� 30+ widgets including new spinner!" \
+    "� Zero dependencies (pure bash)" \
+    "� 256-color ANSI palette" \
+    "� Smart terminal detection" \
+    "� Input sanitization built-in" \
+    "� Works in all environments"
 
 echo ""
-echo -e "${COLOR_HEADER}${BOLD}Thank you for trying Oiseau! 🐦${RESET}"
+echo -e "${COLOR_HEADER}${BOLD}Thank you for trying Oiseau! ${RESET}"
 echo ""
