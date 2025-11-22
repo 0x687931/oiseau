@@ -408,23 +408,24 @@ _escape_input() {
     local result
     result=$(_strip_ansi "$input")
 
-    # Remove control characters (0x00-0x1F and 0x7F)
-    # Use LC_COLLATE=C for consistent character class behavior
+    # Remove control characters and non-ASCII (emoji, CJK)
+    # Keep only printable ASCII characters (0x20-0x7E) plus space/tab/newline
+    # This prevents terminal rendering inconsistencies with wide characters
     local clean=""
     local char
     local i
     for ((i=0; i<${#result}; i++)); do
         char="${result:i:1}"
-        # Skip control characters
-        if [[ ! "$char" =~ [[:cntrl:]] ]]; then
-            clean+="$char"
+        # Keep only printable ASCII and whitespace
+        if [[ "$char" =~ [[:print:][:space:]] ]] && [[ ! "$char" =~ [[:cntrl:]] ]]; then
+            # Additional check: ensure it's actually ASCII (not UTF-8 multi-byte)
+            local byte_val
+            byte_val=$(printf '%d' "'$char")
+            if [ "$byte_val" -ge 32 ] && [ "$byte_val" -le 126 ] || [ "$char" = " " ] || [ "$char" = $'\t' ]; then
+                clean+="$char"
+            fi
         fi
     done
-
-    # Strip non-ASCII characters (emoji, CJK) to prevent alignment issues
-    # Keeps ASCII (0x00-0x7F), removes everything else (0x80-0xFF)
-    # This prevents terminal rendering inconsistencies with wide characters
-    clean=$(echo "$clean" | LC_ALL=C sed 's/[\x80-\xFF]//g')
 
     printf '%s' "$clean"
 }
@@ -586,11 +587,21 @@ _display_width() {
 
 # Pad a string to a specific display width
 # Usage: _pad_to_width "text" 60
+# Terminal-agnostic: Uses byte-count (not display-width) for reliable alignment
+# All user input is ASCII-only (via _escape_input), so byte-count = column-count
 # Performance: Uses _repeat_char cache for faster padding (1.5-2x speedup)
 _pad_to_width() {
     local text="$1"
     local target_width="$2"
-    local current_width=$(_display_width "$text")
+
+    # Strip ANSI codes before measuring
+    local clean_text
+    clean_text=$(_strip_ansi "$text")
+
+    # Use byte-count for terminal-agnostic padding
+    # Since _escape_input ensures all user content is ASCII-only,
+    # byte-count equals column-count in all terminals
+    local current_width=${#clean_text}
     local padding=$((target_width - current_width))
 
     if [ "$padding" -gt 0 ]; then
