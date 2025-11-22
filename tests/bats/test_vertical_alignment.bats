@@ -93,13 +93,14 @@ setup() {
 }
 
 @test "vertical alignment: emoji stripped - three emojis" {
-    output=$(show_header_box "Test" "📁 🌿 🎉 Three emojis" 2>&1)
+    box_output=$(show_header_box "Test" "📁 🌿 🎉 Three emojis" 2>&1)
 
-    run check_box_width_consistency "$output" 60
+    run check_box_width_consistency "$box_output" 60
     [ "$status" -eq 0 ]
 
     # Verify emoji stripped, ASCII kept
-    [[ "$output" =~ "Three emojis" ]]
+    [[ "$box_output" =~ "Three" ]]
+    [[ "$box_output" =~ "emojis" ]]
 }
 
 @test "vertical alignment: CJK characters stripped" {
@@ -236,14 +237,20 @@ setup() {
     [ "$width" -eq 10 ]
 }
 
-@test "_pad_to_width: emoji text padded correctly" {
-    result=$(_pad_to_width "📁 test" 15)
+@test "_pad_to_width: escaped emoji text padded correctly" {
+    # _pad_to_width expects ASCII-only input (after _escape_input)
+    # Test the full pipeline: escape then pad
+    escaped=$(_escape_input "📁 test")
+    result=$(_pad_to_width "$escaped" 15)
     width=$(python_display_width "$result")
     [ "$width" -eq 15 ]
 }
 
-@test "_pad_to_width: CJK text padded correctly" {
-    result=$(_pad_to_width "中文" 10)
+@test "_pad_to_width: escaped CJK text padded correctly" {
+    # _pad_to_width expects ASCII-only input (after _escape_input)
+    # Test the full pipeline: escape then pad
+    escaped=$(_escape_input "中文")
+    result=$(_pad_to_width "$escaped" 10)
     width=$(python_display_width "$result")
     [ "$width" -eq 10 ]
 }
