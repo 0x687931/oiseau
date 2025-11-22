@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Comprehensive BATS test suite for interactive UI components (#69, #71)
 - Multi-line progress bar support with relative cursor positioning (#58)
-- VHS demo recordings for all widgets
+- VHS demo recording for progress bar widget showing all three modes
 - Enhanced zsh compatibility mode (#60)
 - Accessibility palettes (colorblind, high-contrast) with WCAG contrast ratios
 - Test infrastructure extensibility architecture (#73)
@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README to 1980s technical manual aesthetic
 - Condensed README with improved accessibility documentation
 - Progress bar demos now use multi-line progress implementation
-- VHS demos redesigned with side-by-side mode comparisons
+- VHS demo shows sequential mode transitions (rich → color → plain)
 - Reorganized demo files for consistent naming convention
 
 ## [1.0.0] - 2024
