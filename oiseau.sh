@@ -1786,6 +1786,12 @@ ask_list() {
     local array_name="$2"
     local mode="${3:-single}"
 
+    # Validate mode parameter
+    if [[ "$mode" != "single" && "$mode" != "multi" ]]; then
+        echo "ERROR: Invalid mode '$mode'. Must be 'single' or 'multi'" >&2
+        return 1
+    fi
+
     # Validate inputs first (before eval)
     if [ -z "$prompt" ] || [ -z "$array_name" ]; then
         echo "ERROR: ask_list requires prompt and array_name arguments" >&2
