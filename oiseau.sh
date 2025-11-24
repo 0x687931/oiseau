@@ -829,8 +829,10 @@ show_section_header() {
 # Simple header
 # Security: Use printf to prevent backslash injection
 show_header() {
-    local title="$(_escape_input "$1")"
-    printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
+    local title="$(_escape_input "${1:-}")"
+    if [ -n "$title" ]; then
+        printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
+    fi
 }
 
 # Muted subheader
@@ -838,6 +840,14 @@ show_header() {
 show_subheader() {
     local title="$(_escape_input "$1")"
     printf '%b%s%b\n' "${COLOR_MUTED}" "$title" "${RESET}"
+}
+
+# Simple separator line
+# Prints a horizontal line, useful for visual separation of content sections
+show_separator() {
+    local width="${1:-60}"
+    width=$(_clamp_width "$width")
+    printf '%b%s%b\n' "${COLOR_BORDER}" "$(_repeat_char "${BOX_H}" "$width")" "${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
@@ -2724,7 +2734,7 @@ unregister_resize_handler() {
 }
 
 # Initialize OISEAU_HEIGHT on load
-if [ -z "$OISEAU_HEIGHT" ]; then
+if [ -z "${OISEAU_HEIGHT:-}" ]; then
     update_terminal_size
 fi
 
@@ -3022,6 +3032,35 @@ print_success() { show_success "$@"; }
 print_error() { show_error "$@"; }
 print_warning() { show_warning "$@"; }
 print_header() { show_header "$@"; }
+print_separator() { show_separator "$@"; }
+
+# Variable aliases (UI_* → direct variables)
+# These maintain compatibility with tild and other consumers using UI_* naming
+export UI_BOLD="$BOLD"
+export UI_RESET="$RESET"
+
+# Color aliases
+export UI_RED="$COLOR_ERROR"        # Map to orange (colorblind-safe)
+export UI_GREEN="$COLOR_SUCCESS"    # Map to blue (colorblind-safe)
+export UI_YELLOW="$COLOR_WARNING"
+export UI_BLUE="$COLOR_INFO"
+export UI_CYAN="$COLOR_HEADER"
+
+# Semantic color aliases
+export UI_COLOR_ERROR="$COLOR_ERROR"
+export UI_COLOR_SUCCESS="$COLOR_SUCCESS"
+export UI_COLOR_WARNING="$COLOR_WARNING"
+export UI_COLOR_INFO="$COLOR_INFO"
+export UI_COLOR_HEADER="$COLOR_HEADER"
+
+# Icon aliases (standard icons only; consumers may define custom icons)
+export UI_ICON_SUCCESS="$ICON_SUCCESS"
+export UI_ICON_ERROR="$ICON_ERROR"
+export UI_ICON_WARNING="$ICON_WARNING"
+export UI_ICON_INFO="$ICON_INFO"
+export UI_ICON_PENDING="$ICON_PENDING"
+export UI_ICON_ACTIVE="$ICON_ACTIVE"
+export UI_ICON_DONE="$ICON_DONE"
 
 # ==============================================================================
 # INITIALIZATION COMPLETE
