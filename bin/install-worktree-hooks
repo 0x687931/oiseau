@@ -1,0 +1,79 @@
+#!/bin/bash
+# Install git hooks that enforce worktree workflow
+# Must be run from repository root
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+print_info() { echo -e "\033[0;34mℹ\033[0m $1"; }
+print_success() { echo -e "\033[0;32m✓\033[0m $1"; }
+print_error() { echo -e "\033[0;31m✗\033[0m $1"; }
+print_header() { echo -e "\033[1m\033[0;36m$1\033[0m"; }
+
+cd "$PROJECT_DIR"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    print_error "Not in a git repository"
+    exit 1
+fi
+
+print_header "Installing Worktree Enforcement Hooks"
+echo ""
+
+# Verify hooks directory exists
+if [ ! -d ".github/hooks" ]; then
+    print_error "Hooks directory not found: .github/hooks"
+    print_info "This directory should be version-controlled in the repository"
+    exit 1
+fi
+
+# Verify master hook exists
+if [ ! -f ".github/hooks/worktree-enforcer" ]; then
+    print_error "Master hook not found: .github/hooks/worktree-enforcer"
+    exit 1
+fi
+
+# Configure git to use hooks directory
+print_info "Configuring git to use .github/hooks..."
+git config core.hooksPath .github/hooks
+print_success "Git configured to use .github/hooks"
+
+# Verify hooks are executable
+for hook in pre-commit pre-push pre-merge-commit pre-rebase; do
+    if [ -L ".github/hooks/$hook" ]; then
+        print_success "Hook installed: $hook"
+    else
+        print_error "Hook missing: $hook"
+    fi
+done
+
+echo ""
+print_success "Worktree enforcement hooks installed successfully!"
+echo ""
+print_header "What this means:"
+echo ""
+print_info "The following git operations are now enforced:"
+echo "  - Direct git commits blocked (use bin/worktree-* scripts)"
+echo "  - Direct git pushes blocked (use bin/worktree-pr)"
+echo "  - Direct git merges blocked (use bin/worktree-merge)"
+echo ""
+print_info "Bypass mechanisms:"
+echo "  ✓ Tild scripts automatically bypass (TILD_BYPASS_HOOK=1)"
+echo "  ✓ Manual developer use allowed (no CLAUDECODE env var)"
+echo "  ✗ Claude Code direct git blocked (CLAUDECODE env var present)"
+echo ""
+print_header "Defense in Depth:"
+echo ""
+print_info "Layer 1: Claude Code PreToolUse hook (~/.claude/hooks/check-worktree.sh)"
+print_info "         Blocks Edit/Write on main, blocks git without -C flag"
+echo ""
+print_info "Layer 2: Git hooks (.github/hooks/*)"
+print_info "         Blocks git operations from Claude Code at execution time"
+echo ""
+print_info "Layer 3: GitHub branch protection (if configured)"
+print_info "         Blocks direct pushes to main on server side"
+echo ""
+print_success "Multi-layer protection active!"
