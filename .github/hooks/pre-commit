@@ -1,0 +1,67 @@
+#!/bin/bash
+set -euo pipefail
+# Git hook to enforce worktree workflow
+# Blocks Claude Code from direct git operations
+# Allows tild scripts to bypass via TILD_BYPASS_HOOK=1
+# Allows manual developer usage (when CLAUDECODE is not set)
+
+HOOK_NAME=$(basename "$0")
+
+# BYPASS 1: Allow tild scripts (they set TILD_BYPASS_HOOK=1)
+if [ -n "${TILD_BYPASS_HOOK:-}" ]; then
+    if [ "$TILD_BYPASS_HOOK" = "1" ]; then
+        echo "${HOOK_NAME}: bypass activated via TILD_BYPASS_HOOK=1" >&2
+
+        # Run quality checks for pre-push hook
+        if [ "$HOOK_NAME" = "pre-push" ]; then
+            SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+            if [ -x "$SCRIPT_DIR/quality-checks.sh" ]; then
+                exec "$SCRIPT_DIR/quality-checks.sh"
+            fi
+        fi
+
+        exit 0
+    fi
+
+    cat >&2 <<EOF
+${HOOK_NAME}: invalid TILD_BYPASS_HOOK value "${TILD_BYPASS_HOOK}".
+Set TILD_BYPASS_HOOK=1 to bypass this hook or unset the variable.
+EOF
+    exit 1
+fi
+
+# BYPASS 2: Allow non-Claude Code usage (for manual developer use)
+# When developers run git manually, CLAUDECODE won't be set
+if [ -z "${CLAUDECODE:-}" ]; then
+    exit 0
+fi
+
+# BLOCK: Claude Code is trying to run git directly
+cat >&2 << 'EOF'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⛔ WORKTREE WORKFLOW VIOLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Direct git operations are blocked by git hooks.
+You must use the tild worktree automation scripts instead.
+
+📖 Available commands:
+   bin/worktree-new <name>           - Create new worktree
+   bin/worktree-pr [title]           - Push and create PR
+   bin/worktree-merge [method]       - Merge PR
+   bin/worktree-complete <name>      - Full workflow (merge+cleanup)
+   bin/worktree-cleanup <name>       - Clean up worktree
+   bin/worktree-list                 - List worktrees
+
+🔍 Why this exists:
+   Git hooks enforce the worktree workflow to ensure:
+   - All changes go through PR review
+   - Code quality standards are maintained
+   - No accidental commits to main branch
+
+💡 The tild scripts handle git operations correctly and bypass these hooks.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
+
+exit 1

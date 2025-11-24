@@ -1,0 +1,231 @@
+#!/bin/bash
+# Check for Codex review comments on a PR and help acknowledge fixes
+# Usage: bin/check-codex-reviews <pr-number> [--acknowledge]
+
+set -euo pipefail
+
+# Export bypass flag for git hooks
+export TILD_BYPASS_HOOK=1
+
+# Load UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
+if [ -f "$PROJECT_DIR/lib/ui/theme.sh" ]; then
+    source "$PROJECT_DIR/lib/ui/theme.sh"
+    source "$PROJECT_DIR/lib/ui/widgets.sh"
+elif [ -f "$LIB_DIR/ui/theme.sh" ]; then
+    source "$LIB_DIR/ui/theme.sh"
+    source "$LIB_DIR/ui/widgets.sh"
+else
+    echo "Error: Cannot find UI library files" >&2
+    exit 1
+fi
+
+# Check if gh CLI is available
+if ! command -v gh &> /dev/null; then
+    print_error "GitHub CLI (gh) is not installed"
+    print_info "Install it with: brew install gh"
+    exit 1
+fi
+
+if ! gh auth status &> /dev/null 2>&1; then
+    print_error "GitHub CLI is not authenticated"
+    print_info "Run: gh auth login"
+    exit 1
+fi
+
+# Parse arguments
+PR_NUMBER="${1:-}"
+ACKNOWLEDGE_MODE=false
+
+if [ "${2:-}" = "--acknowledge" ]; then
+    ACKNOWLEDGE_MODE=true
+fi
+
+if [ -z "$PR_NUMBER" ]; then
+    print_error "PR number is required"
+    echo ""
+    echo "Usage: bin/check-codex-reviews <pr-number> [--acknowledge]"
+    echo ""
+    echo "Examples:"
+    print_command "bin/check-codex-reviews 85"
+    print_command "bin/check-codex-reviews 85 --acknowledge"
+    echo ""
+    exit 1
+fi
+
+print_header "Checking Codex Review Comments for PR #$PR_NUMBER"
+echo ""
+
+# Get PR review comments from Codex (with pagination to fetch all comments)
+# Fail explicitly if API call fails to avoid false "no comments" reporting
+if ! CODEX_COMMENTS=$(gh api "/repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" --paginate \
+    --jq '.[] | select(.user.login | contains("codex")) | {
+        id: .id,
+        path: .path,
+        line: .line,
+        body: .body,
+        created_at: .created_at
+    }' 2>&1); then
+    echo ""
+    print_error "Failed to fetch review comments from GitHub API"
+    print_warning "Cannot determine if there are Codex review comments"
+    echo ""
+    print_info "Possible causes:"
+    print_item "Network unavailable"
+    print_item "GitHub token lacks required scope"
+    print_item "API rate limit exceeded"
+    echo ""
+    exit 1
+fi
+
+# Get issue comments from Codex (with pagination to fetch all comments)
+# Fail explicitly if API call fails to avoid false "no comments" reporting
+if ! CODEX_ISSUE_COMMENTS=$(gh api "/repos/{owner}/{repo}/issues/$PR_NUMBER/comments" --paginate \
+    --jq '.[] | select(.user.login | contains("codex")) | {
+        id: .id,
+        body: .body,
+        created_at: .created_at
+    }' 2>&1); then
+    echo ""
+    print_error "Failed to fetch issue comments from GitHub API"
+    print_warning "Cannot determine if there are Codex review comments"
+    echo ""
+    print_info "Possible causes:"
+    print_item "Network unavailable"
+    print_item "GitHub token lacks required scope"
+    print_item "API rate limit exceeded"
+    echo ""
+    exit 1
+fi
+
+if [ -z "$CODEX_COMMENTS" ] && [ -z "$CODEX_ISSUE_COMMENTS" ]; then
+    print_success "No Codex review comments found"
+    echo ""
+    exit 0
+fi
+
+# Combine both types of comments for processing
+ALL_COMMENTS=$(printf "%s\n%s" "$CODEX_COMMENTS" "$CODEX_ISSUE_COMMENTS")
+
+# Parse and display P0/P1/P2 issues from inline review comments
+echo "$CODEX_COMMENTS" | jq -r 'select(.body | contains("P0") or contains("P1") or contains("P2")) | "\(.path):\(.line) - \(.body)"' 2>/dev/null | while read -r line; do
+    if [ -n "$line" ]; then
+        if echo "$line" | grep -q "P0"; then
+            print_error "  $line"
+        elif echo "$line" | grep -q "P1"; then
+            print_warning "  $line"
+        else
+            print_info "  $line"
+        fi
+    fi
+done
+
+# Parse and display P0/P1/P2 issues from top-level issue comments
+echo "$CODEX_ISSUE_COMMENTS" | jq -r 'select(.body | contains("P0") or contains("P1") or contains("P2")) | "[Issue Comment] \(.body)"' 2>/dev/null | while read -r line; do
+    if [ -n "$line" ]; then
+        if echo "$line" | grep -q "P0"; then
+            print_error "  $line"
+        elif echo "$line" | grep -q "P1"; then
+            print_warning "  $line"
+        else
+            print_info "  $line"
+        fi
+    fi
+done
+
+# Count issues by priority from ALL comments (inline + issue comments)
+P0_COUNT=$(echo "$ALL_COMMENTS" | grep -c "P0" || echo "0")
+P1_COUNT=$(echo "$ALL_COMMENTS" | grep -c "P1" || echo "0")
+P2_COUNT=$(echo "$ALL_COMMENTS" | grep -c "P2" || echo "0")
+
+TOTAL_ISSUES=$((${P0_COUNT:-0} + ${P1_COUNT:-0} + ${P2_COUNT:-0}))
+
+if [ "$TOTAL_ISSUES" -gt 0 ]; then
+    echo ""
+    print_section "Review Summary:"
+    if [ "$P0_COUNT" -gt 0 ]; then
+        print_error "  P0 (Critical): $P0_COUNT"
+    fi
+    if [ "$P1_COUNT" -gt 0 ]; then
+        print_warning "  P1 (Important): $P1_COUNT"
+    fi
+    if [ "$P2_COUNT" -gt 0 ]; then
+        print_info "  P2 (Nice to have): $P2_COUNT"
+    fi
+    echo ""
+fi
+
+# Acknowledge mode - help user comment on fixes
+if [ "$ACKNOWLEDGE_MODE" = true ] && [ "$TOTAL_ISSUES" -gt 0 ]; then
+    print_header "Acknowledge Fixes"
+    echo ""
+    print_info "You should acknowledge the fixes you've made to Codex review comments."
+    echo ""
+
+    # Get recent commits
+    RECENT_COMMITS=$(git log --oneline -5 | sed 's/^/  /')
+
+    print_section "Recent commits:"
+    echo ""
+    echo "$RECENT_COMMITS"
+    echo ""
+
+    if ask_yes_no "Have you fixed these issues and want to acknowledge them?"; then
+        echo ""
+        print_info "Enter a summary of the fixes (or press Enter for default):"
+        read -r FIX_SUMMARY
+
+        if [ -z "$FIX_SUMMARY" ]; then
+            FIX_SUMMARY="Fixed Codex review issues: $TOTAL_ISSUES total"
+            if [ "$P0_COUNT" -gt 0 ]; then
+                FIX_SUMMARY="$FIX_SUMMARY ($P0_COUNT P0"
+            fi
+            if [ "$P1_COUNT" -gt 0 ]; then
+                if [ "$P0_COUNT" -gt 0 ]; then
+                    FIX_SUMMARY="$FIX_SUMMARY, $P1_COUNT P1"
+                else
+                    FIX_SUMMARY="$FIX_SUMMARY ($P1_COUNT P1"
+                fi
+            fi
+            if [ "$P2_COUNT" -gt 0 ]; then
+                if [ "$P0_COUNT" -gt 0 ] || [ "$P1_COUNT" -gt 0 ]; then
+                    FIX_SUMMARY="$FIX_SUMMARY, $P2_COUNT P2"
+                else
+                    FIX_SUMMARY="$FIX_SUMMARY ($P2_COUNT P2"
+                fi
+            fi
+            FIX_SUMMARY="$FIX_SUMMARY)"
+        fi
+
+        COMMENT_BODY="## ✅ Codex Review Issues Addressed
+
+$FIX_SUMMARY
+
+**Recent commits:**
+$RECENT_COMMITS
+
+Thanks @codex for the feedback!"
+
+        echo ""
+        print_info "Will post this comment:"
+        echo ""
+        echo "$COMMENT_BODY"
+        echo ""
+
+        if ask_yes_no "Post this comment?"; then
+            gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+            print_success "Comment posted!"
+            echo ""
+
+            # Request another Codex review
+            if ask_yes_no "Request another @codex review to verify fixes?"; then
+                gh pr comment "$PR_NUMBER" --body "@codex review"
+                print_success "Codex review requested!"
+            fi
+        fi
+    fi
+fi
+
+echo ""

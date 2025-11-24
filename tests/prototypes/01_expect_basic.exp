@@ -1,0 +1,80 @@
+#!/usr/bin/env expect
+# Prototype: Using Expect for interactive testing
+# Test: Arrow key navigation in ask_list
+
+set timeout 5
+
+# Spawn the test script
+spawn bash -c "source oiseau.sh && items=(Apple Banana Cherry Date) && ask_list 'Choose fruit:' items single"
+
+# Wait for the prompt to appear
+expect "Choose fruit:" {
+    send_user "PASS: Prompt appeared\n"
+} timeout {
+    send_user "FAIL: Prompt timeout\n"
+    exit 1
+}
+
+# Wait for initial rendering (cursor should be on first item)
+expect "› Apple" {
+    send_user "PASS: Initial cursor on first item\n"
+} "Apple" {
+    send_user "PASS: First item visible (ASCII mode)\n"
+}
+
+# Send down arrow key (ESC [B)
+send "\033\[B"
+sleep 0.1
+
+# Verify cursor moved to second item
+expect {
+    "› Banana" {
+        send_user "PASS: Cursor moved to Banana (UTF-8 mode)\n"
+    }
+    "> Banana" {
+        send_user "PASS: Cursor moved to Banana (ASCII mode)\n"
+    }
+    timeout {
+        send_user "FAIL: Cursor did not move\n"
+        exit 1
+    }
+}
+
+# Send down arrow again
+send "\033\[B"
+sleep 0.1
+
+# Verify cursor moved to third item
+expect {
+    "› Cherry" {
+        send_user "PASS: Cursor moved to Cherry\n"
+    }
+    "> Cherry" {
+        send_user "PASS: Cursor moved to Cherry\n"
+    }
+    timeout {
+        send_user "FAIL: Cursor did not move to Cherry\n"
+        exit 1
+    }
+}
+
+# Send Enter to select
+send "\r"
+
+# Verify output
+expect {
+    "Cherry" {
+        send_user "PASS: Selected item returned\n"
+    }
+    eof {
+        send_user "PASS: Program exited\n"
+    }
+    timeout {
+        send_user "FAIL: No output received\n"
+        exit 1
+    }
+}
+
+wait
+send_user "\nTest completed successfully\n"
+exit 0

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:rich.readthedocs.io)",
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply",
+      "SlashCommand(/madf)",
+      "SlashCommand(/madf Fix the show_progress_bar function to use relative positioning instead of absolute positioning. Currently it uses `tput cup $line_number 0` which positions to absolute line numbers, but we need relative positioning from the current cursor location so progress bars work regardless of where in the terminal they start.)",
+      "Bash(git worktree remove:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

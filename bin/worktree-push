@@ -1,0 +1,67 @@
+#!/bin/bash
+# Push changes to existing PR and request re-review
+# Usage: bin/worktree-push
+#
+# Must be run from within the worktree directory
+
+set -euo pipefail
+
+# Export bypass flag for git hooks
+export TILD_BYPASS_HOOK=1
+
+# Load UI framework
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
+if [ -f "$PROJECT_DIR/lib/ui/theme.sh" ]; then
+    source "$PROJECT_DIR/lib/ui/theme.sh"
+    source "$PROJECT_DIR/lib/ui/widgets.sh"
+elif [ -f "$LIB_DIR/ui/theme.sh" ]; then
+    source "$LIB_DIR/ui/theme.sh"
+    source "$LIB_DIR/ui/widgets.sh"
+fi
+
+# Get current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Check if we're on main
+if [ "$CURRENT_BRANCH" = "main" ]; then
+    print_error "On main branch - use worktree workflow"
+    exit 1
+fi
+
+print_info "Pushing changes on branch: $CURRENT_BRANCH"
+
+# Push to remote
+git push
+
+print_success "Changes pushed"
+
+# Check if there's an existing PR
+PR_NUMBER=$(gh pr list --head "$CURRENT_BRANCH" --json number --jq '.[0].number // ""' 2>/dev/null || echo "")
+
+# Treat "null" string as empty (happens when no PR exists)
+if [ "$PR_NUMBER" = "null" ]; then
+    PR_NUMBER=""
+fi
+
+if [ -n "$PR_NUMBER" ]; then
+    echo ""
+    print_info "Found existing PR #$PR_NUMBER"
+    print_info "Requesting re-review from @codex..."
+
+    if gh pr comment "$PR_NUMBER" --body "@codex review" 2>/dev/null; then
+        print_success "Re-review requested"
+        print_info "PR URL: $(gh pr view "$PR_NUMBER" --json url --jq '.url')"
+    else
+        print_warning "Could not request re-review automatically"
+        print_info "Manually comment '@codex review' on the PR"
+    fi
+else
+    print_info "No PR found for this branch"
+    print_info "Create one with: ../$(basename "$PROJECT_DIR")/bin/worktree-pr"
+fi
+
+echo ""
+print_header
+echo ""

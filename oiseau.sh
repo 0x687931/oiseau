@@ -829,8 +829,10 @@ show_section_header() {
 # Simple header
 # Security: Use printf to prevent backslash injection
 show_header() {
-    local title="$(_escape_input "$1")"
-    printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
+    local title="$(_escape_input "${1:-}")"
+    if [ -n "$title" ]; then
+        printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
+    fi
 }
 
 # Muted subheader
@@ -838,6 +840,14 @@ show_header() {
 show_subheader() {
     local title="$(_escape_input "$1")"
     printf '%b%s%b\n' "${COLOR_MUTED}" "$title" "${RESET}"
+}
+
+# Simple separator line
+# Prints a horizontal line, useful for visual separation of content sections
+show_separator() {
+    local width="${1:-60}"
+    width=$(_clamp_width "$width")
+    printf '%b%s%b\n' "${COLOR_BORDER}" "$(_repeat_char "${BOX_H}" "$width")" "${RESET}"
 }
 
 # Header box - decorative box with title and optional subtitle
@@ -3022,6 +3032,7 @@ print_success() { show_success "$@"; }
 print_error() { show_error "$@"; }
 print_warning() { show_warning "$@"; }
 print_header() { show_header "$@"; }
+print_separator() { show_separator "$@"; }
 
 # ==============================================================================
 # INITIALIZATION COMPLETE
