@@ -832,6 +832,9 @@ show_header() {
     local title="$(_escape_input "${1:-}")"
     if [ -n "$title" ]; then
         printf '\n%b%b%s%b\n\n' "${COLOR_HEADER}" "${BOLD}" "$title" "${RESET}"
+    else
+        # Preserve spacing for backward compatibility when called without title
+        printf '\n\n'
     fi
 }
 
@@ -846,6 +849,10 @@ show_subheader() {
 # Prints a horizontal line, useful for visual separation of content sections
 show_separator() {
     local width="${1:-60}"
+    # Validate width is numeric, default to 60 if not
+    if ! [[ "$width" =~ ^[0-9]+$ ]]; then
+        width=60
+    fi
     width=$(_clamp_width "$width")
     printf '%b%s%b\n' "${COLOR_BORDER}" "$(_repeat_char "${BOX_H}" "$width")" "${RESET}"
 }
